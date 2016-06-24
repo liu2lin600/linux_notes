@@ -1,0 +1,160 @@
+2016-06-23
+# edit by liu2lin600
+
+DHCP：Dynamic Host Configuration Protocol, 动态地址配置协议
+    前身bootp：分配出去以后，将绑定
+  
+    C/S模式
+        Server：DHCP Server（运行dhcp服务）
+            UDP服务：port:67
+        Client：DHCP Client(运行dhcp程序)
+            UDP服务：port:68
+            
+        udp：适合发送较小的数据报文，且对时效性要求较高
+
+        过程：
+            C:DHCP DISCOVER (发现报文)
+            S:DHCP OFFER(ip/netmask)
+            C:DHCP REQUEST(确认使用)
+            S:DHCP ACK
+
+        客户端续租：
+            50%时间：DHCP REQUEST (最多租时不超过规定时间)
+              75%时间：DHCP REQUEST (一半时间找不到服务器时)
+                87.5%时间：DHCP REQUEST
+                    DHCP DISCOVER：发广播找别的DHCP服务器
+                    当没有服务器响应时，自行分配169.254.x.x用于本地通讯使用
+
+    DHCP提供的功能：IP,NETMASK,GATEWAY,DNS,NTP SERVER,WINS SERVER,File
+
+
+    服务端安装后有两个程序：一般只运行其中一个
+        dhcpd：服务端用来分配地址
+        dhcrelay：中继
+
+DHCP配置文件：/etc/dhcp/dhcpd.conf (复制/usr/share/doc/dhcp*/dhcp.conf.sample)
+              /var/lib/dhcpd/dhcpd.leases : 租约日志记录
+              /etc/rsyslog.conf : 日志服务的配置文件
+
+    1.定义dhcpd自身的工作属性：
+        log-facilify: 日志facilify
+    2.全局地址分配属性：options打头
+        option router
+    3.子网配置：
+        通常每个作用域通过一个subnet定义
+        subnet NETWORK_ADDR netmask NETMASK {
+            xxx
+        }
+    4.主机配置：
+        通常为某特定MAC地址固定的分配一个地址
+        host 'HOST ID'{
+            hardware ethernet 08:00:07:26:c0:a5; 
+            fixed-address IP; 
+        }
+
+
+相关命令：dhclient
+          dhcilent -d eth0  # 客户端重新获取dhcp地址
+
+配置文件详解：
+ption domain-name "example.org";                    # 搜索域
+option domain-name-servers 192.168.1.1, 8.8.8.8;    # 全局默认网关
+default-lease-time 600;                             # 默认租约期限
+max-lease-time 7200;                                # 最长租约期限
+#ddns-update-style none;                            # 动态dns
+log-facility local7;                                # 日志地址 /etc/rsyslog.conf记录具体地址
+
+# 子网配置，
+subnet 10.5.5.0 netmask 255.255.255.224 {
+    range 10.5.5.26 10.5.5.30;                          # 地址池
+    option domain-name-servers 192.168.1.1 8.8.8.8;     # dns
+    option domain-name "internal.example.org";          # 域名
+    option routers 10.5.5.1;                            # 默认网关
+    option broadcast-address 10.5.5.31;                 # 广播地址
+}
+
+# 主机配置
+host fantasia {
+    hardware ethernet 08:00:07:26:c0:a5; 
+    fixed-address 192.168.1.100;       # 给指定的MAC绑定ip地址
+}
+
+# 定义函数，用来定义特定系统分配特定的地址
+class "foo" {
+    match if substring (option vendor-class-identifier, 0, 4) = "SUNW";
+}
+
+
+
+
+PXE：Preboot Execution Environment,启动前的执行环境
+    
+    Client：网卡要支持网络引导
+
+tftp：Trivial FTP，简单文件传输协议，高效传输小文件，基于udp，监听端口69
+
+超级守护进程：xinetd，为那些极少接收用户请求的服务，专门提供监听功能，如tftp
+    瞬时守护进程：他们无需定义在运行级别下，只需要一次性的定义xinetd的运行级别
+    独立守护进程：standlone, 能自我管理，无需xinted提供监听服务的进程
+ 
+        基于xinetd瞬时守护进程的配置文件：/etc/xinted.d/Service_name
+
+    chkconfig xinetd on
+    service xinetd start
+
+    chkconfig Service_name on
+    service xinetd restart
+
+Linux上的tftp：
+    服务器：tftp-server
+    客户端：tftp
+在dhcp添加
+    next-server ip地址
+    filename="pxelinux.0"
+
+
+PXE配置步骤：
+
+    1. 配置DHCP服务器
+        yum -y install dhcp
+        vim /etc/dhcp/dhcpd.conf
+        subnet{
+            ...
+            next-server 172.16.1.100    # tfpt服务地址
+            filename "pxelinux.0"
+        }
+        service dhcpd restart
+        tail -f /var/log/boot.log
+
+    2. 配置tftp-server
+        yum -y install xinetd tftp-server tftp
+        chkconfig xinetd on
+        chkconfig tftp on
+        service xinetd start
+        ss -unl|grep ':69'
+
+    3. 准备安装树
+        mkdir /var/www/html/centos6
+        mount --bind /media/cdrom /var/www/html/centos6
+        service httpd start
+
+    4. 准备tftpboot下的文件
+        yum -y install syslinux
+        cp /media/cdrom/images/pxeboot/{vmlinuz,initrd.img} /var/lib/tftpboot/
+        cp /media/cdroom/isolinux/{boot.msg,vesamenu.c32,splash.jpg} /var/lib/tftpboot/
+        cp /usr/share/syslinux/pxelinux.0 /var/lib/tftpboot
+        mkdir /var/lib/tftpboot/pxelinux.cfg
+        cp /media/cdrom/isolinux/isolinux.cfg /var/lib/tftpboot/pxelinux.cfg/default
+
+    5. 第一次测试
+
+    6. 完成自动化，提供kickstart文件
+        注意：url及repo后的路径要修改为可用安装树的路径
+        编辑好kickstart文件后保存至/var/www/html/ks.cfg
+    
+    7. 配置引导程序能自动加载kickstart文件
+        编辑/var/lib/tftpboot/pxelinux.cfg/default
+            在label为linux项的append一行后附加ks路径: ks=http://IP/ks.cfg
+    
+    8. 第二次测试
+            

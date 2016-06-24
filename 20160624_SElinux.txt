@@ -1,0 +1,80 @@
+2016-06-24
+# edit by liu2lin600
+
+
+SELinxu：Secure Enhenced Linux
+    由美国国家安全局在linux社区帮助下开发的一个强制访问控制的安全子系统，属于MAC强制访问控制，即让系统中的各个服务进程都受到约束，仅能访问到所需的文件。在linux内核2.6版本后直接引入内核
+        (DAC：自主访问控制)
+
+获取selinux的当前状态：getenforce
+临时启用或禁用：setenfoce 0|1
+
+配置文件：/etc/sysconfig/selinux --> /etc/selinux/config
+    SELINUX=enforcing   # 启用
+            permissove  # 越权访问只发出警告但不拦截
+            disabled    # 关闭
+
+    SELinux有四种工作类型：
+     1. strict: centos5,每个进程都受到selinux的控制
+     2. targeted: 用来保护常见的网络服务,仅有限进程受到selinux控制，只监控容易被入侵的进程
+     3. minimum: centos7,修改过的targeted，只对选择的网络服务
+     4. mls: 提供MLS（多级安全）机制的安全性
+       minimum和mls稳定性不足，未加以应用
+
+作用范围：
+    域：对进程资源进行限制 (查看: ps -Z)
+    安全上下文：对系统资源进行限制 (ls -Z)，组成 user:role:type:sensitivity:category
+        用户: root, user_u, system_u, unconfined_u
+        角色: object_r, 
+        文件类型: admin_home_t, httpd_sys_content_t
+
+
+相关概念：
+    1. Objects： process(进程)
+        Directories
+        File descriptors
+        Files
+        Filesystems
+        Links
+        Processes
+        Sprcial files of various types (block device,character device,socket,FIFO,and so on)
+    
+    2.actions：
+        Append
+        Create
+        Execute
+        Get attribute
+        I/O control
+        Link
+        Lock
+        Read
+        Rename
+        Unlink
+        Write
+
+常用命令：
+    getenforce：
+    setenforce：
+    chcon：
+       -t type：修改为指定类型
+       -R 递归
+       --reference=RFILE：以RFTIE为参照
+       -u user
+       -r role
+
+    restorecon：
+        -R 改回原来的属性
+        修改受selinux控制的文件的属性
+    
+    setsebool：
+      -P 永久生效
+        开放匿名用户上传
+           allow_ftpd_anon_write on
+           allow_ftpd_full_access on
+    
+    getsebool：
+       -a
+
+httpd
+vsftp
+samba

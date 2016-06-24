@@ -1,0 +1,305 @@
+2016-06-19
+# edit by liu2lin600
+
+内核管理
+
+os：
+   内核的功能：
+        进程管理：task_struct，scheduler
+    	内存管理：
+    	I/O管理：中断及中断处理
+    	文件系统：ext3，ext4，reiserfs，xfs
+    	驱动程序：
+    	安全相关：SELinux
+    	是通用软件，平台类的软件
+        内核设计流派：
+            单内核：单一体系结构
+    	    Linux
+    	       模块化设计：核心+外围功能性模块组成
+    	           .ko:Kernel object
+    		   内核支持动态装卸载模块
+    		       
+    	微内核：内核子系统
+    	    Windows
+    	    Solaris
+             
+    	 fock()
+    	     init:负责管理用户空间的进程
+    	        init：PID 1
+    		/sbin/init：可执行文件
+
+CentOS的启动流程
+
+启动流程：POST --> Boot Sequence（BIOS） --> Boot Loader(MBR) --> kernel(ramdisk) --> rootfs(readonly) --> switchroot --> /sbin/init(CentOS 5,6,7不同) --> 设置默认运行级别 --> 系统初始化脚本 --> 关闭启动对应级别下的服务 --> 启动终端（图形终端）
+
+ POST：加电自检
+  
+ BIOS:Boot Sequence，启动次序（一般按F2进入BISO设置）
+     MBR:
+         446：bootloader,还要能识别文件系统
+         64：分区表，16个字节一个分区
+         2：5A
+ 
+ kernel文件：基本磁盘分区，无法放在LVM上
+             vmlinuz 压缩存放，有两段代码组成，一个解压代码，一个为内核代码，自触压
+ /sbin/init
+ /lib/
+ 
+ initrd：(initramfs)
+    rd：ram disk
+
+ /sbin/init:
+      /etc/inittab
+         /etc/rc.d/rc.sysinit脚本
+
+
+
+ init：
+    CentOS 5: SysV格式的系统初始化程序，串行初始化
+    CentOS 6：upstart，dbus
+	          systemd：参考OS X中并行初始化过程
+
+   运行级别：(centos7没有运行级别，使用target来模拟)
+    0-6：7个级别
+        0：关机
+    	1：单用户模式，直接以root用户登录
+    	2：多用户模式，不支持NFS文件系统
+    	3：完全多用户模式，文本模式，不启动图形界面
+    	4：预留级别
+    	5：完全多用户模式，图形模式
+    	6：重启
+
+++++----初始化开始----++++
+centos5,6
+
+/sbin/init的配置文件：/etc/inittab
+    每行定义一种操作：
+        id：操作的id
+        runlevels：运行级别，在那些级别下执行此操作
+        action：动作
+            initdefault：设置默认运行级别，无需定义操作
+            sysinit：指定系统初始化脚本
+                si::sysinit:/etc/rc.d/rc.sysinit (centos5)
+            wait：等待系统切换至此级别时运行一次；
+            ctrlaltdel:定义组合键被按下时要运行的命令：
+            respawn：当指定的操作进程被关闭时立即在重启一次
+                tty1:2345:respawn:/sbin/mingetty tty1
+        process：操作
+    
+init要完成任务：(用户空间)
+    /etc/inittab中定义的操作
+        1.指定默认运行级别
+        2.指定系统运行的初始脚本
+        3.启动指定级别下的要启动的服务，关闭要停止的服务
+            /etc/init.d/:存放服务脚本，可接受{start|stop|status|reload...}操作
+                /etc/rc.d/rc.N.d(0-6)
+                    S##：启动
+                    K##：关闭
+            }
+        4.定义ctrlaltdel组合的动作
+        5.初始化字符终端
+            终端：对应的是设备
+                /dev/tty#，/dev/ttyS#，/dev/console，/dev/pts/#
+            调用：login-->/etc/issue
+        6.启动图形终端（如需要）
+            X-windows
+
+cmdline:内核启动时传递给内核的参数
+系统初始化脚本：/etc/rc.d/rc.sysinit        # 学习脚本的好范本
+    1.设置主机名：
+    2.打印文本欢迎信息
+    3.激活SELinux和udev
+    4.激活swap
+    5.挂载/etc/fstab定义的本地文件系统
+    6.实现检查根文件系统并对其以读写重新挂载
+    7.设置系统时钟
+    8.装载键盘映射
+    9.根据/etc/sysctl.conf设置内核参数
+    10.激活RAID和LVM设备
+    11.加载额外设备的驱动程序
+    12.清理操作
+
+centos7上兼容5，6操作，可以使用service命令，不过建议使用systemctl
+    格式：systemctl {start|stop|restart|status} name.service
+
+/etc/init.d/下的服务类脚本共有特点：    
+
+chkconfig: runlevels SS KK              
+    当chkconfig命令来为此脚本在rc#.d目录创建链接时，runlevels表示默认创建为S*开头的链接，-表示没有级别默认为S*开头的链接；除此之外的级别默认创建为K*开头的链接；
+    S后面的启动优先级为SS所表示的数字；K后面关闭优先次序为KK所表示的数字；
+
+description: xxx
+    用于说明此脚本的简单功能； \, 续行
+注：'#'在文件中有意思，chkconfig命令会去分析后面的内容  
+
+
+^^^^----初始化结束----^^^^
+
+bootloader：引导加载器，是一个程序
+    LILO：LInux LOader，不能引导位于1024 Cylinder（柱面）以后的分区中的os
+    GRUB：GRand Unified Bootloader（grub 0.x:grub legacy, grub 1.x:grub2）
+        grub legacy：
+        1st stage：位于MBR中，为了引导2nd stage
+        1.5 stage：位于boot基本磁盘分区中，为识别内核文件所在的文件系统提供文件识别扩展
+        2nd stage：位于boot基本磁盘分区中，GRUB的引导程序
+            boot分区大小
+                Centos5：100M
+                Centos6：200M
+
+                /boot/grub/
+                    stage2：读取配置文件grub.conf
+    Grub的功能：
+        1.选择要启动的内核或系统，允许传递参数给内核，能隐藏交互式接口
+        2.交互式接口。e: 编辑模式, c: 命令模式
+        3.基于密码保护
+            启用内核映像：定义在响应title下
+            传递参数（进入编辑模式）：定义在全局段中
+    
+    grub命令行接口：
+        grub> help                    # 帮助列表
+        grub> help KEYWORD            # 具体帮助内容
+        grub> find (hd#,N)/xx         # 查找根
+        grub> root (hd#,N)            # 指定/boot根
+        grub> kernel /kernel_path     # 指定内核
+        grub> initrd /initramfs_path  # 指定initramfs
+        grub> boot                    # 引导启动选定的内核
+      
+    init的级别1的表示方法：
+       1，s single S
+       单用户模式几乎不会启动任何服务，且不需要用户登录；单是会执行/etc/rc.d/rc.sysinit脚本
+       如果连/etc/rc.d/rc.sysinit文件也不加载，则传递emergency
+
+       运行级别的切换
+            init [0-6]
+       查看运行级别：
+            runlevel
+            who -r
+
+grub.conf配置文件：（链接文件/etc/grub.conf）
+    default=0  # 设定默认启动的以下title的编号，从0开始
+    timeout=5  # 等待用户选择的超时时长，单位是秒
+    splashimage=(hd0,0)/grub/splash.xpm.gz  # grub的背景图片（640*480尺寸14位色xpm格式的压缩）
+    hiddenmenu # 隐藏菜单
+    //password redhat     # 启动选定内核或操作系统时行全局认证，输入密码才能进行编辑，明文密码保存，建议加密
+    password --md5 $1$HKXJ51$B9Z8A.XXA.AtzU1.KuG.     # 密码使用grub-md5-crypt命令生成
+    title CentOS 6 (2.6.32-573.el6.x86_64)  # 内核标题，或操作系统名称，字符串，可自由修改
+        root (hd0,0)
+            内核文件所在的设备；对grub而言，所有类型硬盘一律hd，格式为(hd#,N)；hd#, #表示第几个磁盘；最后的N表示对应磁盘的分区；
+        
+        kernel /vmlinuz-2.6.32-573.el6.x86_64 ro root=/dev/vol0/root rhgb quiet  
+            内核文件路径，及传递给内核的参数，注意在grub运行时内核文件系统暂未启用，如果/boot单独分区，所以直接表示为/vmlinuz...，如果没有单独分区则为/boot/vmlinuz...
+        
+        initrd /initramfs-2.6.32-573.el6.x86_64.img
+            ramdisk文件路径，安装系统最后生成，通常为cpio归档，并使用gzip压缩，通常以.img作为文件后缀名
+        
+        password --md5 $1$HKXJ51$B9Z8A.X//XA.AtzU1.KuG.     
+            启动选定内核或系统时的密码
+    title Install Red Hat Enterprise Linux 5
+        root (hd0,0)
+        kernel /vmlinuz-5 ks=http://172.16.0.1/workstation.cfg ksdevice=eth0 noipv6
+        initrd /initrd-5
+        password --md5 $1$FSUEU/$uhUUc8USBK5QAXc.BfW4m.
+
+
+当grub配置文件损坏或丢失时，启动直接进入grub命令行：
+    grub> find (hd#,N)/xxx  # 查找，多块硬盘时，tab补全，grub识别的顺序会不一样
+    grub> root (hd#,N)      # 指定根所在分区
+    grub> kernel /PATH/TO/KERNEL_FILE ro root=/dev/vol0...  # 指定内核所在分区
+    grub> initrd /PATH/TO/INITRD_FILE
+    grub> boot
+
+进入单用户模式：（直接以root无密码登录，忘记密码时可以进入修改）
+    1.启动时按任意键进行grub菜单，选定菜单后按'e'编辑
+    2.在选定内核kernel，按'e'进行编辑，在最后加上 1（或s, S single）回车
+    3.按'b'命令启动
+
+grub文件损坏时，需使用光盘引导紧急求援模式去安装grub：
+    进入求援模式：光盘为例
+        1.重启进入光盘引导界面
+        2.选择'Rescue installed system'或按ESC，进入命令行输入linux rescue
+        3.选择相应图形界面选项
+        4.切换根chroot如果需要，再进行下面的grub安装
+
+    grub的安装：
+	    第一种方式
+            grub                 # 进入grub命令提示符
+            grub> root（hd0，0） # 指定根设备
+            grub> setup（hd0）   # 安装第一阶段stage1
+            grub> quit           # 退出
+
+        第二种方式：
+            chroot /mnt/sysimage
+            grub-install --root-directory=/ /dev/sda    # root目录为boot的父目录
+
+
+        sync 将内存文件加载到硬盘上
+
+
+
+  HOST:宿主机
+  Target：目标机
+  
+基于HOST只做一个简单的可启动的Linux：
+
+1、给目标磁盘分区，两个
+    宿主机上：/dev/sdb1 /dev/sdb2
+        /dev/sdb1 挂载至 /mnt/boot
+        /dev/sdb2 挂载至 /mnt/sysroot
+
+2、安装grub至目标磁盘
+    grub-install --root-directory=/mnt /dev/sdb
+    
+3、复制内核和initrd文件
+    cp /boot/vmlinuz-Version  /mnt/boot/vmlinuz
+    cp /boot/initramfs-Version.img /mnt/boot/iniyramfs.img
+
+4、创建目标文件的根系统文件
+    mkdir -pv /mnt/sysroot/{etc/rc.d,usr,var,proc,sys,dev,lib,lib64,bin,sbin,boot,src,mnt,media,home,root}
+       接着去移植bash等至目标主机的根文件系统
+
+5、为grub提供配置文件
+    vim /mnt/boot/grub/grub.conf
+    default=0
+    timeout=5
+    title
+        root(hd0,0)
+        kernel /vmlinuz ro root=/dev/sda1 selinux=0 init=/bin/bash
+        initramfs /initramfs
+
+内核kernel：
+Linux的内核，单内核，支持动态装载和卸载，内核模式强烈依赖与相对应的内核版本
+    模块：/lib/modules/Kernel_version/
+
+    模块相关命令：
+        lspci -v                # 查看pci设备的命令
+        lsmod                   # 查看当前内核装载的所有模块
+        modinfo MOD_NAME        # 查看某模块的详细信息    
+        modprobe -r MOD_NAME    # 动态卸载某模块  
+        rmmod MOD_NAME          # 装载某模块
+        modprobe MOD_NAME       # 动态装载某模块
+        insmod 路径文件         # 装载某模块
+
+ramdisk文件管理：(initramfs)
+    mkinitrd命令：为当前使用的内核重新制作ramdisk文件
+        --with=<module>: 除了默认的模块之外需要装载到initramfs中的模块
+        --preload=<module>: initramfs所提供的模块需要预先装载的模块
+        例：mkinitrd /boot/initramfs-$(uname -r).img  $(uname -r)
+
+    dracut命令：比较底层创建
+
+
+
+chkconfig --list： 查看所有独立守护服务的启动设定；独立守护进程！
+    chkconfig --list SERVICE_NAME
+    chkconfig --add SERVICE_NAME
+    chkconfig --del SERVICE_NAME
+    chkconfig [--level RUNLEVELS] SERVICE_NAME {on|off}
+    
+    如果省略级别指定，默认为2345级别；
+
+    注：正常级别下，最后一个启动的S99local没有链接在/etc/init.d/下的某服务脚本，而是链接到/etc/rc.d/rc.local(/etc/rc.local)脚本，所以，不便写成服务脚本的程序想开机自启，直接将启动命令写到此文件中即可
+
+
+
+相关命令汇总：
+    grub, grub-install, grub-md5-crypt, init, runlevel, lsmod, modinfo, lspci, modprobe, rmmod, insmod, chkconfig

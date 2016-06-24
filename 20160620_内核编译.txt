@@ -1,0 +1,156 @@
+﻿2016-06-20
+# edit by liu2lin600
+
+裁剪的Linux：POST-->BIOS-->GRUB（stage1(MBR)）-->stage2(boot分区)--> Kernel(initramfs)
+    传递给内核的参数
+    selinux={0|1} init=/bin/bash ro root=/path/to/device quiet
+
+Linux：单内核
+    模块化：动态加载
+    /lib/modules/
+        modeles.dep：模块的依赖关系
+        modules.sysbols：符号映射
+            相关命令：lsmod，modinfo，modprobe,insmod,depmod,modprobe -r ,rmmod
+    /lib/modules/kernel/
+            arch：架构
+            crypto：加密模块
+            drivers：驱动
+            fs：文件系统
+            kernel：内核调试模块
+            lib：内核本身通用库
+            mm：内存管理
+            net：网络协议的实现
+                netfilter：软件防火墙
+                openvswith：开源虚拟机
+                sunrpc：
+            sound：声音
+
+    
+    src.rpm：源码代码+specs文件
+        步骤：
+            1.创建mockbuild用户
+            2.切换至mockbuild用户，而后安装src.rpm包
+            3.rpmbuild -bb|-ba ~/rpmbuild/SPECS/package_name.spec
+            4.制作完成的rpm包: 位于/root/rpmbuild/RPMS/x86_64中
+
+        放置源码目录：/usr/src，/usr/local/src
+
+        RHEL src.rpm
+        补充：http://ftp.redhat.com/pub/redhat/linux/enterprise
+
+编译内核前提：
+    1. 开发环境
+        包组安装：Development Tools，Server Platform Development
+    2. 获取目标主机上的硬件相关信息
+        CPU：lscpu, cat /proc/cpuinfo, x86info -a
+        PCI：lspci, lsusb, lsblk
+        所有：hal-device
+        BIOS：dmidecode
+    3. 获取目标主机系统功能相关信息，如要启动的文件系统
+    4. 获取内核源码
+        wget https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-4.4.13.tar.xz
+
+编译内核过程：
+        y:编译进核心
+        m:编译成模块
+        
+    1：获取内核编码，解压至/usr/src并cd进去
+        tar xf linux-4.4.13.tar.xz -C /usr/src
+        ln -sv /usr/src/linux-4.4.13 /usr/src/linux   # 将来系统需要对某硬件编译驱动时，默认会找/usr/src/linux
+
+    2：配置内核选项
+        cp /boot/config-XXX /usr/src/linux/.config    # 在此模版下进行编辑，当然也可省
+        make menuconfig
+            基于cureses文本界面，界面列需要80宽才能正常显示，
+            选项说明：
+                编译进内核本体  [*]
+                编译成内核模块  [M]
+                不选择使用      [ ]
+            其它：
+            make config（基于命令行以遍历方式去配置）
+            make kconfig（KDE桌面环境，并且安装了qt开发环境）
+            make gconfig（Gnome桌面环境，并且安装gtk开发环境）
+
+            make defconfig（基于内核为目标平台提供的默认配置为模板配置）
+            make allnoconfig（所有选项全为no，最小化配置）
+            make allyesconfig（）
+
+    3：编译
+        make [-j #]     '#'为cpu物理核心数的2倍，加快速度，默认1个线程编译
+    4：安装内核模块
+        make modules_install
+    5：安装内核核心
+        make install
+    6：检查测试
+        grub.conf中是否已经有新内核配置项
+        重启系统并启用新内核
+
+
+将编译的文件放置于源码不同的路径：
+    mkdir /path/to/somewhere
+    cd  /path/to/somewhere
+    ./configure --ksource=/usr/src/linux
+
+如何实现内核的部分编译：
+    1.只编译某子目录下的相关代码
+        cd /usr/src/linux
+        make 子目录文件 
+        或
+        make SUBDIR=arch/
+        make drivers/net/
+   2.只编译部分模块
+        make M=path/to/dir/
+        如：make M=drivers/net/
+   3.只编译某一个模块
+        make path/to/dir/module_name.ko
+            如：make drivers/net/e1000/e1000.ko
+   4.将编译后的结果放置于别的目录中
+        make O=/path/to/somewhere
+
+如何实现交叉编译：
+    make ARCH=架构
+        以arm为例：make ARCH=arm neponset_defconfig
+            帮助 make ARCH=arm help
+
+
+二次编译清理操作：
+    cd /usr/src/linux
+    make clean: 只清理编译生成的文件，保留配置文件.config及编译外部模块所需的文件
+    make mrproper: 删除编译生成的文件和.config（最好先备份.config）
+    make distclean: 恢复最初状态
+
+
+内核参数的查看与配置：
+    /proc/sys/{kernel net vm fs}
+        
+    配置参数：
+        echo "string" > /proc/sys/path/to/some_parameter
+            如：echo 1 > /proc/sys/net.ipv4/icmp_echo_ignore_all
+        sysctl -w var=value
+            如：sysctl -w net.ipv4.icmp_echo_ignore_all=1
+    查看参数：
+        sysctl -a 或 sysctl variable
+            如：sysctl net.ipv4.icmp_echo_ignore_all
+        cat /proc/sys/path/to/some_parameter
+            如：cat /proc/sys/net/ipv4/icmp_echo_ignore_all
+    
+    配置文件：/etc/sysctl.conf
+        net.ipv4.ip_forward：ip转发
+        kernel.hostname：主机名
+        net.ipv4.icmp_echo_ignore_all：ping功能
+        vm.drop_caches：清除缓存
+    
+    重读配置文件：sysctl -p 
+
+硬件设备：设备文件
+    2.4-内核以前，安装时直接就生成2W+多个设备文件
+
+    udev：用户空间程序，动态创建设置
+
+        kenrel硬件探测过程在根文件系统挂载前就已经结束，启动udev daemon程序，要求内核重新探测硬件信息，并输出/sys目录，由此udevadmin工具就可以根据/sys目录中硬件信息给每个硬件创建设备文件了
+
+    udev rules：udev规则文件，用于定义udev如何创建设备文件的
+        /etc/udev/rules.d/目录下
+            如：/etc/udev/rules.d/70-persistent-net.rules  # 
+
+    kernel+initramfs(根文件系统所在设备的设备驱动模块)-->devtmps(用于在内核初始化时为基本设备创建设备文件的临时文件系统)

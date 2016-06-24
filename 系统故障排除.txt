@@ -1,0 +1,11 @@
+2016-06-22
+# edit by liu2lin600
+
+bash程序文件损坏：
+    1.启动紧急救援光盘模式，光盘必须在主机版本一样
+    2.获取到bash的rpm包
+        mkdir /media
+        mount -r /dev/dvd /media
+        rpm -ivh bash-*.rpm --replacepkgs --root /mnt/sysimage/
+        chroot /mnt/sysimage    # 查看是否成功
+    其它文件损坏也可参照此方法修复

@@ -1,0 +1,166 @@
+﻿2016-06-22
+# edit by liu2lin600
+
+Linux的系统安装
+
+分区：
+    建议单独分区：
+        /, /home, /usr, /var, swap
+    不能单独分区：
+        /proc, /sys, /etc, /bin, /sbin, /lib, /media, /mnt, /dev
+    /boot：单独分区与否，取决于rootfs所在设备的类型
+
+安装过程：引导阶段-->anaconda阶段(安装前和安装配置)
+
+anaconda：fedora，Linux的安装程序
+
+anaconda将安装分成两个阶段：
+    1.安装前配置阶段
+        键盘类型
+        安装过程中的语言
+        支持的语言
+        时区
+        选择要使用的磁盘设备
+        分区格式化
+        选择要安装的程序包
+        管理员密码
+        是否使用iptables
+        是否启用selinux
+    
+    2.安装阶段
+        在目标磁盘上根文件系统
+        将选定的程序包安装至目标磁盘
+
+如何启动安装过程：
+    1.MBR(bootloader)，本身可启动的安装光盘
+    2.网络启动安装过程
+    3.可移动设备，便携式设备
+
+    简装光盘：只有isolinux，能够启动安装过程
+
+anaconda的配置文件称为：kickstart
+
+安装前配置阶段：
+    配置的选项：
+        必选项：
+            authconfig: 认证方式配置
+                authconfig --useshadow --passalgo=sha512
+            bootloader: 安装位置及相关配置
+            keybord: 键盘类型
+            lang: 语言
+            part:创建分区
+            rootpw: 指明管理员密码
+            timezone: 时区
+        可选项：
+            install or upgrade
+            text: 字符界面
+            zerombr: 是否清空分区
+            url: 安装源
+            network
+            firewall
+            selinux
+            halt
+            poweroff
+            reboot
+            repo
+
+
+kickstart文件的组成部分：系统安装后会在管理员家目录生成anaconda-ks.cfg
+    1.命令段：用于配置系统
+        install
+        firewall
+        part
+        lvm
+    
+    2.软件包：指定要安装的程序包及程序包组，每行一个，在程序包前加-，不安装相关包
+        %packages：标识
+        @Base：使用@指定包组
+        lftp：程序包名
+        tree：
+        %end ：软件包结束
+    
+    3.脚本段：
+       %pre：安装过程开始前的预备脚本
+            所能执行的操作较小，它是一个首先得环境，因为其是仅有简装版的shell环境
+       %post：所有的软件完成之后执行的脚本
+            此时，具有完整意义上的shell环境，但并非所有命令都安装，先确保所有的程序包已经安装
+
+创建kickstart文件的方式：
+    方式1.复制模板/root/anaconda-ks.cfg。而后使用vim编辑配置
+    方式2.使用system-config-kickstart来生成，建议使用/root/anaconda-ks.cfg 模板生成
+
+    ksvalidator命令：检查centos6上kickstart文件的配置是否存在问题
+        centos 6和5的语法上并不完全兼容
+
+
+以光盘为例：isolinux/vesamenu.cs32
+    MBR-->bootloader,isolinux/
+    安装树：
+    noparport：不探测硬件  
+
+启动安装界面时，按ESC进入boot提示符后，可以向安装内核传递许多的配置参数，用于指定安装过程的特性：
+boot：
+    linux：
+    text：文本安装界面
+    graphical：图形安装界面
+    askmethod：提示用户指定安装方法，让用户选择使用的安装树
+    asknetword：提示用户在安装过程中使用网络功能，并提示用户配置网络地址
+    dd：提示用户指定一个驱动程序所在的设备
+    ks=：指定一个安装过程使用的kickstart文件(**.cfg)
+        ks={http|https}://<sevrer>/<path>
+        ks=cdrom:/<path>
+        ks=nfs:<server>:/<path>
+    repo=：指定安装树位置
+        repo=ftp://<path>
+        repo={http|https}://<path>
+        repo=nfs:<path>
+    ip：
+    netmask：
+    gateway：
+    dns：
+    noipv6：
+
+    http://172.16.0.1/centos6.x86_64.cfg
+
+    创建仅有引导功能的光盘镜像：
+        1.下载原光盘中的isolinux/目录
+        2.可修改isolinux/isolinux.cfg，添加ks=cdrom:/myks.cfg
+        3.mkdir myiso; mv isolinux/ myiso/; cp myks.cfg myiso/; 
+        4.在myks.cfg中添加:zerombr(初始化磁盘),text(字符界面)
+        4.mkisofs -R -J -T -v --no-emul-boot --boot-load-size 4 --boot-info-table -V "Centos 6.7 X86_64 boot" -b isolinux/isolinux.bin -c isolinux/boot.cat -o /root/centos6.7.boot.iso myiso/
+            目录结构：myiso/isolinux/#  myiso/myks.cfg
+            -V：标签
+            -b：引导文件
+            -o：保存路径
+            myiso/：将此目录下的内容制做成光盘
+   
+        光盘中的背景图片：640*480
+
+
+
+pxe：主机基于网络引导安装方式
+
+     
+
+写一个脚本：
+    1、通过http://172.16.0.1/cobbler/ks_mirror/centos-6.7-x86_64/Packages路径获取每一层安装过的程序的原文件，放置于/root/myiso/Packages目录
+    2、获取http://172.16.0.1/cobbler/ks_mirror/centos-6.7-x86_64/路径下的isolinux目录及内部的所有文件，放置于/root/myiso目录中
+    3、提供ks文件至/root/myiso目录中
+    4、使用过sed命令为isolinux.cfg中默认的label的append附加“ks=cdrom:/ks.cfg”
+    5、生成光盘映像
+
+#!/bin/bash
+packa=/root/myiso/Packages
+[ -d $packa ]|| mkdir -p $packa
+cd $packa
+for i in $(awk '/^In/{print $2}' /root/install.log);do
+    wget -q http://172.16.0.1/cobbler/ks_mirror/centos-6.7-x86_64/Packages/$i.rpm .
+done
+
+myiso=/root/myiso
+cd $myiso
+wget -q http://172.16.0.1/cobbler/ks_mirror/centos-6.7-x86_64/isolinux/* .
+mv /root/anaconda-ks.cfg /root/ks.cfg
+sed -i "$@\(img$\)@\1 ks=cdrom:ks.cfg@" $myiso/isolinux.cfg
+mkisofs -R -J -T -v --no-emul-boot --boot-load-size 4 --boot-info-table -V "CentOS6.7 linux" -b isolinux/isolinux.bin -c isolinux/boot.cat -o /root/centos6.7.iso myiso/
+
