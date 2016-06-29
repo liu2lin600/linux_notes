@@ -1,0 +1,692 @@
+2016-06-29
+# edit by liu2lin600
+
+
+    
+传输层协议：TCP，UDP，SCTP
+    tcp: tran Control Protocol
+        面向连接的协议：双方通信前需要先建立虚连接
+    udp: User Datagram Protocol
+        无连接的协议：
+
+C/S架构：
+    Client: 发起应用请求的程序
+    Server: 响应请求的程序
+
+
+DNS：Domain Name Service，应用层协议
+    53/udp, 53/tcp
+
+    FQDN：(Full Qualified Domain Name) www.google.com
+    名称解析：主机名解析，把一种名称转换为另一种名称的过程
+        解析库：某种存储
+            username <--> uid
+
+            某种存储：
+                文本文件
+                关系型数据库
+                LDAP：Lightweight Directory Access Protocol, 389/tcp
+        解析：根所用户所提供一种名称，去查询解析库，以得到另一种名称
+
+    hosts：文本文件
+        IANA：
+            文本文件
+            ftp：--> DNS(中心服务器)
+
+    层级结构：
+        根域：root domain (全球只有13个节点,11美国1日本1瑞~)
+        一级域：top-level domain
+            组织域：.com, .org, .net, .mil, .edu, .gov, .info, .cc, .me, .tv
+            国家域：.cn, .us, .uk, .jp, .tw, .hk, .iq, .ir
+            反向域：.in-addr.arpa
+        二级域：公司、组织、个人使用
+            google, baidu, sina...
+        主机：www, news...
+
+    DNS查询类型：
+        递归：
+            A --> B --> C --> D
+        迭代：
+            A --> B
+            A --> C
+            A --> D
+
+    DNS服务器类型：
+        1. 负责解析至少一个域
+            主DNS服务器：master, 维护所负责的域数据库的那台服务器，可读写
+            从DNS服务器：slave, 数据只能从主服务器上同步，也可解析
+                同步方式：pull
+                    序列号：数据库版本号，主服务器数据库发生变化时其版本号递增
+                    刷新间隔：refresh, 从服务器每多久到主服务器检查序列号更新状况
+                    重试间隔：retry, 同步失败时再次请求时间间隔
+                    过期时长：expire, 始终同步不到时，多久之后放弃同步，并停止提供服务
+                    否定答案缓存时长：
+                主服务器通知从服务器随时更新数据 (push)
+
+        2. 不负责域解析
+            缓存名称服务器, cache
+
+        3. 转发服务器, forward
+
+    一次完整的查询流程：
+        client --> hosts文件 --> local DNS cache --> DNS server (recursion) --> 迭代
+                                  缓存名称服务器
+
+        DNS中的名称与对应的主机的主机名不要求是一样的
+            一个名称可以对应多个IP-->实现负载
+            一个IP上也可以多个名称-->邮件，论坛...
+
+    区域(zone)和域(domain)：
+        www.google.com  ==> 域
+        正向解析：名称(FQDN) --> IP   ==> 区域
+        反向解析：IP --> 名称(FQDN)   ==> 区域
+
+        区域传送：
+            全量传送：axfr，传送整个数据库
+                dig -t axfr IP
+            增量传送：lxfr，仅传送变化的数据
+
+    区域数据库文件：
+        资源记录：rr(resource record)
+            有类型的概念：用于此记录解析的属性
+            SOA：Start Of Authority, 起始授权记录，一个区域文件只能有一个且必须放第一条
+            NS：Name Server，域名服务记录，一个区域解析库可有多个
+            A：Address,地址记录(FQDN --> IP)，专用于正向解析库
+            AAAA：FQDN --> IPv6，专用于正向解析库
+            CNAME：Canonical Name，别名记录
+            PTR：IP --> FQDN，专用于反向解析库
+            MX：Mail eXchange, 邮件交换器，MX记录有优先级属性（0-99数值小优先级高）
+
+        资源记录定义格式：
+            语法：name    [ttl]    IN     RRType  value 
+                        存活时长  关键字 资源类型   值
+
+            SOA：Start Of Authority
+                name: 区域名称，通常可以简写为@
+                value: 主DNS服务器的FQDN，也可以当前区域的区域名称
+                    1)当前区域的名称
+                    2)当有区域管理员的邮箱，但不能使用@，一般使用.来替代
+                    3)
+
+                例如：google.com.   86400   IN      SOA     map.google.com.   admin.google.com. (
+                                20170606    ;serial number，解析库的版本号
+                                2H          ;refresh time，周期性同步的时间间隔
+                                10M         ;retry time，重试的时间间隔
+                                1W          ;expire time，过期时长
+                                1D          ;negative answer ttl，否定答案的统一缓存时长
+                      )   
+
+            NS：name server
+                name: 区域名称
+                value: DNS服务器的FQDN
+
+                例如：
+                    google  86400   IN  NS  plus.google.com.
+                    google  86400   IN  NS  plus2.google.com.
+
+                注意：
+                    如果有多台NS服务器，每一个都必须有对应的NS记录；
+                    对于正向解析文件来讲，每一个NS的FQDN都应该有一个A记录；
+
+            MX：Mail eXchanger
+                name: 当前区域名称
+                value: 邮件服务器的FQDN
+
+                例如：
+                    google  86400   IN  MX  10  mail.google.com.
+                    google  86400   IN  MX  20  mail2.google.com.
+
+                注意：
+                    如果有多台MX服务器，每一个都必须有对应的MX记录；但各MX记录还有优先级属性
+                    对于正向解析文件来讲，每一个NS的FQDN都应该有一个A记录；
+
+            A：Address
+                name: FQDN
+                value: IP
+
+                例如：
+                    www.google.com.     IN   A      1.1.1.1
+                    www.google.com.     IN   A      1.1.1.2
+
+                    pop3.google.com.    IN   A      1.1.1.3
+                    imap.google.com.    IN   A      1.1.1.3
+
+            AAAA：ipv6 IP
+
+            CNAME：Canonical Name
+                name: FQDN格式别名
+                value: FQDN格式的正式名
+
+                例如：
+                    www.google.com.     IN    A    1.1.1.5
+                    web.google.com.     IN    CNAME www.google.com.
+
+            PTR：pointer
+                name: 逆向的主机IP地址加后缀in-addr.arpa，例如172.16.100.7/16, 网络地址为172.16, 主机地址为100.7，其name为7.100.in-addr.arpa.
+                value: FQDN
+
+                例如：
+                    7.100.in-addr.arpa.     IN      PTR     www.google.com.
+
+        注意：
+            1. TTL可以从全局继承
+            2. @可表示当前区域名称
+            3. 相邻两条记录其name一样时，后面可省略
+            4. 对于正向区域来说，各MX，NS等类型记录的value为FQDN应该有一个A记录
+
+
+DNS服务安装配置：
+    BIND：Berkeley Internet Dame Domain （ISC.org）
+        dns：协议
+        bind：dns协的一种实现 
+        named：bind程序的运行进程名
+    程序包：
+        bind-libs:被bind和bind-util包中的程序共同乃用到的库文件
+        bind-utils:bind客户端程序集，如dig,host,nxlookup
+        bind:提供dns server程序及几个常用的测试程序
+        bind-chroot:选装，让named运行在jail模式下
+
+    bind：
+        服务脚本：/etc/rc.d/init.d/named
+        主配置文件：/etc/named.conf, /etc/named.rfc1912.zones, /etc/named.iscdlv.key
+        区域解析库文件：/var/named/ZONE_NAME.zone
+            1. 一台DNS服务器可同时为多个区域提供解析
+            2. 必须要有根区域解析库文件，named.ca
+            3. 还有2个区域解析库文件，localhost和127.0.0.1正反向解析库
+                正向：named.localhost
+                反向：named.loopback
+
+        rndc程序：remote name domain controller
+            默认监听在tcp127.0.0.1:953，因此仅允许本地使用
+
+        bind程序安装完成后，即可做缓存名称服务器使用，如果没有专门负责的解析区域，可直接启动
+            service named start
+            systemctl start named
+
+        主配置文件格式：
+            全局配置段：
+                options{...}
+            日志配置段：
+                logging{...}
+            区域配置段：
+                zone{...}
+
+            注意：配置语句以分号结尾，花括号前后有空格
+
+            缓存名称服务器配置：
+                监听能与外部主机通讯
+                    listen-on port 53 { x.x.x.x; }
+                
+                学习时建议关闭dnssec
+                    dnssec-enable no;
+                    dnssec-validation no;
+                    dnssec-lookaside no;
+
+                关闭仅本机查询
+                    //allow-query { localhost; }
+
+            检查配置文件语法：
+                named-checkconf [/etc/named.conf]
+
+    客户端测试工具：
+        1、host命令：
+            host [-t RR_Type] NAME [SERVER_IP]
+            如：host -t NS www.baidu.com
+
+        2、nslookup命令：
+            nslookup [options] [name] [server]
+
+            交互式：
+            nslookup>
+                server IP:以指定的IP为DNS服务器地址
+                set q={A|SOA|NS|MX}:资源记录类型
+                name:查询的名称
+
+        3、dig命令：测试dns，不会查询hosts文件
+            dig -t RR_TYPE name @server
+                如：dig -t AXFR mageedu.com  @172.16.100.7
+
+            查询选项：
+                +trace：跟踪解析过程
+                +notrace：不跟踪
+                +recurse：递归解析
+                +norecurse：
+
+            测试反向解析：
+                dig -x IP
+
+        4、rndc命令：
+            rndc status
+            rndc flush
+
+    
+
+
+    配置解析一个正向区域：(以li2lin.com为例)
+        1. 定义一个区域在主配置文件或其包含的配置文件/etc/named.rfc1912.zones）
+            zone "liu2lin.com" IN {
+                type {hint|master|slave|forward};
+                file "/var/named/liu2lin.com.zone";
+            };
+
+        2. 建立区域数据文件，创建/var/named/liu2lin.com.zone区域数据文件
+            添加内容：
+                $TTL 3600
+                $ORIDIN liu2lin.com
+                @    IN   SOA   ns1.liu2lin.com.   dnsadmin.liu2lin.com.(
+                    2017010201 1H 10M 3D 1D
+                )
+                     IN   NS    ns1
+                     IN   MX    A   10  mx1
+                     IN   MX    A   20  mx2
+                ns1  IN   A   192.168.99.11
+                mx1  IN   A   192.168.99.12
+                mx2  IN   A   192.168.99.13
+                www  IN   A   192.168.99.11
+                wed  IN  CNAME  www
+                bbs  IN   A   192.168.99.14
+                bbs  IN   A   192.168.99.15
+
+                说明：
+                    1、正向解析和反向解析文件中的名称可以仅使用相对名称，它们均相对当前区域而言
+                    2、绝对后缀可以使用$ORIGIN来定义
+            
+            chgrp named /var/named/liu2lin.com.zone
+            chmod o= /var/named/liu2lin.com.zone
+            named-checkzone ZONE_NAME ZONE_FILE
+            named-checkconf
+
+        3. 让服务器重载配置文件和区域数据文件
+            centos6: rndc reload
+            centos7: systemctl reload named.service
+
+        4. 测试dig
+
+    配置解析一个反向区域：(以li2lin.com为例)
+        1. 定义一个区域在主配置文件或其包含的配置文件/etc/named.rfc1912.zones）
+            zone "ZONE_NAME" IN {
+                type {hint|master|slave|forward};
+                file "ZONE_NAME.zone";
+            };
+
+            注：反向区域的名字为'反写网段.in-addr.arpa' 如: 99.168.192.in-addr.arpa
+
+        2. 建立区域数据文件，创建/var/named/192.168.99.zone区域数据文件
+            添加内容：
+                $TTL 3600
+                $ORIGIN 99.168.192.in-addr.arpa.
+                @    IN   SOA   ns1.liu2lin.com.   nsaadmin.liu2lin.com. (
+                    2017010201  1H  10M  3D  12H
+                )
+                     IN   NS   ns1.liu2lin.com.
+                11    IN   PTR  ns1.liu2lin.com.
+                12    IN   PTR  mx1.liu2lin.com.
+                13    IN   PTR  bbs.liu2lin.com.
+                14    IN   PTR  bbs.liu2lin.com.
+                11    IN   PTR  www.liu2lin.com.
+
+            chgrp named /var/named/192.168.99.zone
+            chmod o= /var/named/192.168.99.zone
+            named-checkzone ZONE_NAME ZONE_FILE
+            named-checkconf
+
+        3. 让服务器重载配置文件和区域数据文件
+            centos6: rndc reload
+            centos7: systemctl reload named.service
+
+        4. 测试dig
+            dig -x 192.168.99.11
+     
+
+    DNS主从服务器：从服务器是区域级别的概念
+        1、时间同步；
+            ntp: network time protocol
+
+            ntpdate NTP_SERVER
+
+            crontab:
+            */3 * * * * /sbin/ntpdate  172.16.0.1  &> /dev/null
+
+        2、bind版本差异
+            二者相同
+            主低、从高
+
+        添加一个从区域：
+            一、从服务器：
+                1. 定义从区域/etc/named.rfc1912.zones
+                    zone "ZONE_NAME" IN {
+                        type slave;
+                        file "slaves/ZONE_NAME.zone";
+                        masters { 192.168.99.1; };
+                    };
+
+                    named-checkconf:语法检查
+
+                        /var/named/slave/目录专用来存放从服务配置文件（写权限）
+
+                2. 重载配置
+                    rndc reload named
+
+            二、主服务器：
+                1. 确保区域数据文件中的每个服务配置NS记录，并且在正向区域文件线个从服务器的NS记录的主机名配置一个A记录，且A后为真正的地址
+                    liu2lin.com.    IN  NS    ns2.liu2lin.com.
+                    ns2.liu2lin.com.  IN   A   192.168.99.16 
+                注：并修改解析库的版本号
+
+                2. 重载配置(最好主服务先重载，然后从服务再重载)
+
+
+    区域传送的限制功能：
+        主、从
+
+        bind: 有内置的ACL
+            none: 所有都不
+            any: 任意
+            localhost: 本机
+
+        allow-transfer { ip; ip; ip; ... };
+
+
+    DNS子域授权：
+        liu2lin.com
+            www.liu2lin.com
+            子域：
+                ops.liu2lin.com
+                    www.ops.liu2lin.com
+                    ftp.ops.liu2lin.com
+                dev.liu2lin.com
+                    www.dev.liu2lin.com
+
+
+        正向解析区域授权子域的方法：
+            1. 主服务器上区域文件添加
+                ops     IN      NS      ns.ops
+                ops     IN      NS      ns2.ops
+                ns.ops  IN      A       172.16.100.77
+                ns2.ops IN      A       172.16.100.78
+
+                dev     IN      NS      ns.dev
+                ns.dev  IN      A       172.16.100.88
+
+            2. 子域服务器主配置文件添加监听本地主机并开启（此时为缓存名称服务器）
+            3. 添加正向区域 ops.liu2lin.com,方法略
+            4. 检查语法并重载
+            5. dig -t A www.ops.liu2lin.com @本机IP
+
+
+        定义转发：
+            注：被转发的服务器必须允许当前服务做递归
+
+            配置区域转发：仅转发对某特定区域的解析请求
+                /etc/named.rfc1912.zones
+                zone "liu2lin.com" IN {
+                    type forward;
+                    foward only|first;
+                    forwarders { IP; };
+                }
+                    first:首先转发，转发器不响应时自行去递归
+                    only:只转发
+
+
+            配置全局转发：转发所有的非本机负责的区域的请求至某指定的DNS服务器
+                /etc/named.conf
+                options {
+                    ...
+                    forward only|first;
+                    forwarders { SERVER_IP; };  # 指定DNS来解析
+                }
+
+
+    bind中的安全相关配置：
+        acl：访问控制列表，把一个或多个地址归并一个命名的集合，随后通过此名称即可对此集合内的所有主机实现统一调用
+            /etc/named.conf：放置在options上方
+            acl ACL_NAME {
+                ip;
+                ip;
+                network;
+            };
+
+            如：
+                acl mynet {
+                    172.16.0.0/16;
+                    192.168.0.0/24;
+                };
+
+                allow-recursion { mynet; };      # 仅允许指定网段的主机发起递归查询请求
+
+        bind内置4个acl：
+            none：没有一个主机
+            any：任意主机
+            local：本机
+            localnet：本机所在的IP所属网络
+
+        访问控制指令：/etc/named.conf和/ect/named.rfc1912.zones
+            allow-query { ...; };       # 允许查询的主机，白名单
+            allow-transfer { ...; };    # 允许向哪些主机做区域传送，默认所有，应该配置仅允许从服务器
+            allow-recursion { ...; };   # 允许哪些此主机向当前dns服务器发送递归查询请求
+            allow-update { ...; };      # 允许动态更新区域数据库文件内容
+
+
+    bind view：视图，脑裂（split-brain）
+        根据客户端来源的不同，将同一个名称解析至不同的值，达到智能解析效果
+
+        view VIEW_NAME {
+            match-clients { telecom; };
+            zone "liu2lin.com" IN {
+                type master;
+                file "liu2lin.com.tel";
+            };
+        };
+
+        view VIEW_NAME {
+            match-clients { unicom; };
+            zone "liu2lin.com" IN {
+                type master;
+                file "liu2lin.com.uni";
+            };
+        };
+
+        使用view注意的事项：
+            1、通常只为内网客户端提供递归功能，提供根区域等；
+            2、通过只为外网客户端提供本机所负责的区域的解析；
+
+
+
+^^^^^^^^以下内容做简单了解^^^^^^^
+
+    bind dlz
+
+    总结：master/slave, subdomain, view, acl; 
+
+        博客：
+            1、bind安装配置(正反向解析)
+            2、主从复制
+            3、子域授权和转发
+            4、view
+
+
+编译安装named：
+
+    1、编译安装
+        # groupadd -g 53 -r named
+        # useradd -g named -r -u 53 named
+
+        # tar xf bind-9.9.5.tar.gz
+        # cd bind-9.9.5
+        # ./configure --prefix=/usr/local/bind9 --sysconfdir=/etc/named --disable-ipv6 --disable-chroot enable-threads
+        # make && make install
+
+        (1) 修改PATH环境变量
+        (2) 导出帮助手册
+        (3) 库文件和头文件的导出
+
+    2、提供主配置文件/etc/named/named.conf
+
+        options {
+            directory "/var/named";
+            recursion yes;
+        };
+
+        zone "." IN {
+            type hint;
+            file "named.ca";
+        };
+
+        zone "localhost" IN {
+            type master;
+            file "localhost.zone";
+            allow-update { none; };
+        };
+
+        zone "0.0.127.in-addr.arpa"  IN {
+            type master;
+            file "127.0.0.zone";
+            allow-update { none; };
+        };
+
+    3、为根及localhost提供区域解析库
+        (1) named.ca
+        # dig -t NS . @a.root-servers.net > /var/named/named.ca
+
+        (2) localhost.zone
+        $TTL 86400
+        @   IN  SOA localhost.  admin.localhost. (
+                    2014080501
+                    3H
+                    15M
+                    7D
+                    1D )
+        IN  NS  localhost.
+        IN  A   127.0.0.1   
+
+        (3) 127.0.0.zone
+        $TTL 86400
+        @   IN  SOA localhost.  admin.localhost. (
+                        2014080501
+                        3H
+                        15M
+                        7D
+                        1D )
+            IN  NS  localhost.
+        1   IN  PTR localhost.
+
+        修改权限及属主属组
+
+    4、尝试启动缓存名称服务器
+        # named-checkconfig
+        # named -g -u named -c /etc/named/named.conf
+
+        # named -u named
+
+    5、提供rndc
+        # rndc-confgen -r /dev/urandom > /etc/named/rndc.conf
+        # chown root:named /etc/named/rndc.conf
+        # chmod 440 /etc/named/rndc.conf
+
+        把rndc.conf中的后半段复制到named.conf中，并启用之；
+
+    6、提供一个需要解析域；
+    7、提供脚本
+            #!/bin/bash
+            #
+            # description: named daemon
+            # chkconfig: - 25 80
+            #
+            pidFile=/usr/local/bind9/var/run/named.pid
+            lockFile=/var/lock/subsys/named
+            confFile=/etc/named/named.conf
+
+            [ -r /etc/rc.d/init.d/functions ] && . /etc/rc.d/init.d/functions
+
+            start() {
+                if [ -e $lockFile ]; then
+                    echo "named is already running..."
+                    exit 0
+                fi
+
+                echo -n "Starting named:"
+                daemon --pidfile "$pidFile" /usr/local/bind9/sbin/named -u named -c "$confFile"
+                RETVAL=$?
+                echo
+
+                if [ $RETVAL -eq 0 ]; then
+                    touch $lockFile
+                    return $RETVAL
+                else
+                    rm -f $lockFile $pidFile
+                    return 1
+                fi
+            }
+
+            stop() {
+                if [ ! -e $lockFile ]; then
+                    echo "named is stopped."
+                #   exit 0
+                fi
+
+                echo -n "Stopping named:"
+                killproc named
+                RETVAL=$?
+                echo
+
+                if [ $RETVAL -eq 0 ];then
+                    rm -f $lockFile $pidFile
+                    return 0
+                else
+                    echo "Cannot stop named."
+                    failure
+                    return 1
+                fi
+            }
+
+            restart() {
+                stop
+                sleep 2
+                start
+            }
+
+            reload() {
+                echo -n "Reloading named: "
+                killproc named -HUP
+                #killall -HUP named
+                RETVAL=$?
+                echo 
+                return $RETVAL
+            }
+
+            status() {
+                if pidof named &> /dev/null; then
+                    echo -n "named is running..."
+                    success
+                    echo
+                else
+                    echo -n "named is stopped..."
+                    success
+                    echo
+                fi
+            }
+
+            usage() {
+                echo "Usage: named {start|stop|restart|status|reload}"
+            }
+
+            case $1 in
+            start)
+                start ;;
+            stop)
+                stop ;;
+            restart) 
+                restart ;;
+            status)
+                status ;;
+            reload)
+                reload ;;
+            *)
+                usage 
+                exit 4 
+                ;;  
+            esac    
+
+        8、性能测试
+            queryperf
+            dnstop

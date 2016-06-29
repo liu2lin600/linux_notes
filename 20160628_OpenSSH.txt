@@ -1,0 +1,173 @@
+2016-06-28
+# edit by liu2lin600
+
+OpenSSH简介：
+
+远程连接：
+    telnet服务：明文传输，监听tcp协议的23号端口
+        客户端：telnet
+        服务器：telnet-server
+        查看：ss -tan |grep 23
+
+        默认禁止管理员直接登陆，
+
+    ssh：Secure SHell，监听tcp协议的22号端口
+        注：建议使用普通用户登录。而后su到管理员
+
+        C/S：
+            Server：OpenSSH(sshd)，监听tcp22
+            Client：OpenSSH(ssh, scp)
+            windows客户端：xmanager(xshell)、SecureCRT、putty、sshshellcilent
+
+        流程：
+            一、主机认证
+
+            二、用户认证
+                1. 基于口令认证
+                2. 基于密钥认证
+        
+        sshv1,sshv2，由于sshv1是居于CRC-32做MAC，因此，不安全，建议勿用
+        sshv2 基于双发主机协商选择最安全的MAC实现机制
+            加密机制和MAC机制是双方协商选定
+            基于DH实现密钥交换，基于RSA或DAS实现身份认证
+            客户端通过检查服务端的主机密钥来判断是否与其进一步通信
+
+OpenSSH：
+    配置文件：
+        sshd：/etc/ssh/sshd_config
+        ssh：/etc/ssh/ssh_config
+
+OpenSSH客户端组件：
+    ssh：
+        ssh [-p PORT] Username@HOST [command]
+        ssh [-p PORT] -l Username HOST [command]
+
+        注：如果不跟用户名时，默认使用本地用户名作远程登录名
+
+        ssh认证机制：
+            一、基于口令认证
+            二、基于密钥认证
+                1. 客户端生成密钥对默认保存家目录下的.ssh下的id_rsa，公钥在id_rsa.pub
+                ssh-keygen [-t rsa|dsa|ecdsa] [-q] [-b bits] [-f OUT_FILE] [-P PASS] 
+                    ssh-keygen -t rsa
+                
+                2. 复制密钥至远程主机 (保存于~/.ssh/authorized_keys)
+                    ssh-copy-id [-i PUB_KEY] USER@HOST:/xxx
+    
+    scp：类cp命令，基于ssh协议跨主机复制
+        scp [OPTION] SRC1[ SRC2...] DEST
+       
+        分两种情况：
+            1. 源文件在本机，目标为远程，即上传
+                scp /path/to/somefile ... User@HOST:/path/to/somewhere
+            
+            2. 源文件在远程，目标在本机，即下载
+                scp User@HOST:/path/to/somefile /path/to/somewhere
+
+            常用选项:
+                -r：当源文件为目录，以实现递归复制
+                -p：保留源文件的复制及修改时间戳，以及权限
+                -q：静默模式
+                -P PORT：指定服务器端口
+
+    sftp：基于ssh安全文件传输机制
+        C/S架构：
+            C：sftp
+            S：由sshd服务进程管理，centos上默认开启，sshd配置文件中
+                Subsystem  sftp    /usr/libexec/openssh/sftp-server
+
+        用法：sftp [User@]HOST
+
+
+openSSH服务器端：sshd
+    
+    主配置文件：/etc/ssh/sshd_config
+    服务脚本：/etc/rc.d/init.d/sshd
+    脚本配置文件：/etc/sysconfig/sshd
+
+    查看帮助： 
+        man sshd_config     man sshd
+        man ssh_config      man ssh
+
+    /etc/ssh/sshd_config配置：   
+        Port 22             # 监听端口
+        AddressFamily any   # ipv4 ipv6
+        ListernAddress      # 当前主机的监听地址
+        Protocol            # 协议版本
+        
+        HostKeys for protocol version 2
+        HostKey /etc/ssh/ssh_host_rsa_key
+        HostKey /etc/ssh/ssh_host_dsa_key   # 验证主机的公钥
+        KeyRegenerationInterval 1h  # 密钥的使用时间
+        ServerKeyBits 1024  # 密钥长度
+        
+        LogLevel INFO       # 日志级别
+        LoginGraceTime 2m   # 登陆宽限期
+        PermitRootLogin yes # root是否可以登录
+        StrictModes yes     # 严格模式，家目录 属主 属组
+        MaxAuthTries 6      # 最多可以承受的次数
+        MaxSessions 10      # 最大并发连接数
+        
+        PasswordAuthentication yes  # 是否使用用户名和密码的方式
+        Kerberos            # 统一认证管理
+        X11Forwarding yes   # 是否转发图形窗口
+        PrintMotd           # 登录是否显示/etc/motd内容
+        PrintLastLog        # 显示上次登录日志
+        UseDNS no           # dns反解
+        Subsystem           # sftp
+        
+        AllowUsers user1...     # 用户白名单
+        Allowgroups  grp1...    # 组白名单
+        DenyUser  user1...      # 用户黑名单   
+        DenyGroup grp1...       # 
+  
+
+使用ssh的最佳实践：
+    1. 不要使用默认的22号端口
+    2. 不要使用protocol v1
+    3. 限制可登录的用户
+        白名单：
+            AllowUsers user1 user2 ...
+            AllowGroups grp1 grp2...
+        黑名单：
+            DenyUsers 
+            DenyGroups
+    4. 设定空闲会话超时时长
+        ClientAliveInterval 300 
+        ClientAliveCountMax 0
+    5. 利用防火墙设置ssh访问策略
+    6. 仅监听在特定的IP地址，而非本机所有的IP地址
+    7. 使用强密码策略
+        tr -dc A-Za-z0-9_ < /dev/urandom | head -c 30 | xargs
+    8. 使用基于密钥的认证
+    9. 禁止使用空密码
+    10. 禁止root用户直接登录
+    11. 限制ssh的访问频度和并发在线数
+    12. 做好日志，经常分析
+
+命令总结：ssh, ssh-keygen, ssh-copy-id, scp, sftp, sshd
+文件总结：
+    ~/.ssh/known_hosts
+    ~/.ssh/id_rsa
+    ~/.ssh/id_rsa.pub
+    ~/.ssh/authorized_keys
+    /etc/ssh/ssh_config
+    /etc/ssh/sshd_config
+    /var/log/secure         # 登录日志
+
+
+
+ssh协议的另一个实现：dropbear, 轻量化的实现方案，多用于嵌入式环境中
+    工具：
+        dropbear: 服务端程序
+            -p [IP:]PORT：
+            -F：前台
+            -E：将日志发往错误输出
+
+        dbclinet: ssh协议客户端程序
+            dbclinet [opt] [User@]Host[/PORT]... [COMMAND]
+
+        dropbeatkey:主机密钥生成工具
+            dropbearkey -t type -f file [-s bits]
+
+

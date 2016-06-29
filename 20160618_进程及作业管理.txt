@@ -1,0 +1,291 @@
+2016-06-18
+
+进程管理：
+
+    程序文件：静态文件
+        指令+数据
+            指令:CPU ，加工数据
+                输出机制：
+
+    进程：运行中程序
+        CPU：（ring0: kernel, ring3: user program）
+            mkdir --> system call (由内核执行代码)
+
+
+    用户态，用户模式：--> 内核态、内核模式
+        软中断：soft interrupt, si
+
+    Linux: 多用户、多任务
+
+        内存：分段、分页
+
+        进程：进程+内核
+            内存：4G，
+                1G：内核
+                3G：进程
+
+            线性地址空间
+            物理地址空间
+
+            内核：精心编造一个数据结构
+                tast structure：任务结构
+
+            进程调度：
+                程序，算法
+                    算法复杂度：
+                        BIG O 
+                        O(1)
+                        O(logn)
+                        O（n）
+                        O(N^2)
+                        O(2^N)
+
+                    mmu: memory management unit
+
+            进程分类：
+                CPU-Bound: 
+                I/O-Bound: 
+
+        内核：进程调度、内存管理
+            CFS
+
+        进程分类：
+            批处理进程
+            交互式进程
+            实时进程
+
+        进程优先级：0-139
+            实时优先级：0-99，数字越大，优先级越高
+            静态优先级：100-139，数字越小，优先级越高
+                nice值：-20, 19
+                    进程启动，默认nice值为0
+            动态优先级：由内核维护，动态调整
+
+        进程状态：
+            运行态：running
+            睡眠态：sleeping
+                可中断睡眠：interruptable
+                不可中断睡眠：等待外部满足之前无法继续运行, uninterruptable
+            停止态：不会被内核调度并运行，stopped
+            僵死态：zombie
+
+        进程创建机制：每一个进程都是由其父进程fork()自身而来；
+
+        进程间通信：IPC (InterProcess Communication)
+            同一主机：
+                signal
+                shm：共享内存
+                semerphor: 旗语
+
+            不同主机：
+                rpc: Remote Procedure Calling
+                socket: 
+
+        CPU虚拟化：时间片, timeslice
+            5ms
+
+            保存现场、恢复现场
+
+            5ms, 2ms, 5ms
+            1ms, 2ms, 1ms, 2ms
+
+            抢占式多任务
+
+        线程：比进程更小的可以被单独调度的单位；
+            thread: lwp
+
+计算机开机的时候，内核（kernel）只建立了一个 init 进程。剩下的所有进程都是 init 进程通过 fork 机制建立的，新的进程要通过老的进程复制自身得到。fork 是一个系统调用。
+进程存活于内存中。每个进程都在内存中分配有属于自己的一片空间 (内存空间，包含栈、堆、全局静态区、文本常量区、程序代码区)。当一个程序调用 fork 的时候，实际上就是将上面的内存空间，又复制出来一个，构成一个新的进程，并在内核中为该进程创建新的附加信息 (比如新的 PID，而 PPID 为原进程的 PID)。此后，两个进程分别地继续运行下去。新的进程和原有进程有相同的运行状态(相同的变量值，相同的指令…)。我们只能通过进程的附加信息来区分两者。
+程序调用 exec 的时候，进程清空自身的内存空间，并根据新的程序文件重建程序代码、文本常量、全局静态、堆和栈(此时堆和栈大小都为 0)，并开始运行
+
+
+Linux进程管理工具：ps, pstree, pidof, top, htop, pmap, vmstat, dstat, kill, job, glance
+
+    pstree: 查看进程树
+
+    ps: 显示进程状态的命令，快照式、一次性
+        支持两种风格：SysV, BSD
+
+        进程：
+            与终端相关的进程: a
+            与终端无关的进程：x
+
+            常用组合：ps aux
+                VSZ: Virtual memory SiZe
+                RSS: 常驻内存集
+
+            STAT状态：
+                R: running
+                S: 可中断睡眠
+                D：不可中断睡眠
+                T：stopped
+                Z：zombie
+
+                s: session leader
+                +：前台进程
+                l: 多线程进程
+                N：低优先级进程
+                <: 高优先级进程
+
+            COMMAND：包含在方括号中的进程表示为内核线程
+
+            常用组合：ps -ef
+                -e: 显示所有进程
+                -f: 显示完整格式的信息
+
+            常用组合：ps -eFH
+                -F: 显示额外信息
+                -H：显示进程的层次结构
+
+            自定义要显示的信息：-o
+                ps axo pid,command,psr,pri,ni
+                    ni: nice值
+                    pri: 优优级
+                    psr: 运行的CPU
+
+            pgrep 
+                -U UID：仅显示由指定用户启动的进程
+                -G GID：仅显示与指定组相关的进程
+                -t term...: 仅显示与指定终端相关的进程
+                -l: 同时显示进程号和程序名
+
+            pidof:显示指定命令所启动的进程的ID
+                pidof COMMAND
+
+        top: 
+            M: 内存百分比
+            P: CPU百分比
+            T: 累积占用的CPU时间
+
+            l: 显示或不显示负载信息
+                过去1分钟、5分钟、15分钟的平均负载
+                    等待运行的进程队列的长度
+            t: 显示或不显示进程及CPU相关的信息
+                1: 数字，分别显示各CPU的相关信息
+                    us: user space
+                    sy: system
+                    ni: 
+                    id: 
+                    wa: wait io
+                    hi: hardware interrupt
+                    si: soft interrupt
+                    st: 
+            m: 显示或不显示物理内存和交换内存的相关信息
+
+            q: 退出
+            k: 终止指定进程
+            s: 修改刷新时间间隔
+
+            常用选项：
+                -d #: 指定刷新时间间隔
+                -b: 以批次的方式显示top的刷新
+                -n #: 显示的批次
+
+        htop: 
+            u: 交互式选择显示指定用户的进程
+            l: 显示光标所在进程所打开的文件列表
+            s: 显示光标所在进程执行的系统调用
+            a: 绑定进程到指定的CPU
+            #：快速定位光标至PID为#的进程上
+
+            F1：获取帮助
+
+        vmstat: 
+            procs:
+                r: 运行队列的长度
+                b: 被阻塞（等待IO完成）队列的长度
+
+            memory: 
+                swpd: 从物理内存交换至swap中的数据量
+                free: 空间物理内存
+                buffer:
+                cache：
+
+            swap:
+                si: swap in, 数据进入swap中的数据速率，kb/s
+                so: swap out，数据离开swap中的数据速率
+
+            io:
+                bi: block in, 从块设备读入的数据速率，kb/s
+                bo: block out，保存至块设备的数据速率
+
+            system:
+                in: interrupt, 中断速率
+                cs: context switch, 进程切换速率
+
+            cpu:
+                us, sy, id, wa, st
+
+            -s: 显示内存统计数据
+
+
+Linux作业控制：
+        job
+
+        前台作业：通过终端启动，并在终止之前一直占据着终端
+        后台作业：作业启动之后即运行于后台，释放前台
+
+        交互式模式：手动启动的非守护进程类的程序，一般都运行于前台；
+
+        如何将作业运行于后台：
+            1、运行中的作业：
+                Ctrl+z
+                    送往后台后，作业处于STOPPED状态
+            2、尚未启动作业：
+                COMMAND &
+
+                此类由手动方式控制的作业，与终端相关作业会被终止；如果把作业送往后台，且与终端无关：
+                    # nohup COMMAND &
+
+        作业：作业号
+            # jobs
+
+        作业控制命令：
+            # fg [[%]JOBNUM]: 将指定的作业调回前台
+            # bg [[%]JOBNUM]: 让送往后台的作业在后台继续运行
+            # kill %JOBNUM: 终止指定的作业
+
+    进程查看：htop
+        uptime, vmstat, iostat, netstat, ifstat, nfsstat
+
+        dstat
+            -c: 显示CPU统计数据
+            -d: 显示disk统计数据
+            -D DISK: 只显示指定disk的统计数据
+            -g: 显示page的统计数据
+            -i: 显示中断的统计数据
+            -m: 显示内存的统计数据
+            -l: 显示系统负载的统计数据
+            -n: 显示网络接口相关
+            -N INTERFACE: 仅显示指定的网络接口的数据
+            -s: 显示交换内存
+            -p: 进程队列
+            --ipc: 显示ipc消息队列、信号量和共享内存的使用状况
+            -y: 系统状态数据
+
+            默认相当于使用“dstat -cdngy”，也相当于“dstat -a”
+
+            此外，使用"dstat -f", 以完整格式显示所有信息，
+
+            再者，使用"dstat -v"，显示结果类似于vmstat命令
+
+            网络连接状态统计：
+                --tcp
+                --udp
+                --raw
+                --unix
+
+    /proc/#/maps:
+        进程内存映射表
+
+        pmap命令：显示指定进程的物理内存空间映射表
+        pmap PID
+
+    glances: 
+        由epel源所提供
+
+
+课外作业：nmap, netcat, tcpdump, nethogs, iftop
+
+命令总结：ps, pstree, pgrep, pidof, top, htop, vmstat,nice, renice, jobs, bg, fg, nohup, kill, dstat, uptime, pmap, glances
+        

@@ -148,6 +148,9 @@ bootloader：引导加载器，是一个程序
 
                 /boot/grub/
                     stage2：读取配置文件grub.conf
+
+grub 0.x相关内容：
+
     Grub的功能：
         1.选择要启动的内核或系统，允许传递参数给内核，能隐藏交互式接口
         2.交互式接口。e: 编辑模式, c: 命令模式
@@ -235,11 +238,37 @@ grub文件损坏时，需使用光盘引导紧急求援模式去安装grub：
         sync 将内存文件加载到硬盘上
 
 
+>> grub2相关内容：
 
-  HOST:宿主机
-  Target：目标机
+grub2主配置文件：/boot/grub2/grub.cfg
+    不建议直接编辑，使用grub2-mkconfig命令读取下面模版文件生成
+    grub2-mkconfig -o /boot/grub2/grub.cfg
+
+grub2配置文件模版：/etc/default/grub
+    GRUB_TIMEOUT=5                  # 指定默认倒数读秒的秒数
+    GRUB_TIMEOUT_STYLE=hidden       # 是否隐藏菜单，menu, countdown, hidden
+    GRUB_DEFAULT=saved              # 指定默认开机菜单项，值有saved, 数字, title , ID
+    GRUB_DISABLE_SUBMENU=true       # 是否要隐藏次菜单，通常是藏起来的好！
+    GRUB_TERMINAL_OUTPUT="console"  # 指定数据输出的终端机格式，默认是通过文字终端机
+    GRUB_CMDLINE_LINUX="rd. lvm. lv=centos/root rd. lvm. lv=centos/swap crashkernel=auto rhgb quiet"  # 就是在menuentry 括号内的linux16项目后续的核心参数
+    GRUB_DISABLE_RECOVERY="true"    # 取消救援菜单的制作
+    GRUB_DISABLE_OS_PROBER=true     # 取消/etc/grub.d/30_os-prober文件执行
+
+grub2配置文件菜单创建脚本：/etc/grub.d/ *
+    00_header：创建初始的显示项目，包括需要载入的模块分析、屏幕终端机的格式、倒数秒数、菜单是否需要隐藏等等
+    10_linux：分析/boot下面的文件，尝试找到正确的linux核心与读取这个核心需要的文件系统模块与参数等  
+    30_os-prober：找其他的分区里可能含有的操作系统，然后将该操作系统做成菜单来处理 
+    40_custom：如需自己手动添加其它菜单项目可添加到此，可以从主配置中复制过来修改
+
+grub2安装：
+    grub2-install [OPT] INSTALL_DEVICE
+
+
+
+
+
   
-基于HOST只做一个简单的可启动的Linux：
+基于HOST宿主机只做一个简单的可启动的Linux：
 
 1、给目标磁盘分区，两个
     宿主机上：/dev/sdb1 /dev/sdb2
@@ -280,13 +309,27 @@ Linux的内核，单内核，支持动态装载和卸载，内核模式强烈依赖与相对应的内核版本
         insmod 路径文件         # 装载某模块
 
 ramdisk文件管理：(initramfs)
+    功能：
+        1. 根目录所在磁盘为SATA、USB或SCSI等连接接口提供模块
+        2. 根目录所在文件系统为LVM,RAID等特殊格式提供模块
+        3. 根目录所在文件系统为非传统Linux认识的文件系统时提供模块
+        4. 其他必须要在核心载入时提供的模块
+    
     mkinitrd命令：为当前使用的内核重新制作ramdisk文件
         --with=<module>: 除了默认的模块之外需要装载到initramfs中的模块
         --preload=<module>: initramfs所提供的模块需要预先装载的模块
         例：mkinitrd /boot/initramfs-$(uname -r).img  $(uname -r)
 
     dracut命令：比较底层创建
+        dracut [-fv] [--add-drivers LIST] initramfd_NAME $(uname -r)
+        -f：强行编译，如果initramfs文件已经存在，则覆盖掉旧文件
+        -v：显示过程    
+        --add-drivers：添加的模块
+        --filesystems：加入某些额外的文件系统支持
+        --modules：将dracut所提供的开机所需模块（核心核模块）载入，可用模块在下面的目录内
+/usr/lib/dracut/modules.d/
 
+        例：dracut -v --add-drivers "e1000e" --filesystems "ext4 nfs" initramfs-test.img 3.10.0-327.el7.x86_64
 
 
 chkconfig --list： 查看所有独立守护服务的启动设定；独立守护进程！

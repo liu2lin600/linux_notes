@@ -1,0 +1,203 @@
+2016-06-27
+# edit by liu2lin600
+
+
+openssl
+
+加密相关知识：
+
+    加密方式：对称加密、公钥加密、单向加密
+    明文：plaintext，cleartext -->密文 -->
+
+    1. 对称加密：加密算法+口令，加密和解密使用同一个口令
+        算法：
+        DES（56bits）：数据加密标准
+        3DES：加密3次DES
+        AES（128bits）：高级加密标准
+        Blowfish, Twofish, IDEA, RC6, CAST5, Serpent...
+        
+        特性：
+            1. 加密/解密使用统一口令
+            2. 将原文分割成固定大小的数据块，对这些块进行加密ECB,CBC
+
+        缺陷：
+            1. 口令传输
+            2. 密钥太多
+
+        密钥交换：
+        用户认证：
+        数据完整性：
+
+
+    2. 非对称加密：公钥，私钥，公钥私钥都能加密，解密，效率比对称加密低
+        算法：RSA, EIGmal, DSA(身份认证)
+        1. 密钥交换(发送方用对方的公钥加密自己的密码发给对方)
+        2. 数字签名(用户身份认证)
+        3. 数据加密
+    
+    3. 单向加密：用于获取数据特征码，并不对数据本身进行加密
+        算法：MD5,SHA1,SHA512，CRC-32（循环冗余校验码）
+        1. 完整性
+
+        只需身份认证算法：消息认证算法，MAC(Message Authenntication Codes)，主要有CBC-MAC，HMAC
+
+        缺点：雪崩效应，定长输出
+
+    CA机构：
+        1. 自签证书
+        2. 签署证书
+        3. 传给用户
+        4. 维护吊销列表
+
+    密钥交换：IKE（Internet Key Exchange）
+        RSA、DH算法
+
+    PKI：Pubile key Infrastucture 公钥基础设施
+        签证机构：CA
+        注册机构：RA
+        证书吊销列表：CRL
+        证书存取库：
+
+        x.509v3：定义证书的结构及认证协议标准
+            版本号、序列号、签名算法ID、发行者名称、有效期、主体名、主体公钥、发行者的唯一标识、主体的唯一标识、扩展、发行者的签名
+
+    SSL协议：Secure Socket Layer 安全套接字层(网景公司1994)
+        sslv1, sslv2, sslv3
+
+    TLS协议：Transport Layer Security 传输层安全(IETF1999)
+        tlsv1.0 v1.1 v1.2...
+
+        分层设计：
+            1. 最底层，基础算法原语实现，aes,rsa,md5...
+            2. 第二层，各种算法的实现
+            3. 组合简洁的实现的半成品
+            4. 用各种组件拼装而成的各种成品密码学协议软件
+
+        ssl会话三步：
+            1. 客户端向服务器索取并验证证书
+            2. 双方协商生成‘会话密钥’
+            3. 双方采用‘会话密钥’进行加密通信
+
+    协议开源实现：OpenSSL、gpg
+
+
+openssl：套件，开源程序
+    libcrypto：通用功能的加密库(开发者使用)
+    libssl：用于实现TLX/SSL的功能(开发者使用)
+    openssl：多功能命令工具
+        生成密钥，创建数字证书，手动加密解密数据
+
+
+    对称加密：
+        工具：openssl enc
+        算法：3DES, AES, Blowfish...
+        加密：openssl enc -e -des3 -a -salt -in /ets/fstab -out /tmp/fstab.cipher
+        解密：openssl enc -d -des3 -a -salt -in /tmp/fstab.cipher  -out /tmp/xxx
+
+    单向加密：(消息摘要算法)
+        工具：openssl dgst, sha1sum, md5sum
+        算法：md5, sha1, sha512
+        加密：openssl dgst [-md5|-md4|-md2|-sha1|-sha|-mdc2|-ripemd160|-dss1][-out filename] /path/to/somefile
+   
+    生成用户密码：
+        工具：passwd openssl passwd
+            openssl passwd -1 -salt SALT
+ 
+    生成随机数：
+        工具：openssl rand
+            openssl rand -base64 NUM
+            openssl rand -hex NUM
+
+    公钥加密：公钥加密，私钥解密
+        加密解密：
+            算法：RSA，EIGamal
+            工具：gpg openssl rsautl
+
+        数字签名：私钥加密，公钥解密
+            算法：RSA，EIGamal，DSA
+                DSA:Digital Signature Algorithm
+                DSS: Digital Signature standard
+        密钥交换：IKE
+            算法：DH（Diffie-Hellman），公钥加密
+
+        生成密钥：
+            私钥：(umask 077;openssl genrsa -out /XXX NUM_bits)
+                使用()让命令在子shell中运行，这样不影响当前shell的mask值，NUM_bits为2的n次方如2048
+            公钥：openssl rsa -in /XXX -pubout
+                公钥是从私钥中提取而来
+
+
+
+用openssl实现私有CA：
+	配置文件：/etc/pki/tls/openssl.cnf
+
+	1. 生成密钥对儿
+		(umask 077; openssl genrsa -out /etc/pki/CA/private/cakey.pem 2048)
+		查看公钥：openssl rsa -in private/cakey.pem -pubout -text -noout
+
+	2. 生成自签证书
+		openssl req -new -x509 -key /etc/pki/CA/private/cakey.pem -out /etc/pki/CA/cacert.pem -days 365
+        -new:生成新证书签署请求
+        -x509:生成自签格式证书，专用于创建私有CA
+        -key:生成请求时用到的私有文件路径
+        -out:生成的请求文件，如果是自签操作则直接生成签署过的证书
+        -days:证书有效时长，天
+        回车后填写的内容：
+            国家代码：CN，省，城市，公司，部门，个人或服务器名，邮件
+
+    3. 为CA提供所需目录及文件
+        mkdir /etc/pki/CA{cert,crl,newcerts}    # 如果已生成则此步省略
+        touch /etc/pki/CA{serial,index.txt}
+        echo 01 > /etc/pki/CA/serial
+
+
+用openssl实现证书申请：
+	1. 在主机上生成密钥，保存至应用此证书的服务的配置文件目录下, 例如
+		mkdir /etc/httpd/ssl
+		cd /etc/httpd/ssl
+		(umask 077; openssl genrsa -out httpd.key 2048)
+
+	2. 生成证书签署请求
+		openssl req -new -key httpd.key -out httpd.csr 
+
+	3. 将请求文件发往CA主机
+        scp httpd.csr root@xxx:/tmp
+	
+    4. CA签署证书(CA主机上操作)
+		openssl ca -in /tmp/httpd.csr -out /etc/pki/CA/certs/httpd.crt -days DAYS
+        查看证书信息：
+            openssl x509 -in /etc/pki/CA/certs/httpd.crt -noout -serial -subject
+
+	5. 将证书传回请求者
+        scp /etc/pki/CA/certs/httpd.crt root@xxx:/etc/httpd/ssl/
+
+        注：生成后可将httpd.csr文件删除，确保安全
+
+	吊销证书：
+        1. 客户机获取要吊销的证书serial
+            openssl x509 -in /etc/pki/CA/serts/httpd.crt -noout -serial -subject
+        2. CA主机吊销证书
+            openssl ca -revoke /etc/pki/CA/newcerts/SERIAL.crt
+        3. 生成吊销证书的吊销编号（第一次吊销证书时执行）
+            echo 01 > /etc/pki/CA/crlnumber
+        4. 更新证书吊销列表
+            openssl ca -gencrl -out thisca.crl
+            查看crl文件
+                openssl crl -in xxx.crl -noout -text   
+
+openssl补充：
+	openssl中有如下后缀名的文件
+	.key格式：私有的密钥
+	.crt格式：证书文件，certificate的缩写
+	.csr格式：证书签名请求（证书请求文件），含有公钥信息，certificate signing request的缩写
+	.crl格式：证书吊销列表，Certificate Revocation List的缩写
+	.pem格式：用于导出，导入证书时候的证书的格式，有证书开头，结尾的格式
+		 
+	常用证书协议：
+		x509v3: IETF的证书标准
+		x.500:目录的标准
+		SCEP:  简单证书申请协议，用http来进行申请，数据有PKCS#7封装，数据其实格式也是PKCS#10的
+		PKCS#7:  是封装数据的标准，可以放置证书和一些请求信息
+		PKCS#10:  用于离线证书申请的证书申请的数据格式，注意数据包是使用PKCS#7封装这个数据
+		PKCS#12:  用于一个单一文件中交换公共和私有对象，就是公钥，私钥和证书，这些信息进行打包，加密放在存储目录中，CISCO放在NVRAM中，用户可以导出，以防证书服务器挂掉可以进行相应恢复。思科是.p12,微软是.pfx
+

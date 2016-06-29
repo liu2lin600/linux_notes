@@ -6,12 +6,12 @@ SELinxu：Secure Enhenced Linux
     由美国国家安全局在linux社区帮助下开发的一个强制访问控制的安全子系统，属于MAC强制访问控制，即让系统中的各个服务进程都受到约束，仅能访问到所需的文件。在linux内核2.6版本后直接引入内核
         (DAC：自主访问控制)
 
-获取selinux的当前状态：getenforce
-临时启用或禁用：setenfoce 0|1
+    沙箱模式：sandbos, 最小化权限
+
 
 配置文件：/etc/sysconfig/selinux --> /etc/selinux/config
-    SELINUX=enforcing   # 启用
-            permissove  # 越权访问只发出警告但不拦截
+    SELINUX=enforcing   # 强制，每个受限的进程都受限
+            permissove  # 越权访问不拦截但会被记录在审计日志中/var/log/audit/audit.log
             disabled    # 关闭
 
     SELinux有四种工作类型：
@@ -21,58 +21,46 @@ SELinxu：Secure Enhenced Linux
      4. mls: 提供MLS（多级安全）机制的安全性
        minimum和mls稳定性不足，未加以应用
 
-作用范围：
+作用范围：打标签
     域：对进程资源进行限制 (查看: ps -Z)
-    安全上下文：对系统资源进行限制 (ls -Z)，组成 user:role:type:sensitivity:category
+    安全上下文：对系统资源进行限制 (ls -Z)，组成 user:role:type:sensitivity:category，主要看前3段内容
         用户: root, user_u, system_u, unconfined_u
         角色: object_r, 
-        文件类型: admin_home_t, httpd_sys_content_t
+        文件类型: admin_home_t, tmp_t, httpd_sys_content_t...(不同目录下默认不同)
+
+SELinux规则库：
+    规则：哪些域能访问哪种或哪些类型内的文件
 
 
 相关概念：
-    1. Objects： process(进程)
-        Directories
-        File descriptors
-        Files
-        Filesystems
-        Links
-        Processes
-        Sprcial files of various types (block device,character device,socket,FIFO,and so on)
-    
-    2.actions：
-        Append
-        Create
-        Execute
-        Get attribute
-        I/O control
-        Link
-        Lock
-        Read
-        Rename
-        Unlink
-        Write
+    主(subject) ：进程
+    谓(operation) ：读、写、执行...
+    宾(object)：进程、文件...
 
-常用命令：
-    getenforce：
-    setenforce：
-    chcon：
-       -t type：修改为指定类型
+
+相关命令：
+    getenforce：获取selinux的当前状态
+    setenforce：状态必须有enforcing或permissive才可使用此命令
+        setenfore 0|1: 临时切换
+    
+    chcon：打标签
+       -t TYPE：修改为指定类型
        -R 递归
        --reference=RFILE：以RFTIE为参照
-       -u user
-       -r role
+       -u USER
+       -r ROLE
 
     restorecon：
-        -R 改回原来的属性
+        -R 递归改回原来的标签属性
         修改受selinux控制的文件的属性
     
-    setsebool：
-      -P 永久生效
-        开放匿名用户上传
-           allow_ftpd_anon_write on
-           allow_ftpd_full_access on
+    setsebool：设置某一布尔型标签
+        -P 永久生效
+            如vsftp服务开放匿名用户上传
+                allow_ftpd_anon_write on
+                allow_ftpd_full_access on
     
-    getsebool：
+    getsebool：获取某一或全部布尔型标签
        -a
 
 httpd
