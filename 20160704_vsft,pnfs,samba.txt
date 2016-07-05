@@ -1,0 +1,317 @@
+2016-07-04
+# edit by liu2lin600
+
+文件共享服务： 
+    应用层：ftp
+    内核：nfs (Sun)
+    跨平台：samba，在Linux实现CIFS（SMB）协议
+
+    注：以上只适用于小规模的对性能要求不是特别高的场景
+
+一、ftp：File Transfer Protocol，基于tcp的应用层协议, 21/tcp，C/S架构
+    
+    建立2种连接：
+        1. 命令连接：文件管理类命令，始终在线的连接，用来传输命令如get,mget...
+        2. 数据连接：数据传输，按需创建及关闭的连接
+
+            数据传输格式：(流式化数据) 文本传输、二进制传输
+
+            主动：由服务器创建连接
+                命令：
+                    Client:50000 --> Server: 21
+                数据：
+                    Server: 20/tcp --> Client: 50000+1
+
+            被动：由客户端创建连接                 
+                命令：
+                    Client:50000 --> Server: 21
+                数据：
+                    Client:50000+1 --> Server: 随机端口(解决多个数据传输请求)
+
+    常用实现C/S：
+        Server：
+            wu-ftpd:华盛顿大学
+            proftpd:
+            pureftp:
+            vsftpd: Very Secure FTP
+            ServU:
+        Client：
+            ftp:
+            lftp, lftpget
+            wget, curl
+            filezilla(开源)
+            gftp(Linux GUI)
+            flashfxp(win GUI)
+            cuteftp(win GUI)
+
+    ftp用户认证：
+        1. 虚拟用户：仅用于访问某特定服务中的资源，存放hash file或mysql中
+        2. 系统用户：
+        3. 匿名用户：
+
+    ftp数据传输安全：ftp协议是明文
+        sftp：ssh提供的基于ssh协议的ftp
+        ftps：基于ssl的ftp
+
+    ftp响应码：
+        1xx: 信息
+        2xx: 成功类的状态码
+        3xx: 提示需进一步提供补充类信息的状态码
+        4xx: 客户端错误
+        5xx: 服务端错误
+
+
+    vsftpd安装配置：
+        用户认证配置文件：/etc/pam.d/vsftpd
+            nsswitch: network server switch, 名称解析框架 (name --> uid)
+                模块：/lib64/libnss*, /usr/lib64/libnss*
+                配置文件：/etc/nsswitch.conf
+            pam: pluggable authentication module, 用户认证框架 (uid --> password,时间...)
+                模块：/lib64/security/pam*.so
+                配置文件：/etc/pam.conf, /etc/pam.d/*
+        服务脚本：/etc/rc.d/init.d/vsftpd
+        配置文件目录：/etc/vsftpd
+            主配置文件：/etc/vsftpd/vsftpd.conf
+        主程序文件：/usr/sbin/vsftpd
+        匿名用户(映射为ftp用户)共享资源位置：/var/ftp
+        系统用户通过ftp访问的资源的位置：用户自己的家目录
+        虚拟用户通过ftp访问的资源的位置：给虚拟用户指定的映射成为的系统用户的家目录
+
+
+    主配置文件配置：/etc/vsftpd/vsftpd.conf
+        匿名用户的配置：
+            anonymous_enable=YES
+            anon_upload_enable=YES
+            anon_mkdir_write_enable=YES
+            anon_ohter_write_enable=YES
+
+            注：匿名登录用户名为anoymous或ftp，写入权限取决于文件系统本身和ftp服务权限的交集
+                同时如果SELinux开启时，需设置 setsebool -P ftpd_full_access=on
+                还要保持不被防火墙过滤
+
+        系统用户的配置：
+            local_enable=YES
+            write_enable=YES
+            local_umask=022
+
+            注：默认情况下用户登录后可以查看其它文件
+
+            禁锢所有的ftp本地用户于其家目录中：
+                chroot_local_user=YES
+            禁锢文件中指定的ftp本地用户于其家目录中：手动创建该文件，每个用户一行
+                chroot_list_enable=YES
+                chroot_list_file=/etc/vsftpd/chroot_list 
+
+        用户的欢迎信息login banners：
+            ftpd_banner=Welcom...           # 此优先级高
+            banner_file=/etc/vsftpd/banner  # 文件可自定义
+
+        切换目录时的欢迎信息：
+            dirmessage_enable=YES
+            在目录下创建.messages文件
+
+        vsftp控制登陆系统用户的机制：
+            /etc/vsftpd/ftpusers中的用户不允许使用ftp服务器，这是在/etc/pam.d/vsftpd中定义的
+            注：编译安装不存在/etc/pam.d/vsftpd，为redhat的rpm包提供
+
+            是否启用控制用户登录的列表文件：/etc/vsftpd/user_list
+                黑名单：
+                    userlist_enable=YES
+                    uselist_deny=YES
+                白名单：
+                    userlist_enable=YES
+                    uselist_deny=NO
+
+            注：ftpusers文件优先级高
+
+
+        连接限制：
+            max_clients=    # 最大并发连接数
+            max_per_ip=     # 每个IP可同时发起的并发请求数
+
+        速率限制：
+            anon_max_rate=      # 匿名用户的最大传输速率, byte/s
+            local_max_rate=     # 本地用户
+
+        上传文件的umask：
+            anno_umask=     # 匿名用户上传文件的umask，默认077
+            local_umask=    # 本地用户
+
+        改变上传文件的属主属组：默认为ftp:ftp
+            chown_uploads=YES
+            chown_username=USERNAME
+
+        日志：
+            xferlog_enable=YES
+            xferlog_std_format=YES
+            xferlog_file=/var/log/xferlog
+        
+        vsftpd使用pam完成用户认证，其用到的pam配置文件：
+            pam_service_name=vsftpd
+
+
+    实现虚拟用户：
+        所有的虚拟用户会映射成一个系统用户，访问时的文件目录是为此系统用户的家目录
+
+        虚拟用户：
+            1. hash编码的文件：
+                奇数行为用户名，偶数行为密码
+            2. 关系型数据库：
+                pam-mysql实现认证，相关配置见 vsftp+pam+mysql.txt
+
+        虚拟用户的权限：
+            user_config_dir=文件夹
+            在文件夹中创建虚拟用户同名的的文件
+            在虚拟用户的文件中写入权限
+            # yum -y install pam_mysql
+
+
+二、NFS：Network File System，传统意义上，文件系统在内核中实现，依赖与RPC
+
+    RPC: Remote Procedure Call protocol，远程过程调用，函数调用（远程主机上的函数）
+        一部分功能由本地程序完成，另一部分功能由远程主机上的函数完成
+
+    NFS: Sun公司研发
+        NFSv1
+        NFSv2, udp
+        NFSv3,
+        NFSv4.0
+        NFSv4.1 
+        NFSv4.2
+
+    NIS：Network Information System，网络信息服务，集中于某服务器完成身份认证功能
+    Kerberos：
+    LDAP：
+
+    NFS：基于IP的认证，不对身份进行认证
+        监听端口：2049/tcp, 2049/udp
+        配置文件：/etc/sysconfig/nfs
+
+    RPC服务：portmapper实现
+        监听端口：111/tcp, 111/udp
+
+    安装配置：
+        yum -y install nfs-utils
+        service start nfs
+        rpcinfo -p localhost        # 查看rpc服务监听端口及服务，可以指定地址查看该服务器上的共享
+
+    三个关键进程： 
+        moutnd：挂载守护进程，负责客户端来源认证进程，默认端口号随机，可在/etc/sysconfig/nfs中配置固定端口
+        nfsd：文件读写
+        idmapd：id映射进程
+
+    /etc/exports：建议直接导出一个新分区并挂载作为nfs共享目录使用
+        格式：文件系统    客户端1(文件系统导出选项)  客户端2(选项)
+            如 /nfsfile  192.168.1.0/24(rw,no_root_squash)  172.16.60.0/24(rw)
+
+        注：导出的文件夹的目录权限需要添加写权限，远程用户才能执行写操作
+
+            客户端：
+                IP：172.16.100.7
+                Hostname：*.google.com
+                IP networks：长短格式都可以
+
+            文件系统导出属性：
+                rw：读写
+                async：异步,尽量使用异步
+                sync：同步
+                root_squash：压缩root用户，基于imapd，将root通过网络访问时映射为nfsnobody用户，默认启用
+                no_root_squash：不压缩root用户
+                all_squash：压缩所有用户
+                anonuid，anongid：指定匿名用户映射为UID，GID
+
+    挂载NFS文件系统：
+        mount -t nfs SERVER:/path/to/sharedfs  /path/to/mount_point
+
+    showmount命令：
+        -a: 全部 在nfs服务器端显示所有的挂载会话
+        -d SERVER_IP: 文件 在服务器端执行，显示那个导出的文件系统被那些客户端挂载过
+        -e SERVER_IP: 共享，在客户端执行，探查某主机所导出的nfs文件系统，使用格式为showmount -e Server_IP
+
+    exportfs命令：维护exports文件导出的文件系统表的专用工具
+        -ar: 重新导出所有的文件系统
+        -au: 关闭导出的所有文件系统
+        -u FS: 关闭指定的导出的文件系统
+        -v: 显示详细过程
+
+    客户端开机自动挂载nfs：/etc/fstab
+        SERVER:/PATH/TO/EXPORTED_FS  /mount_point  nfs  defaults,_netdev  0 0
+
+
+三、samba：用于Linux与windows系统直接的文件共享和打印共享，也可以用于Linux与Linux之间的资源共享
+        smb：Service Message Block smbd(cifs) ==> tcp:445
+        NetBIOS：本地名称解析 nmbd ==> udp:137 138, tcp:139
+        winbindd：window的绑定进程
+
+        UNC路径：\\SERVER\shared_name，在windows电脑上运行访问方式
+
+    服务器：
+        安装：yum -y install samba
+
+        服务脚本：
+            /etc/rc.d/init.d/nmb
+            /etc/rc.d/init.d/smb
+                重启：for i in nmb smb;do service $i restart;done
+
+        主配置文件：/etc/samba/smb.conf
+
+        samba用户：
+            账号：都是系统用户, /etc/passwd
+            密码：samba服务自有密码文件
+
+            将系统用户添加为samba的命令：smbpasswd
+
+            smbpasswd:
+                -a Sys_User：添加系统用户为samba用户
+                -d：禁用
+                -e：启用
+                -x：删除
+
+    配置文件：/etc/samba/smb.conf
+        全局设定：
+        [global]
+
+        特定共享的设定：
+            私有家目录
+            打印机共享
+            自定义共享
+
+            自定义共享：
+            [shared_name]
+            path =                  # 共享路径
+            comment =               # 说明
+            guest ok = {yes|no}     # 
+            public = {yes|no}       # 是否公开，即文件属主属级不属于当前用户时，是否可访问
+            writable = {yes|no}     # 是否可写
+            browseable = {yes|no}   # 文件属主属级不属于当前用户时，是否可显示
+            read only = {yes|no}    # 是否只读
+            write list = USER|+GROUP # 可写的用户或组，多用户使用逗号隔开,组名前加+或@
+
+
+    smbclient命令：
+        smbclient -L Server_HOST -U username              # 检查服务器上的共享
+        smbclient //Server_HOST/Shared_name -U username   # 以交互式模式连入服务器的某共享
+            > get FILENAME      # 需要有相应权限才能获取或上传
+            > put FILENAME
+            > exit
+
+    testparm命令：测试配置文件是否有语法错误，以及显示最终生效的配置
+
+    基于挂载的方式访问：
+        mount -t cifs //SERVER/shared_name  /mount_point -o username=USERNAME,password=PASSWORD
+
+    图形客户端配置：
+        yum install -y samba-swat
+        vim /etc/xinetd.d/swap
+            disable = no    # 启用
+            only_from =     # 允许来源
+
+        注：图形设置直接修改配置文件并直接生效
+
+
+    练习：建立samba共享，共享目录为/data
+        1)共享名为shared，工作组为magedu；
+        2)添加组develop，添加用户gentoo,centos和ubuntu，其中gentoo和centos以develop为附加组，ubuntu不属于develop组；密码均为用户名；
+        3)添加samba用户gentoo,centos和ubuntu，密码均为“mageedu”；
+        4)此samba共享shared仅允许develop组具有写权限，其他用户只能以只读方式访问；
+        5)此samba共享服务仅允许来自于172.16.0.0/16网络的主机访问； 

@@ -157,7 +157,7 @@ openSSH服务器端：sshd
 
 
 
-ssh协议的另一个实现：dropbear, 轻量化的实现方案，多用于嵌入式环境中
+ssh协议的另一个实现：dropbear, 轻量化的实现方案，多用于嵌入式环境中,供简单ssh远程连接服务
     工具：
         dropbear: 服务端程序
             -p [IP:]PORT：
@@ -169,5 +169,115 @@ ssh协议的另一个实现：dropbear, 轻量化的实现方案，多用于嵌�
 
         dropbeatkey:主机密钥生成工具
             dropbearkey -t type -f file [-s bits]
+
+
+    步骤：
+        1、编译并移植dropbear, dropbearkey, dbclient, scp
+            1. 下载源码
+            2. tar xf dropbear-2013.58.tar.bz2
+            3. cd dropbear-2013.58
+            4. ./configure
+            5. make PROGRAMS='dropbear scp dropbearkey dbclient'    # 指定生成的工具
+            6. make PROGRAMS='dropbear scp dropbearkey dbclient' install
+        
+        2、启动
+            mkdir /etc/dropbear
+            dropbearkey -t rsa -f /etc/dropbear/dropbear_rsa_host_key -s 2048
+                或：dropbearkey -t dss -f /etc/dropbear/dropbear_dsa_host_key
+            dropbear -p 2222 -F -E;ss –tnl      #-F前台运行，查看远程登录时记录
+            ssh -p 2222 root@127.0.0.1
+            dropbear -p 2222      #默认后台运行
+            dbclient -p 2222 root@127.0.0.1
+
+        3、提供服务脚本，开机自运行
+
+        dropbear脚本示例：vim /etc/init.d/dropbear
+            #!/bin/bash
+            #
+            #description: dropbear ssh daemon
+            #chkconfig: 2345 66 33
+            #
+            dbprog='/usr/local/sbin/dropbear'
+            dbkeygen='/usr/local/bin/dropbearkey'
+            dsskey='/etc/dropbear/dropbear_dss_host_key'
+            rsakey='/etc/dropbear/dropbear_rsa_host_key'
+            rsakeysize=2048
+            dbport=22022
+
+            gendsskey() {
+                if [ ! -f $dsskey ]; then
+                    echo "Generating dss key file."
+                    [ -d /etc/dropbear ] || mkdir /etc/dropbear
+                    $dbkeygen -t dss -f $dsskey
+                fi
+            }
+
+            genrsakey() {
+                if [ ! -f $rsakey ]; then
+                    echo "Generating rsa key file."
+                    [ -d /etc/dropbear ] || mkdir /etc/dropbear
+                    $dbkeygen -t rsa -s $rsakeysize -f $rsakey
+                fi
+            }
+
+            start() {
+                gendsskey
+                genrsakey
+
+                if ! pidof dropbear &> /dev/null; then
+                    echo "Starting dropbear"
+                    $dbprog -p $dbport
+                    retval=$?
+                else
+                    echo "$dbprog is already running..."
+                    return 1
+                fi
+                
+                if [ $retval -eq 0 ]; then
+                    echo "OK"
+                    return 0
+                else
+                    echo "Failure"
+                    return 1
+                fi
+            }
+
+            stop() {
+                echo "stopping dropbear"
+                
+                if pidof dropbear &> /dev/null; then
+                    echo "stopping dropbear"
+                    killall dropbear
+                    retval=$?
+                else
+                    echo "$dbprog is not running..."
+                    return 1
+                fi  
+            }
+
+            restart() {
+                stop
+                sleep 1
+                start
+            }
+
+            usage() {
+                echo "Usage: `basename $0` {start|stop|restart}"
+            }
+
+            case $1 in 
+            start)
+                start
+                ;;
+            stop)
+                stop
+                ;;
+            restart)
+                restart
+                ;;
+            *)
+                usage
+                ;;
+            esac
 
 

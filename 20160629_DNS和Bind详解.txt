@@ -121,8 +121,8 @@ DNS：Domain Name Service，应用层协议
                 value: DNS服务器的FQDN
 
                 例如：
-                    google  86400   IN  NS  plus.google.com.
-                    google  86400   IN  NS  plus2.google.com.
+                    google  86400   IN  NS  ns1.google.com.
+                    google  86400   IN  NS  ns2.google.com.
 
                 注意：
                     如果有多台NS服务器，每一个都必须有对应的NS记录；
