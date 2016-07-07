@@ -2,17 +2,17 @@
 # edit by liu2lin600
 
 DHCP：Dynamic Host Configuration Protocol, 动态地址配置协议
-    前身bootp：分配出去以后，将绑定
+    前身bootp：分配出去以后，将绑定主机和IP
   
-    C/S模式
+    C/S模式：
         Server：DHCP Server（运行dhcp服务）
             UDP服务：port:67
         Client：DHCP Client(运行dhcp程序)
             UDP服务：port:68
             
-        udp：适合发送较小的数据报文，且对时效性要求较高
+            udp：适合发送较小的数据报文，且对时效性要求较高
 
-        过程：
+        过程：(广播方式)
             C:DHCP DISCOVER (发现报文)
             S:DHCP OFFER(ip/netmask)
             C:DHCP REQUEST(确认使用)
@@ -38,7 +38,7 @@ DHCP配置文件：/etc/dhcp/dhcpd.conf (复制/usr/share/doc/dhcp*/dhcp.conf.sa
 
     1.定义dhcpd自身的工作属性：
         log-facilify: 日志facilify
-    2.全局地址分配属性：options打头
+    2.全局地址分配属性：option打头
         option router
     3.子网配置：
         通常每个作用域通过一个subnet定义
@@ -54,37 +54,47 @@ DHCP配置文件：/etc/dhcp/dhcpd.conf (复制/usr/share/doc/dhcp*/dhcp.conf.sa
 
 
 相关命令：dhclient
-          dhcilent -d eth0  # 客户端重新获取dhcp地址
+          dhcilent -d eth0  # 客户端重新获取dhcp地址,获取成功后不能直接再获取，需killall dhclient后再获取
 
 配置文件详解：
-ption domain-name "example.org";                    # 搜索域
-option domain-name-servers 192.168.1.1, 8.8.8.8;    # 全局默认网关
-default-lease-time 600;                             # 默认租约期限
-max-lease-time 7200;                                # 最长租约期限
-#ddns-update-style none;                            # 动态dns
-log-facility local7;                                # 日志地址 /etc/rsyslog.conf记录具体地址
+    ption domain-name "example.org";                    # 搜索域
+    option domain-name-servers 172.16.0.1, 8.8.8.8;     # 全局默认网关
+    default-lease-time 600;                             # 默认租约期限
+    max-lease-time 7200;                                # 最长租约期限
+    #ddns-update-style none;                            # 动态dns
+    log-facility local7;                                # 日志地址 /etc/rsyslog.conf记录具体地址
 
-# 子网配置，
-subnet 10.5.5.0 netmask 255.255.255.224 {
-    range 10.5.5.26 10.5.5.30;                          # 地址池
-    option domain-name-servers 192.168.1.1 8.8.8.8;     # dns
-    option domain-name "internal.example.org";          # 域名
-    option routers 10.5.5.1;                            # 默认网关
-    option broadcast-address 10.5.5.31;                 # 广播地址
-}
+    # 子网配置，
+    subnet 172.16.0.0 netmask 255.255.0.0 {
+        range 172.16.10.10 172.16.10.100;               # 地址池，必须在本机的网络内，本机地址静态给定
+        
+        option domain-name-servers 172.16.0.1;          # dns
+        option domain-name "liu2lin.com";               # 域名
+        option routers 172.16.0.1;                      # 默认网关
+    }
 
-# 主机配置
-host fantasia {
-    hardware ethernet 08:00:07:26:c0:a5; 
-    fixed-address 192.168.1.100;       # 给指定的MAC绑定ip地址
-}
+    # 主机配置
+    host fantasia {
+        hardware ethernet 00:0c:29:26:c0:a5; 
+        fixed-address 192.168.1.101;       # 给指定的MAC绑定ip地址,在指定的范围以外
+    }
 
-# 定义函数，用来定义特定系统分配特定的地址
-class "foo" {
-    match if substring (option vendor-class-identifier, 0, 4) = "SUNW";
-}
+    # 定义函数，用来定义特定系统分配特定的地址
+    class "foo" {
+        match if substring (option vendor-class-identifier, 0, 4) = "SUNW";
+    }
 
 
+实验：在两台虚拟机上实现，DHCP服务器分配172.16.10.1~172.16.10.100
+    1. subnet 172.16.0.0 netmask 255.255.0.0 {
+            range 172.16.10.10 172.16.10.100;       # 地址池必须在dhcp服务器地址网络内
+       }
+    2. service dhcpd start      # 开启
+        ss -uanp sport = :67    # 查看是否运行
+        ps aux | grep dhcp
+    3. 两台自定义网络连接，如vmnet3
+    4. 请求主机网络设置为dhcp动态，并重启查看是否成功获取
+    5. dhcp服务器上查看日志/var/log/boot.log
 
 
 PXE：Preboot Execution Environment,启动前的执行环境
@@ -92,18 +102,20 @@ PXE：Preboot Execution Environment,启动前的执行环境
     Client：网卡要支持网络引导
 
 tftp：Trivial FTP，简单文件传输协议，高效传输小文件，基于udp，监听端口69
+    默认共享目录：/var/lib/tftpboot/
 
 超级守护进程：xinetd，为那些极少接收用户请求的服务，专门提供监听功能，如tftp
-    瞬时守护进程：他们无需定义在运行级别下，只需要一次性的定义xinetd的运行级别
     独立守护进程：standlone, 能自我管理，无需xinted提供监听服务的进程
+    瞬时守护进程：他们无需定义在运行级别下，只需要一次性的定义xinetd的运行级别
  
         基于xinetd瞬时守护进程的配置文件：/etc/xinted.d/Service_name
 
-    chkconfig xinetd on
-    service xinetd start
+        启动：
+            chkconfig xinetd on
+            service xinetd start
 
-    chkconfig Service_name on
-    service xinetd restart
+            chkconfig Service_name on
+            service xinetd restart
 
 Linux上的tftp：
     服务器：tftp-server
@@ -120,7 +132,7 @@ PXE配置步骤：
         vim /etc/dhcp/dhcpd.conf
         subnet{
             ...
-            next-server 172.16.1.100    # tfpt服务地址
+            next-server 172.16.60.2    # tfpt服务地址
             filename "pxelinux.0"
         }
         service dhcpd restart
@@ -133,7 +145,7 @@ PXE配置步骤：
         service xinetd start
         ss -unl|grep ':69'
 
-    3. 准备安装树
+    3. 准备安装树，由apache提供服务，默认目录为/var/www/html
         mkdir /var/www/html/centos6
         mount --bind /media/cdrom /var/www/html/centos6
         service httpd start
@@ -150,7 +162,7 @@ PXE配置步骤：
 
     6. 完成自动化，提供kickstart文件
         注意：url及repo后的路径要修改为可用安装树的路径
-        编辑好kickstart文件后保存至/var/www/html/ks.cfg
+        编辑好kickstart文件后保存至/var/www/html/ks.cfg，同时需要设置可读权限
     
     7. 配置引导程序能自动加载kickstart文件
         编辑/var/lib/tftpboot/pxelinux.cfg/default

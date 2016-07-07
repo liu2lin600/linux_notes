@@ -64,7 +64,7 @@ DNS：Domain Name Service，应用层协议
                 主服务器通知从服务器随时更新数据 (push)
 
         2. 不负责域解析
-            缓存名称服务器, cache
+            缓存名称服务器, cache,默认设置
 
         3. 转发服务器, forward
 
@@ -108,10 +108,10 @@ DNS：Domain Name Service，应用层协议
                     2)当有区域管理员的邮箱，但不能使用@，一般使用.来替代
                     3)
 
-                例如：google.com.   86400   IN      SOA     map.google.com.   admin.google.com. (
-                                20170606    ;serial number，解析库的版本号
-                                2H          ;refresh time，周期性同步的时间间隔
-                                10M         ;retry time，重试的时间间隔
+                例如：google.com.   86400   IN      SOA     ns.google.com.   admin.google.com. (
+                                2017060601  ;serial number，解析库的版本号,通常使用日期加版本
+                                2H          ;refresh time，刷新时间，周期性同步的时间间隔
+                                10M         ;retry time，重试的时间间隔，小于刷新时间
                                 1W          ;expire time，过期时长
                                 1D          ;negative answer ttl，否定答案的统一缓存时长
                       )   
@@ -181,9 +181,9 @@ DNS服务安装配置：
         bind：dns协的一种实现 
         named：bind程序的运行进程名
     程序包：
-        bind-libs:被bind和bind-util包中的程序共同乃用到的库文件
-        bind-utils:bind客户端程序集，如dig,host,nxlookup
         bind:提供dns server程序及几个常用的测试程序
+        bind-utils:bind客户端程序集，如dig,host,nxlookup
+        bind-libs:被bind和bind-util包中的程序共同用到的库文件
         bind-chroot:选装，让named运行在jail模式下
 
     bind：
@@ -191,7 +191,7 @@ DNS服务安装配置：
         主配置文件：/etc/named.conf, /etc/named.rfc1912.zones, /etc/named.iscdlv.key
         区域解析库文件：/var/named/ZONE_NAME.zone
             1. 一台DNS服务器可同时为多个区域提供解析
-            2. 必须要有根区域解析库文件，named.ca
+            2. 必须要有根区域解析库文件/var/named/named.ca (dig -t NS . 的结果一样)
             3. 还有2个区域解析库文件，localhost和127.0.0.1正反向解析库
                 正向：named.localhost
                 反向：named.loopback
@@ -205,11 +205,16 @@ DNS服务安装配置：
 
         主配置文件格式：
             全局配置段：
-                options{...}
+                options{
+                    directory "/var/named/";
+                };
             日志配置段：
                 logging{...}
             区域配置段：
-                zone{...}
+                zone "xx" IN {
+                    type {hint|master|slave|forward};
+                    file "xx.zone";
+                };
 
             注意：配置语句以分号结尾，花括号前后有空格
 
@@ -238,13 +243,14 @@ DNS服务安装配置：
 
             交互式：
             nslookup>
-                server IP:以指定的IP为DNS服务器地址
+                server DNS_SERVER_IP:以指定的IP为DNS服务器地址
                 set q={A|SOA|NS|MX}:资源记录类型
                 name:查询的名称
 
         3、dig命令：测试dns，不会查询hosts文件
-            dig -t RR_TYPE name @server
-                如：dig -t AXFR mageedu.com  @172.16.100.7
+            dig -t RR_TYPE name [@server]
+                如：dig -t AXFR liu2lin.com  @172.16.60.2
+                    dig -t NS .     
 
             查询选项：
                 +trace：跟踪解析过程
@@ -255,30 +261,36 @@ DNS服务安装配置：
             测试反向解析：
                 dig -x IP
 
-        4、rndc命令：
+        4、rndc命令：Remote Name Domain Controller 用于远程控制dns服务器
+            rndc-reload     # 重载区域
             rndc status
-            rndc flush
+            rndc flush      # 清空缓存
+            rndc-confgen    # 生成rndc.key
+            rndc reconfig   # 重读配置文件，并加载新区域
+            rndc trace          # 打开debug，每执行一次会提升一个级别
+            rndc trance LEVEL   # 指定debug的级别
+
+            注：如查rndc无法使用，可尝试使用rndc-confgen生成/etc/rndc.conf，并将其后半断复制到服务器bind主配置文件中开启
+                rndc-confgen [-r /dev/urandom] > /etc/rndc.conf 
 
     
-
-
-    配置解析一个正向区域：(以li2lin.com为例)
+    I.配置解析一个正向区域：(以li2lin.com为例)
         1. 定义一个区域在主配置文件或其包含的配置文件/etc/named.rfc1912.zones）
-            zone "liu2lin.com" IN {
+            zone "liu2lin.com." IN {
                 type {hint|master|slave|forward};
-                file "/var/named/liu2lin.com.zone";
+                file "liu2lin.com.zone";
             };
 
         2. 建立区域数据文件，创建/var/named/liu2lin.com.zone区域数据文件
             添加内容：
                 $TTL 3600
-                $ORIDIN liu2lin.com
+                $ORIGIN liu2lin.com.
                 @    IN   SOA   ns1.liu2lin.com.   dnsadmin.liu2lin.com.(
                     2017010201 1H 10M 3D 1D
                 )
-                     IN   NS    ns1
-                     IN   MX    A   10  mx1
-                     IN   MX    A   20  mx2
+                @    IN   NS            ns1
+                @    IN   MX    A   10  mx1
+                @    IN   MX    A   20  mx2
                 ns1  IN   A   192.168.99.11
                 mx1  IN   A   192.168.99.12
                 mx2  IN   A   192.168.99.13
@@ -293,16 +305,20 @@ DNS服务安装配置：
             
             chgrp named /var/named/liu2lin.com.zone
             chmod o= /var/named/liu2lin.com.zone
-            named-checkzone ZONE_NAME ZONE_FILE
-            named-checkconf
+            named-checkzone "liu2lin.com" /var/named/liu2lin.com.zone      # 检测区域文件语法
+            named-checkconf                                   # 检测主配置文件
 
         3. 让服务器重载配置文件和区域数据文件
             centos6: rndc reload
             centos7: systemctl reload named.service
+            或：
+            killall -1 named
 
         4. 测试dig
+            dig -t A www.liu2lin.com @192.168.99.1
+            dig -t axfr liu2lin.com @192.168.99.1   # 查看全部区域传送
 
-    配置解析一个反向区域：(以li2lin.com为例)
+    II.配置解析一个反向区域：(以li2lin.com为例)
         1. 定义一个区域在主配置文件或其包含的配置文件/etc/named.rfc1912.zones）
             zone "ZONE_NAME" IN {
                 type {hint|master|slave|forward};
@@ -318,16 +334,18 @@ DNS服务安装配置：
                 @    IN   SOA   ns1.liu2lin.com.   nsaadmin.liu2lin.com. (
                     2017010201  1H  10M  3D  12H
                 )
-                     IN   NS   ns1.liu2lin.com.
+                @     IN   NS   ns1.liu2lin.com.
                 11    IN   PTR  ns1.liu2lin.com.
                 12    IN   PTR  mx1.liu2lin.com.
                 13    IN   PTR  bbs.liu2lin.com.
                 14    IN   PTR  bbs.liu2lin.com.
                 11    IN   PTR  www.liu2lin.com.
 
+            注：第一条为SOA，应该具有NS记录，但不能出现A记录，常见为PTR
+
             chgrp named /var/named/192.168.99.zone
             chmod o= /var/named/192.168.99.zone
-            named-checkzone ZONE_NAME ZONE_FILE
+            named-checkzone "ZONE_NAME" ZONE_FILE
             named-checkconf
 
         3. 让服务器重载配置文件和区域数据文件
@@ -335,10 +353,10 @@ DNS服务安装配置：
             centos7: systemctl reload named.service
 
         4. 测试dig
-            dig -x 192.168.99.11
+            dig -x 192.168.99.11 [@SERVER_IP]
      
 
-    DNS主从服务器：从服务器是区域级别的概念
+    III.DNS主从服务器：从服务器是区域级别的概念
         1、时间同步；
             ntp: network time protocol
 
@@ -352,54 +370,49 @@ DNS服务安装配置：
             主低、从高
 
         添加一个从区域：
-            一、从服务器：
+
+            一、主服务器：192.168.99.1
+                
+                1. 确保区域数据文件中的每个服务配置NS记录，并且在正向区域文件线个从服务器的NS记录的主机名配置一个A记录，且A后为真正的地址
+                    liu2lin.com.    IN  NS    ns2.liu2lin.com.
+                    ns2.liu2lin.com.  IN   A   192.168.99.16 
+                
+                注：并修改解析库的版本号！！！！！！
+
+                2. 重载配置(最好主服务先重载，然后从服务再重载)
+
+            二、从服务器：192.168.99.16
+                
                 1. 定义从区域/etc/named.rfc1912.zones
                     zone "ZONE_NAME" IN {
                         type slave;
                         file "slaves/ZONE_NAME.zone";
                         masters { 192.168.99.1; };
+                        allow-transfer{ none };      # 设置从服务器不允许为其它主机开启区域传送 
                     };
 
                     named-checkconf:语法检查
 
-                        /var/named/slave/目录专用来存放从服务配置文件（写权限）
+                    /var/named/slaves/目录专用来存放从服务配置文件（写权限）
 
                 2. 重载配置
-                    rndc reload named
+                    rndc reload named 或 killall -1 named
 
-            二、主服务器：
-                1. 确保区域数据文件中的每个服务配置NS记录，并且在正向区域文件线个从服务器的NS记录的主机名配置一个A记录，且A后为真正的地址
-                    liu2lin.com.    IN  NS    ns2.liu2lin.com.
-                    ns2.liu2lin.com.  IN   A   192.168.99.16 
-                注：并修改解析库的版本号
+            注：注意防火墙规则，反向解析配置方法一致，主服务器区域文件添加一条NS记录
 
-                2. 重载配置(最好主服务先重载，然后从服务再重载)
-
-
-    区域传送的限制功能：
-        主、从
-
-        bind: 有内置的ACL
-            none: 所有都不
-            any: 任意
-            localhost: 本机
-
-        allow-transfer { ip; ip; ip; ... };
-
-
-    DNS子域授权：
-        liu2lin.com
-            www.liu2lin.com
-            子域：
-                ops.liu2lin.com
-                    www.ops.liu2lin.com
-                    ftp.ops.liu2lin.com
-                dev.liu2lin.com
-                    www.dev.liu2lin.com
-
+    IV.DNS子域授权：
+        父域：
+            liu2lin.com
+                www.liu2lin.com
+        子域：
+            ops.liu2lin.com
+                www.ops.liu2lin.com
+                ftp.ops.liu2lin.com
+            dev.liu2lin.com
+                www.dev.liu2lin.com
 
         正向解析区域授权子域的方法：
-            1. 主服务器上区域文件添加
+            1. 父域主服务器上区域文件添加
                 ops     IN      NS      ns.ops
                 ops     IN      NS      ns2.ops
                 ns.ops  IN      A       172.16.100.77
@@ -409,37 +422,46 @@ DNS服务安装配置：
                 ns.dev  IN      A       172.16.100.88
 
             2. 子域服务器主配置文件添加监听本地主机并开启（此时为缓存名称服务器）
-            3. 添加正向区域 ops.liu2lin.com,方法略
+            3. 添加正向区域 ops.liu2lin.com (方法同定义正向解析)
             4. 检查语法并重载
             5. dig -t A www.ops.liu2lin.com @本机IP
 
+            注：此时父区域能解析子域，但子域不能解析父域，如需解析需定义转发
 
-        定义转发：
-            注：被转发的服务器必须允许当前服务做递归
+    V.定义转发：
+        注：被转发的服务器必须允许当前服务做递归
 
-            配置区域转发：仅转发对某特定区域的解析请求
-                /etc/named.rfc1912.zones
-                zone "liu2lin.com" IN {
-                    type forward;
-                    foward only|first;
-                    forwarders { IP; };
-                }
-                    first:首先转发，转发器不响应时自行去递归
-                    only:只转发
+        1.配置区域转发：仅转发对某特定区域的解析请求
+            在子域中/etc/named.rfc1912.zones
+            zone "liu2lin.com" IN {
+                type forward;
+                foward only|first;
+                forwarders { IP; };
+            }
+                first:首先转发，转发器不响应时再去找根服务器
+                only:只转发
 
 
-            配置全局转发：转发所有的非本机负责的区域的请求至某指定的DNS服务器
-                /etc/named.conf
-                options {
-                    ...
-                    forward only|first;
-                    forwarders { SERVER_IP; };  # 指定DNS来解析
-                }
+        2.配置全局转发：转发所有的非本机负责的区域的请求至某指定的DNS服务器
+            /etc/named.conf
+            options {
+                ...
+                forward only|first;
+                forwarders { SERVER_IP; };  # 指定DNS来解析
+            }
 
+        前提：本机要在对方允许递归的主机列表中
+        注：二者可以同时配置，全局解析互联网，区域解析本地或特定域名
 
     bind中的安全相关配置：
-        acl：访问控制列表，把一个或多个地址归并一个命名的集合，随后通过此名称即可对此集合内的所有主机实现统一调用
-            /etc/named.conf：放置在options上方
+        1.访问控制指令：在可定义在配置文件的zone中或options中
+            allow-query { ...; };       # 允许查询的主机，通常仅用于缓存名称服务器，只开放给本地
+            allow-transfer { ...; };    # 允许向哪些主机做区域传送，默认所有，应该配置仅允许从服务器
+            allow-recursion { ...; };   # 允许哪些此主机向当前dns服务器发送递归查询请求，可写网络地址或指定IP
+            allow-update { ...; };      # 允许动态更新区域数据库文件内容，不建议开启
+
+        2.acl：访问控制列表，把一个或多个地址归并一个命名的集合，随后通过此名称即可对此集合内的所有主机实现统一调用
+            /etc/named.conf：acl要定义在/etc/named.conf最上方
             acl ACL_NAME {
                 ip;
                 ip;
@@ -460,31 +482,38 @@ DNS服务安装配置：
             local：本机
             localnet：本机所在的IP所属网络
 
-        访问控制指令：/etc/named.conf和/ect/named.rfc1912.zones
-            allow-query { ...; };       # 允许查询的主机，白名单
-            allow-transfer { ...; };    # 允许向哪些主机做区域传送，默认所有，应该配置仅允许从服务器
-            allow-recursion { ...; };   # 允许哪些此主机向当前dns服务器发送递归查询请求
-            allow-update { ...; };      # 允许动态更新区域数据库文件内容
 
-
-    bind view：视图，脑裂（split-brain）
-        根据客户端来源的不同，将同一个名称解析至不同的值，达到智能解析效果
-
-        view VIEW_NAME {
-            match-clients { telecom; };
-            zone "liu2lin.com" IN {
-                type master;
-                file "liu2lin.com.tel";
+    VI.bind view：视图，split-brain,根据客户端来源的不同，将同一个名称解析至不同的值，达到智能解析效果
+        /etc/named.conf
+            acl telecom {
+                ......
             };
-        };
 
-        view VIEW_NAME {
-            match-clients { unicom; };
-            zone "liu2lin.com" IN {
-                type master;
-                file "liu2lin.com.uni";
+        /etc/rfc1912.zones
+            view VIEW_NAME {
+                match-clients { telecom; };     # telecom为acl中定义，也可直接写ip
+                zone "liu2lin.com" IN {
+                    type master;
+                    file "liu2lin.com.tel";
+                };
             };
-        };
+
+            view VIEW_NAME {
+                match-clients { unicom; };
+                zone "liu2lin.com" IN {
+                    type master;
+                    file "liu2lin.com.uni";
+                };
+            };
+
+            view VIEW_NAME {
+                match-clients { any; };
+                zone "liu2lin.com" IN {
+                    type master;
+                    file "liu2lin.com.uni";
+                };
+            };
+            ......
 
         使用view注意的事项：
             1、通常只为内网客户端提供递归功能，提供根区域等；
