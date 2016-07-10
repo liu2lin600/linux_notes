@@ -1,0 +1,232 @@
+2016-07-08
+# edit by liu2lin600
+
+
+rsync: Remote Sync 远程同步工具，本身不具备加密功能
+
+    特点：
+        1、可以镜像保存整个目录树或文件系统
+        2、较高的数据传输效率
+        3、可以借助于ssh实现安全数据传输
+        4、支持匿名传输
+
+    rsync命令的工作模式：
+        第一种模式：shell模式，也称作本地模式，类似cp功能
+        第二种模式：远程shell模式，可以利用ssh协议承载其远程传输过程，类似scp
+        第三种模式：列表模式，仅列出源中的内容，-nv
+        第四种模式：服务模式，此时rsync工作为守护进程，能接收客户端的数据同步请求
+
+    rsync命令语法：rsync [opt] SRC DST
+        本地模式：
+            rsync [OPTION...] SRC... [DEST]
+
+        远程shell模式：
+            Pull: rsync [OPTION...] [USER@]HOST:SRC... [DEST]
+            Push: rsync [OPTION...] SRC... [USER@]HOST:DEST
+        服务daemon模式：
+            Pull: rsync [OPTION...] [USER@]HOST::SYNC_NAME... [DEST]
+            Push: rsync [OPTION...] SRC... [USER@]HOST::SYNC_NAME
+
+        注：目标路径不写为当前目录，':'用于客户端上用于表示服务端路径，'::'或'rsync://'为服务端...
+
+    rsync命令的选项：
+        -n: 同步测试，不执行真正的同步过程
+        -v: 详细输出模式
+        -q: 静默模式
+        -c: checksum，开启校验功能
+        -r: 递归复制
+            注意：复制时，如果源路径是目录，且给复制路径时末尾有/，则复制目录中的内容，而非目录本身
+                  如果末尾没有/，则会同步目录本身及目录中的所有文件;目标路径末尾是否有/无关紧要
+                rsync -r /mydata/ /tmp   # 将mydata目录下的内容复制到tmp
+                rsync -r /mydata  /tmp   # 将目录本身复制到/tmp下，结果为/tmp/mydata/
+        -a: 归档，保留文件的原有属性
+        -p: 保留文件的权限
+        -t: 保留文件的时间戳
+        -l: 保留符号链接
+        -g: 保留属组
+        -o: 保留属主
+        -D: 保留设备文件
+
+        -e ssh: 使用ssh作为传输承载
+        -z: 压缩后传输
+
+        --progress: 显示进度条
+        --stats: 显示如何执行压缩和传输
+        --password-file=/path/to/secrets_file: 指定密码文件
+
+    rsync的服务器模式：基于xinetd工作，监听端口默认873/tcp
+        1、安装rsync服务
+            yum -y install xinetd rsync
+
+        2、为rsync提供配置文件: /etc/rsyncd.conf，默认位置，如果在其它地方需要在/etc/xinetd.d/rsync文件的daemon后添加 --config=/path/to/conf
+            配置文件分两段：
+                全局配置段：1个
+                共享配置段：多个
+
+            配置示例：
+                # Global Settings
+                uid = nobody
+                gid = nobody
+                use chroot = no
+                max connections = 10
+                strict modes = yes
+                pid file = /var/run/rsyncd.pid
+                log file = /var/log/rsyncd.log
+
+                # Directory to be synced
+                [rsync_name]              # 同步的模式名，可以有多个分别定义不同的同步
+                path = /data
+                ignore errors = yes
+                read only = no
+                write only = no
+                hosts allow = 172.16.0.0/16     # 多个使用逗号隔开
+                hosts deny = *  
+                    1. 默认规则为允许访问，二者都不出现时
+                    2. 只出现hosts allow, 定义白名单；但没有被匹配到的由默认规则处理，即为允许
+                    3. 只出现hosts deny, 定义黑名单；出现在名单中的都被拒绝
+                    4. 二者同时出现，先检查hosts allow,如果匹配就allow，否则，检查hosts deny 如果匹配则拒绝，如二者均无匹配，则使用默认的，即允许
+                list = false        # 显示列表
+                uid = root
+                gid = root
+                auth users = rsync_USER   # 认证用户,用户名与系统上用户无关
+                secrets file = /etc/rsyncd.passwd
+                    密码文件格式：rsync_USER:PASSWORD，一行一个，权限为600，且密码不能超过8个字符
+
+            详情查看：man rsyncd.conf
+
+        3、启动服务，xinetd监听于873/tcp
+            service xinetd start
+            chkconfig rsync start
+
+        4、在客户端测试
+            1) vim /etc/rsync_client.passwd  添加一行密码
+            2) chmod 600 /etc/rsync_client.passwd
+            3) 将本地/tmp/下内容同步到远程
+                rsync -auvrtzopgP --progress --password-file=/etc/rsync_client.passwd /tmp/ rsync_USER@192.168.1.100::rsync_name
+            4) 将远程同步到本地/tmp/
+                rsync -auvrtzopgP --progress --password-file=/etc/rsync_client.passwd rsync_USER@192.168.1.100::rsync_name /tmp/
+            
+            说明：rsync_USER:认证用户，跟系统上的用户无关
+                  rsyn_name:服务器上定义的模块名
+
+
+
+inotify：
+    一种强大的、细粒度的、异步的文件系统事件监控机制，Linux内核从2.6.13开始引入，允许监控程序打开一个独立文件描述符，并针对事件集监控一个或者多个文件，例如打开、关闭、移动/重命名、删除、创建或者改变属性
+
+    查看支持：/proc/sys/fs/inotify/目录下的3个文件
+        max_user_watches        #设置inotifywait或inotifywatch命令可以监视的文件数量(单进程)
+        max_user_instances      #设置每个用户可以运行的inotifywait或inotifywatch命令的进程数
+        max_queued_events       #设置inotify实例事件(event)队列可容纳的事件数量
+
+inotify-tools：
+    为linux下inotify文件监控工具提供的一套C的开发接口库函数，同时还提供了一系列的命令行工具，这些工具可以用来监控文件系统的事件。inotify-tools是用c编写的，除了要求内核支持inotify外，不依赖于其他
+    
+    inotify-tools提供两种工具：
+        inotifywait：它是用来监控文件或目录的变化，
+        inotifywatch：它是用来统计文件系统访问的次数
+
+    安装：
+        yum -y install inotify-tools    # 在EPEL源中
+
+    inotifywait命令选项：
+        -m：始终保持事件监听状态
+        -r：递归查询目录
+        -q：只打印监控事件的信息
+        -t：超时时间
+        -e：事件，包括删、增、改等
+        –excludei：排除文件或目录时，不区分大小写
+        –timefmt：指定时间输出格式
+        –format：指定输出内容格式
+            %w: 文件夹
+            %f: 变化的文件
+            %e: 
+            %Xe: 改变的方式，包括CREATE,MODIFY,ATTRIB,DELETE...
+            %T: 打印时间
+
+        事件：
+            access：读取文件或目录内容
+            modify：修改文件或目录内容
+            attrib：文件或目录的属性改变
+            close_write：修改真实文件内容
+            close_nowrite：  
+            close：  
+            open：文件或目录被打开
+            moved_to：文件或目录移动到
+            moved_from：文件或目录从移动
+            move：移动文件或目录移动到监视目录
+            create：在监视目录下创建文件或目录
+            delete：删除监视目录下的文件或目录
+            delete_self：
+            unmount：卸载文件系统
+
+    inotifywait监控实例：
+        inotifywait -mrq --timefmt '%Y/%m/%d-%H:%M:%S' --format '%T %Xe %w%f' -e modify,delete,create,move,attrib /root/tmp/
+
+        持续监听/root/tmp目录及其子目录的文件变化，包括文件被修改、删除、创建、移动、属性更改，显示到屏幕
+
+
+rsync + inotify 组合：inotifywait监控源目录下的变化，利用rsync同步工具将变化的内容pull到远程服务器上
+    
+    文件排除：排除监控或同步目录下的不需要被监控或同步的文件
+        inotifywait排除：
+            --exclude <pattern>：指定排除的文件或目录，可以使用正则匹配
+            --fromfile <file>：从指定文件中读取需要同步或排除的文件，一行一个条目，加@为排除，不能使用正则
+
+        rsync排除：
+            --exclude=<pattern>：
+            --exclude-from=FILE：
+
+    客户端上同步脚本：如同步数据到两台服务器上
+        #!/bin/bash
+        src=/data/                                  # 需要同步的源路径
+        dst=rsync_name                              # 目标服务器上 rsync --daemon 发布的名称
+        rsync_passwd_file=/etc/rsync_client.passwd  # rsync验证的密码文件
+        ip1=192.168.0.18                            # 目标服务器1
+        ip2=192.168.0.19                            # 目标服务器2
+        user=rsync_user                             # rsync --daemon定义的验证用户名
+        cd ${src}                                   # cd到源目录，inotify再监听 ./ 才能rsync同步后目录结构一致
+        
+        inotifywait -mrq --format  '%Xe %w%f' -e modify,create,delete,attrib,close_write,move ./ | while read file ;do        # 把监控到有发生更改的"文件路径列表"循环
+            INO_EVENT=$(echo $file | awk '{print $1}')      # 把事件类型部分赋值给INO_EVENT
+            INO_FILE=$(echo $file | awk '{print $2}')       # 把文件路径部分赋值给INO_FILE
+            echo "-------------------------------$(date +'%F %H:%M:%S')------------------------------------"
+            echo $file
+            #增加、修改、写入完成、移动进事件
+            
+            #增、改放在同一个判断，因为他们都肯定是针对文件的操作，即使是新建目录，要同步的也只是一个空目录，不会影响速度。
+            if [[ $INO_EVENT =~ 'CREATE' ]] || [[ $INO_EVENT =~ 'MODIFY' ]] || [[ $INO_EVENT =~ 'CLOSE_WRITE' ]] || [[ $INO_EVENT =~ 'MOVED_TO' ]];then
+                echo 'CREATE or MODIFY or CLOSE_WRITE or MOVED_TO'
+                rsync -avzcR --password-file=${rsync_passwd_file} $(dirname ${INO_FILE}) ${user}@${ip1}::${dst} &&  
+                rsync -avzcR --password-file=${rsync_passwd_file} $(dirname ${INO_FILE}) ${user}@${ip2}::${dst}
+                 #仔细看 上面的rsync同步命令 源是用了$(dirname ${INO_FILE})变量 即每次只针对性的同步发生改变的文件的目录(只同步目标文件的方法在生产环境的某些极端环境下会漏文件 现在可以在不漏文件下也有不错的速度 做到平衡) 然后用-R参数把源的目录结构递归到目标后面 保证目录结构一致性
+            fi
+        
+            #删除、移动出事件
+            if [[ $INO_EVENT =~ 'DELETE' ]] || [[ $INO_EVENT =~ 'MOVED_FROM' ]];then
+                echo 'DELETE or MOVED_FROM'
+                rsync -avzR --delete --password-file=${rsync_passwd_file} $(dirname ${INO_FILE}) ${user}@${ip1}::${dst} &&
+                rsync -avzR --delete --password-file=${rsync_passwd_file} $(dirname ${INO_FILE}) ${user}@${ip2}::${dst}
+                #看rsync命令 如果直接同步已删除的路径${INO_FILE}会报no such or directory错误 所以这里同步的源是被删文件或目录的上一级路径，并加上--delete来删除目标上有而源中没有的文件，这里不能做到指定文件删除，如果删除的路径越靠近根，则同步的目录月多，同步删除的操作就越花时间。这里有更好方法的同学，欢迎交流。
+            fi
+        
+            #修改属性事件 指 touch chgrp chmod chown等操作
+            if [[ $INO_EVENT =~ 'ATTRIB' ]];then
+                echo 'ATTRIB'
+                # 如果修改属性的是目录则不同步，因为同步目录会发生递归扫描
+                if [ ! -d "$INO_FILE" ];then                
+                        rsync -avzcR --password-file=${rsync_passwd_file} $(dirname ${INO_FILE}) ${user}@${ip1}::${dst} &&            
+                        rsync -avzcR --password-file=${rsync_passwd_file} $(dirname ${INO_FILE}) ${user}@${ip2}::${dst}
+                fi
+            fi
+        done
+
+    每两小时做1次全量同步：
+        * */2 * * * rsync -avz --password-file=/etc/rsync-client.passwd /data/ root@192.168.0.18::rsync_name && rsync -avz --password-file=/etc/rsync-client.passwd /data/ root@192.168.0.19::rsync_name
+
+
+
+    参考：
+        http://www.ttlsa.com/web/let-infotify-rsync-fast/
+        http://seanlook.com/2014/12/12/rsync_inotify_setup/
+       

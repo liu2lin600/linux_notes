@@ -176,7 +176,7 @@ DNS：Domain Name Service，应用层协议
 
 
 DNS服务安装配置：
-    BIND：Berkeley Internet Dame Domain （ISC.org）
+    BIND：Berkeley Internet Name Domain （ISC.org）
         dns：协议
         bind：dns协的一种实现 
         named：bind程序的运行进程名

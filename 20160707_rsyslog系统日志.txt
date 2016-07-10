@@ -1,0 +1,134 @@
+2016-07-07
+# edit by liu2lin600
+
+
+Linux日志：
+    /var/log/messages, secure,
+
+    日志：历史事件，按时间序列将发生的事件予以记录
+        日志记录：事件发生的时间，事件内容
+        日志级别：事件的关键性程度，log level
+
+
+    syslog：日志系统服务(CentOS5 配置文件/etc/syslog)
+        syslogd: 系统进程的相关日志
+        klogd: 内核事件相关的日志
+
+    rsyslog：增强版syslog
+        1. 多线程
+        2. TCP,SSL,TLS,RELP
+        3. MySQL, PGSQL, Oracle等多种关系型数据中
+        4. 强大的过滤器，可实现过滤系统信息中的任意部分
+        5. 自定义输出格式
+        6. 适用于企业级别日志记录需求
+
+    facility：设施，从功能或程序上对日志进行分类，并由专门的工具负责记录其日志
+        auth
+        authpriv
+        cron
+        daemon
+        kern
+        lpr
+        mail
+        mark
+        news
+        security
+        syslog
+        user
+        uucp
+        local0 through local7: 8 customed facility
+
+        指定设施时可以使用通配符：
+            *: 所有
+            f1,f2,f3,...: 列表
+            !: 取反
+
+    priority：级别
+        debug
+        info
+        notice
+        warn, warning
+        err, error
+        crit
+        alert
+        emerg, panic
+
+        通配符：
+            *: 所有级别
+            none: 没有任何级别
+
+    Target：
+        文件路径：/var/log/messages
+        用户：*
+        日志服务器：@SERVER_IP
+        管道：|COMMAND
+
+    rsyslog的主配置文件：/etc/rsyslog.conf
+        
+        $ModLoad imudp              # 加载输入udp模块
+        $UDPServerRun 514           # 启用udp
+        $ModLoad imtcp
+        $InputTCPServerRun 514
+
+        $IncludeConfig /etc/rsyslog.d/ *.conf   # 引入子配置文件
+
+
+        规则：facility.priority   Target
+
+        mail.info       /var/log/maillog    # 比指定级别更高的所有级别，包括指定的级别本身
+        mail.=info      /var/log/maillog    # 明确指定级别
+        mail.!info      *                   # 除了指定级别
+        *.info          | COMMAND           # 所有facility的info级别
+        mail.*:         -/var/log/maillog   # mail的所有级别，'-'表示异步记录
+        mail,news.info:                     # 即mail.info;news.info
+
+
+    日志信息格式：
+        时间  主机  进程[PID]: 事件
+
+
+    使用loganalyzer分析rsyslog产生的日志：
+
+        1. rsyslog将日志存储于MySQL服务器中
+            1) yum install rsyslog rsyslog-mysql mysql-server
+
+            2) 创建rsyslog依赖的数据库并赋权
+                mysql < /usr/share/doc/rsyslog-5.8.10/createDB.sql
+
+            3) 登录mysql授权
+                grant insert on Syslog.* to 'sysloguser'@'localhost' identified by '123678';
+                flush privileges; 
+            
+            4) 配置rsyslog启用模块/etc/rsyslog.conf
+                $ModLoad ommysql    # 写在相应Module位置
+                $ModLoad imudp     
+                $UDPServerRun 514
+                $ModLoad imtcp
+                $InputTCPServerRun 514
+                $AllowedSender UDP, 127.0.0.1, 10.2.0.0/16      #10.2.0.0为接受某个网段发来的IP
+                $AllowedSender TCP, 127.0.0.1, 10.2.0.0/16
+
+                *.* :ommysql:127.0.0.1,Syslog,sysloguser,123678   # 写上相应规则
+
+            5) 重启rsyslog服务，此时可登录mysql查看日志记录
+
+        2. 使用loganalyzer展示日志信息        
+            yum -y install httpd php php-mysql php-gd 
+            tar xf loganalyzer-3.6.5.tar.gz 
+            mkdir /var/www/html/loganalyzer
+            cp loganalyzer-3.6.5/src/* /var/www/html/loganalyzer/
+            cp loganalyzer-3.6.5/contrib/ *.sh /var/www/html/loganalyzer/
+            cd /var/www/html/loganalyzer/
+            chmod +x configure.sh secure.sh     # 这2文件执行后最好删除
+            ./configure.sh
+            ./secure.sh
+            chmod 666 config.php
+            chown -R apache.apache ./*
+            访问http://SERVER_IP/loganalyzer/配置相关内容
+
+        3. 客户端配置
+            1) yum -y install rsyslog
+            2） 主配置文件中添加    
+                *.* @@Server_ip         # 服务器IP
+            3) 重启rsyslog
+            4) http://SERVER_IP/loganalyzer
