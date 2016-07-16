@@ -1,0 +1,247 @@
+2016-07-16
+# edit by liu2lin600
+
+
+LAMP搭建：
+
+I. 基础知识
+    httpd与php结合方式：
+        1.CGI：
+        2.module：把php编译成为httpd的扩展模块
+            MPM：
+                prefork: libphp5.so
+                event, worker: libphp5-zts.so
+        3.FastCGI：fpm, 基于socket通信
+
+    LAMP的实现方式：
+        httpd(prefork)+libphp5.so+mysql
+        httpd(event)+libphp5-zts.so+mysql
+        httpd+fpm(php)+mysql
+
+
+#### 以下实验为方便测试需先关闭SELinux和防火墙 ####
+
+II. 快速安装一(centos7)，php以模块方式安装
+    yum -y install httpd php php-mysql mariadb-server
+
+    1. httpd-2.4
+        配置文件：/etc/httpd/conf/httpd.conf, /etc/httpd/conf.d/*.conf
+
+        启动：systemctl start httpd
+              ss -tunl
+              ps aux | grep httpd
+
+        添加测试：echo "<?php phpinfo();?>" > /var/www/html/index.php
+
+    2. php-5.4
+        配置文件：/etc/php.ini, /etc/php.d/*.ini
+
+    3. mariadb-5.5
+        配置文件：/etc/my.cnf
+                  /etc/my.cnf.d/ *.cnf
+            /etc/my.cnf中添加：
+                [mysqld]
+                innodb_file_per_table = On
+                skip_name_resolve = On
+
+        启动：systemctl start mariadb
+              ss -tunl
+              ps aux | grep mysql
+
+            注：如果启动不了，尝试修改权限
+            chown -R mysql.mysql /var/lib/mysql
+
+        初始化数据库及安全设置：默认只允许root用户本地登录，且空密码
+            mysql_install_db
+            mysql_secure_installation  # 添加root密码，移除匿名用户...
+
+        登录：
+            mysql -uroot -p123
+            GRANT ALL ON *.* TO test@'localhost' identified by '123'
+            GRANT ALL ON *.* TO test@'127.0.0.1' identified by '123'
+
+        php本机连接测试：修改默认首页
+            <?php
+                $con = mysql_connect('127.0.0.1','test','123');
+                if($con){
+                    echo 'OK';
+                }else{
+                    echo 'FAIL';
+                }
+            ?>
+
+            注：确保防火墙和SELinux关闭方便测试
+
+    4. php-xcache,php加速器安装
+        yum -y install php-xcache
+
+        配置文件：/etc/php.d/xcache.ini
+
+III. 快速安装二: FASTCGI方式(php-fpm)运行php
+    说明：mariadb及httpd安装如上不再缀述
+        httpd-2.2：默认不支持fcgi模块，需要自行编译扩展；
+        php-5.3.3：不支持fpm机制，需要自行打补丁编译安装；
+
+    php-fpm：
+        配置文件：
+            服务进程配置文件：/etc/php-fpm.conf, /etc/php-fpm.d/*.conf
+            解释器配置文件：/etc/php.ini, /etc/php.d/*.ini 
+            
+        服务进程配置文件：
+            [global]    # 全局配置
+            [pool]      # 连接池配置
+            listen = 127.0.0.1:9000
+            listen.backlog = -1
+            
+            listen.allowed_clients = 127.0.0.1
+            
+            user = 
+            group = 
+            
+            pm = dynamic|static
+            pm.max_children
+            pm.start_servers
+            pm.min_spare_servers
+            pm.max_spare_servers
+            pm.max_requests 
+        
+            pm方式的php进程存储session的路径：
+            php_value[session.save_handler] = files
+            php_value[session.save_path] = /var/lib/php/session
+            
+            如果目录不存在手动建立：
+                # mkdir /var/lib/php/session
+                # chown apache.apache /var/lib/php/session
+                
+            配置示例：
+                <VirtualHost *:80>
+                    ServerName www.liu2lin.com
+                    DocumentRoot /data/www
+                    ProxyRequests Off           # 关闭正向代理
+                    DirectoryIndex index.php    # 索引文件
+                    ProxyPassMatch ^/(.*\.php)$ fcgi://127.0.0.1:9000/data/www/$1
+                    <Directory "/data/www">
+                        Options None
+                        AllowOverride None
+                        Require all granted
+                    </Directory>
+                </VirtualHost>
+
+        启动：
+            systemctl start php-fpm     # 启动php-fpm服务
+            ss -tuln sport = :9000      # 默认监听9000/tcp 
+            ps aux | grep php-fpm
+
+        测试：
+
+IV. 编译安装LAMP(centos7)
+    httpd：httpd-2.4, 需要apr-1.4+及apr-util-1.4+以上依赖
+    mariadb：mariadb-5.5, 二进制包安装
+    php：php-5.5
+
+
+    0. 开发包组及依赖关系
+        yum groupinstall 'Development Tools' 'Server Platform Development'
+        yum install pcre-devel openssl-devel  libevent-devel                # httpd依赖
+        yum install libxml2-devel gd-devel freetype-devel libmcrypt-devel   # php依赖
+
+    1. httpd
+        0) 获取源码apr-1.5.2, apr-util-1.5.4, httpd-2.4.23
+
+        1) 编译安装apr
+            tar xf apr-1.5.2.tar.bz2
+            cd apr-1.5.2
+            ./configure --prefix=/usr/local/apr
+            make && make install
+
+        2) 编译安装apr-util
+            tar xf apr-util-1.5.4.tar.bz2
+            cd apr-util-1.5.4
+            ./configure --prefix=/usr/local/apr-util --with-apr=/usr/local/apr
+            make && make install
+
+            注：centos7的yum为apr为1.4+，可以直接yum安装
+
+        3) 编译安装httpd
+            tar xf httpd-2.4.23.tar.bz2
+            cd httpd-2.4.23
+            ./configure --prefix=/usr/local/apache2 --sysconfdir=/etc/httpd24 --enable-so --enable-ssl --enable-cgi --enable-rewrite --with-zlib --with-pcre --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr-util --enable-modules=most --enable-mpms-shared=all --with-mpm=event
+            make -j N       # N为物理核心的2倍，加速编译
+            make install
+
+        4) 配置
+            A：php以模块方式结合
+                LoadModule php5_module modules/libphp5.so
+                
+            B：php以FastCGI
+                LoadModule proxy_module modules/mod_proxy.so
+                LoadModule proxy_fcgi_module modules/mod_proxy_fcgi.so
+                
+                注：fcgi虚拟主机配置见上快速安装
+
+            AddType application/x-httpd-php  .php
+            AddType application/x-httpd-php-source  .phps
+            DirectoryIndex  index.php  index.html
+
+    2. mariadb (二进制包安装)
+        0) 安装
+            tar xf mariadb-5.5.50-linux-x86_64.tar.gz -C /usr/local
+            cd /usr/local/
+            ln -sv mariadb-5.5.50-linux-x86_64  mysql   # 方便滚动升级
+            cd mysql 
+            chown -R mysql:mysql .
+            scripts/mysql_install_db --user=mysql --datadir=/mydata      # 初始化并指定数据存放路径
+            chown -R root .
+
+            注：数据建议存放在lvm上
+
+        1) 配置
+            cp /usr/local/mysql/support-files/my-large.cnf  /etc/my.cnf
+            vim /etc/my.cnf
+                [mysqld]
+                thread_concurrency = 2
+                innodb_file_per_table = On
+                skip_name_resolve = On
+
+        2) PATH路径,MAN文档,头文件
+            echo "$PATH:/usr/local/mysql/bin" > /etc/profile.d/mysql.conf       # PATH环境变量
+            vim /etc/man_db.conf  ==> MANDATORY_MANPATH  /usr/local/mysql/man   # 帮忙文档
+            ln -sv /usr/local/mysql/include  /usr/include/mysql         # 头文件
+            echo '/usr/local/mysql/lib' > /etc/ld.so.conf.d/mysql.conf  # 输出mysql的库文件给系统库查找路径
+            ldconfig [-v]   # 系统重新载入系统库
+
+    3. php
+        0) 安装
+            tar xf php-5.5.37.tar.bz2
+            cd php-5.5.37
+            ./configure --prefix=/usr/local/php5 --with-mysql=/usr/local/mysql --with-openssl --with-mysqli=/usr/local/mysql/bin/mysql_config --enable-mbstring --enable-xml --enable-sockets --enable-fpm --with-freetype-dir --with-gd --with-libxml-dir=/usr --with-zlib --with-jpeg-dir --with-png-dir --with-mcrypt --with-apxs2=/usr/local/apache2/bin/apxs --with-config-file-path=/etc/php5.ini --with-config-file-scan-dir=/etc/php5.d --enable-maintainer-zts
+            make -j N       # N为物理核心的2倍，加速编译
+            make install
+
+        1) 配置
+            cp /usr/local/php/etc/php.ini-production /etc/php5.ini
+            cp /usr/local/php/etc/php-fpm.conf.default /usr/local/php/etc/php-fpm.conf 
+                pm.max_children = 50
+                pm.start_servers = 5
+                pm.min_spare_servers = 2
+                pm.max_spare_servers = 8
+                pid = /usr/local/php/var/run/php-fpm.pid
+
+        注：--enable-maintainer-zts为支持apache的worker或event
+
+    4. xcache加速
+        /usr/local/php5/bin/phpize
+        ./configure --enable-xcache --with-php-config=/usr/local/php5/bin/php-config
+        make && make install
+        
+        mkdir /etc/php5.d/
+        cp xcache.ini  /etc/php5.d/         # zend_extension =
+
+    5. 启动各服务并测试
+
+
+
+
+
+
+

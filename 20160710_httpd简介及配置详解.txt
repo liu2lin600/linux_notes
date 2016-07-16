@@ -5,36 +5,59 @@ httpd简介及配置详解：
 
 
 httpd：俗称apache，a pachey server => apache (www.netcraft.com统计)
-    v1.3, v2.0, v2.2(不支持event), v2.4
+    v1.3(停止维护), v2.0, v2.2(不支持event), v2.4
 
 httpd：高度模块化，core + modules
-    DSO：Dynamic Shared Object 动态模块对象
+    DSO：Dynamic Shared Object 动态共享对象，支持动态装卸裁
     MPM：Multipath Processing Module，多道处理模块，非一个模块，而是对一种特性的称谓
-        prefork：一个进程一个请求（预先创建好）
+        prefork：主进程管理子进程，一个子进程一个请求（预先创建好）
             select():最多1024个
-        worker：一个进程多个线程，一个线程一个请求
-        event：一个进程响应多个请求，不生成线程
+        worker：主进程管理子进程，多进程多个线程，一个线程一个请求
+        event：主进程管理多子进程，一个子进程响应多个请求，不生成线程
             event-driven:事件驱动，主要目的在于实现单线程响应多个请求
 
 httpd的功能特性：
     1. 路径别名：alias
     2. 用户认证：authentication
-    3. 虚拟主机：virtual host
+    3. 虚拟主机：IP, PORT, HOSTNAME
     4. 反向代理：
-        负载均衡
-    5. 用户站点：
-    6. 支持CGI：Common Gateway Interface
+    5. 负载均衡：
+    6. 用户认证机制：
+    7. 支持CGI：Common Gateway Interface
+    8. 支持第三方模块：
     ......
 
 httpd安装配置：
     安装：yum -y install  httpd
-    服务脚本：/etc/rc.d/init.d/httpd
-        脚本配置文件：/etc/sysconfig/httpd
-    运行目录：/etc/httpd
+        CentOS 6:httpd-2.2
+        CentOS 7:httpd-2.4  
+    服务脚本：
+        /etc/rc.d/init.d/httpd(centos6)
+        /usr/lib/systemd/system/httpd.service(7)
+    脚本配置文件：/etc/sysconfig/httpd(6)
+
+    服务根目录：/etc/httpd
+        配置文件：/etc/httpd/conf/
+        日志文件：/etc/httpd/logs/
+        模块文件：/etc/httpd/modules/
+
+    程序文件：
+        prefork模式：/usr/sbin/httpd
+        worker模式：/usr/sbin/httpd.worker
+        event模式：/usr/sbin/httpd.event
+
     配置文件：
         主配置文件：/etc/httpd/conf/httpd.conf
-        扩展配置：/etc/httpd/conf.d/*.conf
+        扩展配置：/etc/httpd/conf.d/*.conf(6)
+
+    模块配置文件：/etc/httpd/conf.modules.d/*.conf(7)
+        00-mpm.conf:切换MPM配置文件
+    
+    日志文件：
+        访问日志：/var/log/httpd/access.log
+        错误日志：/var/log/httpd/error.log
     Socket：80/tcp，443/tcp
+    
     文档根目录：/var/www/html
         CGI目录：/var/www/cgi-bin/
 
@@ -43,10 +66,10 @@ httpd安装配置：
     日志切割，时间、空间
 
 
-httpd配置文件说明：/etc/httpd/conf/httpd.conf
+httpd-2.2配置文件说明：/etc/httpd/conf/httpd.conf
     配置指令不区分字符大小写，值有可能区分大小写，有些指令可以重复出现多次
 
-    配置文件格式：
+    配置文件组成：
         I.全局配置：
         II.主机配置：用于仅提供一个站点时
         III.虚拟主机配置：用于提供多个站点时
@@ -54,24 +77,32 @@ httpd配置文件说明：/etc/httpd/conf/httpd.conf
         注：主机和虚拟机配置不能同时启用
 
     配置文件语法测试：
-        serviice httpd configtest
+        service httpd configtest
         httpd -t
 
     注：绝大多数配置修改后，可以用过service httpd reload 来生效，如果修改了监听的地址或端口，必须重启服务才能生效
 
 
+    ##先说明httpd-2.2的配置## 
     1. 监听套接字
-        Listen [IP:]port    # 此指令可以出现多次，用于指定监听多个不同的套接字
+        Listen [IP:]port    # 此指令可以出现多次，用于指定监听多个不同的套接字，IP为本地主机上的有效地址
             Listen 80
             Listen 172.16.100.7：8080
-    
-    2. 配置使用Keepalive
+
+    2. 持久连接
         KeepAlive {On|Off}          # 保持连接是否开启
         KeepAliveTimeout 2          # 保持连接超时时间
         MaxKeepAliveRequests 50     # 保持连接最大连接数
 
-    3. MPM，多道处理模块
+        测试：
+            telnet SERVER_IP PORT
+            GET /index.html HTTP/1.1
+            Host:SERVER_IP
+            再连续回车2次，查看是否持久连接
+
+    3. MPM(Multi-Processing Module) 多道处理模块，2.2版本不支持DSO机制，event为测试
         httpd -l    # 查看编译进内核的模块
+
         vim /etc/syconfig/httpd         # 使用不同的机制配置文件
             HTTPD=/usr/sbin/httpd.worker  # 默认关闭，即默认运行httpd.prefork
     　
@@ -94,18 +125,21 @@ httpd配置文件说明：/etc/httpd/conf/httpd.conf
         </IfModule>
 
     4. DSO模块的加载方式
-        LoadModule module_name /path/to/module  # 相对路径时则对于ServerRoot所定义的位置
+        LoadModule module_name /path/to/module  # 相对路径时则对于ServerRoot(/etc/httpd/)
        
-        httpd -M     # 列出与加载到所有DSO模块与非DOS模块
+        httpd -M     # 列出与加载到所有DSO模块与非DSO模块
 
-    5. 配置站点根目录
+    5. 配置站点名称及根目录
+        ServerName FQDN:PORT
         DocumentRoot /path/to/somewhere
 
-    6. 页面访问属性
+        注：v2.2修改目录立即生效，v2.4还需修改访问控制
+
+    6. 站点资源访问控制
         <Direcotry "/path/to/somewhere">
             Options：
                 Indexes：缺少指定的默认页面时，允许将目录中的所有文件已列表形式返回给用户,危险!慎用
-                FollowsymLinks：允许跟随符号链接所指向的原始文件
+                FollowsymLinks：允许跟踪访问符号链接所指向的原始文件
                 None：所有都不启用
                 All：所有的都启用
                 ExecCGI：允许使用mod_cgi模块执行CGI脚本
@@ -114,17 +148,25 @@ httpd配置文件说明：/etc/httpd/conf/httpd.conf
                 MultiViews：允许使用mod_negotiation实现内容协商
                 SymLinksIfOwnerMatch：在链接文件属主属组与原始文件的属主属组相同时，允许跟随符号连接所指向的原始文件
             AllowOverride：
-        </Direcotry>
-        可以使用正则表达式，使用~
+                在各资源目录下使用.htaccess文件实现单目录访问控制，表示哪些指令可以存放在.htaccess中，建议关闭
 
-    7. 基于主机的访问控制
+        </Direcotry>
+        <File ""></File>
+        <FileMatch "PATTERN"></FileMatch>
+        <Location ""></Location>
+
+    7. 基于IP的访问控制
         <Direcotry "/path/to/somewhere">
-            Options ：
-            AllowOverride None ：不禁用下面
+            Options xxx
+            AllowOverride None
             Order：次序，写在后面的为默认
                 allow,deny: 没有允许的都拒绝
                 deny,allow: 没有拒绝的都允许
-            Allow from：允许，可使用IP，网络地址
+            Allow from：允许，可使用IP，网络地址，FQDN，DOMAIN或all
+                172.16
+                172.16.0.0
+                172.16.0.0/16
+                172.16.0.0/255.255.0.0
             Deny from：拒绝
         </Direcotry>
 
@@ -144,7 +186,7 @@ httpd配置文件说明：/etc/httpd/conf/httpd.conf
                     setfacl -m u:apache:x ~Username
 
     10. 配置日志功能
-        /var/log/http/
+        /var/log/httpd/
             access.log：访问日志，其需要记录的内容需要自定义
             error.log：错误日志
           
@@ -165,338 +207,343 @@ httpd配置文件说明：/etc/httpd/conf/httpd.conf
                 详情参考：http://httpd.apache.org/docs/2.2/mod/mod_log_config.html#formats
             
             错误日志：
-                ErrorLog
+                ErrorLog logs/error_log    <-- /var/log/httpd/error_log
+                LogLevel warn   # 记录错误日志的最低级别
 
-    11. 路径别名
+    11. 路径别名，URL-->FileSystem Directory
         Alias /alias/ "/path/to/where/"    #访问http://Server_IP/alias时，其页面文件来自于/path/to/where/
+
+        注：右边的'/'必须同时有或无
 
     12. 指定默认的字符集
         AddDefaultCharset  UTF-8
 
     13. 脚本路径别名(CGI接口)
-   URL-->FileSystem Directory
-   CGI：Common Gateway Interface（通用网关接口）使WEB可以跟一个应用程序进行通信，从通信环境中获得结果。
-    CGI是不安全的
-      在第一行写入
-      echo “Content-Type：text/html：
-   mod_alias,mod_cgi
-   ScriptAlias /URL/ "/path/to/somewhere" somewhere下的文件可以被执行
-   也可以在目录中实现
+        ScriptAlias /cgi-bin/ "/var/www/cgi-bin/"   # cgi-bin下的文件可以被执行，也可以在目录中实现
 
-  格式一般为
-   cat << EOF
-    Content-Type:text/html
-    <pre>
-    The time is : `date`.
-    </pre>
-    EOF
+        访问：http://SERVER_IP/cgi-bin/
+        
+        CGI：Common Gateway Interface(通用网关接口)使WEB可以跟一个应用程序进行通信，从通信环境中获得结果的协议，但是不安全
+        依赖模块：mod_alias,mod_cgi
 
-14.基于用户的访问控制
-    虚拟用户：不是系统用户，只是为了获取某种资源类型的一种虚拟的用户
-       文件/etc/httpd/conf/.htpasswd
-       SQL数据库
-       dbm：
-       ldap:轻量级目录访问协议
-    认证类型(auth)：
-        basic：基本认证，账号和密码明文发送
-        digest：摘要认证，hash编码之后发送
-    认证提供者(authentication provider):账号和密码的存放位置
-      authn
-    授权机制(authorization):根据什么进行授权
-    案例：基于文件，做基本认证根据用户和组进行授权
-    1、编辑配置文件，为需要认证的目录配置认证机制
-    <Directory "/www/htdocs/fin">A
-        options None
-        AllowOverride AuthConfig 使用认证配置
-        AuthType Basic 使用基本认证
-        AuthName "Private Area" 质询时标题
-        AuthUserFile /etc/http/conf/.htpasswd  密码的存放位置
-        Require vaild-user 可访问的用户
+        如访问一脚本，返回执行结果：
 
-    </Directory>
-    2、使用htpsswdm命令使用生成认证库
-      htpasswd 
-      -c 创建密码，创建第一个用户时使用
-      htpasswd -c -m /etc/http/conf/.htpasswd tom
-      -m MD5格式存放
-      -b 批量模式
-      -D 删除用户
-    3、基于组认证
-    <Directory "/www/htdocs/fin">
-        options None
-        AllowOverride AuthConfig 使用认证配置
-        AuthType Basic 使用基本认证
-        AuthName "Private Area" 质询时标题
-        AuthgroupFile /etc/http/conf/.htpasswd  密码的存放位置
-        Require group GroupName  可访问的用户
+            脚本格式一般为：
+                cat << EOF
+                Content-Type:text/html
+                <pre>
+                    The time is : `date`.
+                </pre>
+                EOF
+        注：很少用
 
-    </Directory>
-       先创建用户，在创建组
-       组文件：
-         组名：用户1 用户2 用户3
+    14. 基于用户的访问控制
+        http协议认证功能：
+            认证质询：
+                WWW-Authenticate:响应码401，拒绝客户端请求并要求提供帐号密码
+            认证：
+                Authorization:客户端输入帐号密码再发送请求，认证通过后服务器返回响应资源
 
- 15.虚拟主机
-     一个物理服务器提供多个站点；使用虚拟主机得先取消中心主机
-     基于不同的IP实现不同的虚拟主机
-        变化IP
-     基于不同的port实现不同的虚拟主机
-        变化port
-     基于不同主机名实现不同的虚拟主机
-        变化ServerName的值
-    通过请求报文中的HOST来实现不同的虚拟主机访问
-    <VirtualHost IP:port>
-      SeverName
-      DocumentRoot ""
-      <Directory "">
-      </Directory>
-      ServerAlias
-      ServerAdmin
-    </VirtualHost>
-    将全局中的DocumentRoot""注释掉
+        认证方式(auth)：
+            basic：基本认证，账号和密码明文发送
+            digest：摘要认证，hash编码之后发送
 
-   虚拟主机的单独配置
-       用户认证
-       访问日志
-       错误日志
-       别名
-       脚本别名
+        虚拟用户：不是系统用户，只是为了获取某种资源类型的一种虚拟的用户，仅用于访问某服务的帐号密码，保存位置有
+            1. 文件:/etc/httpd/conf/.htpasswd
+            2. SQL数据库
+            3. dbm:
+            4. ldap:轻量级目录访问协议
+        
+        安全域：
 
-   基于IP认证机制，基于用户认证
+        案例：基于文件，做basic基本认证根据用户和组进行授权
+            1、编辑配置文件，为需要认证的目录配置认证机制
+                <Directory "/web/admin/">
+                    Options None
+                    AllowOverride None          # 使用认证配置
+                    AuthType Basic              # 使用基本认证
+                    AuthName "Private Area"     # 质询时标题
+                    AuthUserFile "/etc/http/conf/.htpasswd"   # 密码的存放位置
+                    Require valid-user          # 可访问的用户，valid-user表示文件中所有用户，也可指定具体用户
+                </Directory>
 
-       http协议认证、表单认证
+                    指定用户：Require user liu tom lily
 
-16.https协议
-     x509.3证书格式
-         证书格式的版本号
-         证书序列号
-         证书签名算法
-         证书颁发者
-         有效期
-         持有者的名称
-         持有者的公钥
-         CA的ID
-         持有者的ID
-         其他扩展信息
-              基本约束
-              证书策略
-              密钥的使用限制
-         CA签名
-    ssl握手要完成的工作
-         交换协议版本号
-         选择一个双方都支持的加密方式
-         对两端实现身份验证
-         密钥交换
-    http：文本协议 80/tcp
-    https：二进制格式的协议 443/tcp
+            2、使用 htpsswd 命令使用生成认证库
+                -c: 创建密码，创建第一个用户时使用
+                -m: MD5格式存放
+                -s: SHA加密
+                -b: 批量模式
+                -D: 删除用户
 
-    SSL会话基于IP地址进行：不支持在基于主机名的虚拟主机上实现
+                如：htpasswd -c -m /etc/http/conf/.htpasswd tom  回车输入密码
+                    注：-c为第一次生成使用，再添加用户时不能加，否则之前用户会被覆盖
 
-    客户端验证服务器端证书时：
-          日期检查：证书是否在有效期内
-          证书颁发者的可信度
-          证书的签名检测：
-          持有者的身份检测
+            3、基于组认证，先使用htpasswd创建用户，再创建组帐号文件
+                <Directory "/web/admin/">
+                    Options None
+                    AllowOverride None          # 使用认证配置
+                    AuthType Basic              # 使用基本认证
+                    AuthName "Private Area"     # 定义质询时标题
+                    AuthUserFile /etc/http/conf/.htpasswd   # 密码的存放位置
+                    AuthGroupFile /etc/http/conf/.group     # 组帐号文件
+                    Require group GroupName     # 可访问的用户
+                </Directory>
+               
+                组帐号文件格式：
+                    组名：用户1 用户2 用户3
 
+    15. 虚拟主机
+        一个物理服务器提供多个站点，使用虚拟主机得先取消中心主机
+        实现方式：
+            1. 基于不同的IP实现不同的虚拟主
+            2. 基于不同的port实现不同的虚拟主机
+            3. 基于不同主机名实现不同的虚拟主机(现实可行方案)
 
-    httpd：基于mod_ssl模块实现对ssl的支持
-      可以在/etc/pki/tls/certs
-      openssl s_client 
-      -connet：验证的地址：端口
-      -CAfile:CA证书的路径
-    1)、准备好服务器的私钥和证书
-    2)、安装mod_ssl模块
-         yum -y install mod_ssl
-    3)、配置/etc/httpd/conf.d/ssl.conf
-       配置实用ssl的虚拟主机
-          ServerName
-          DocunmentRoot
-       配置证书和私钥
-          SSLCertificatFile 证书文件
-          SSLCertificatKeyFile 密钥文件
-     4)、重启httpd服务
-     5)、测试
-         openssl s_client -connet：验证的地址：端口  -CAfile:CA证书的路径
+        1) 使用虚拟的前提：注释主服务器的站点根路径指定DocumentRoot
 
-    URL Rewrite：URL重写
+        2) 定义虚拟主机：
+            <VirtualHost IP:PORT>
+                ServerName 
+                DocumentRoot 
+                ServerAlias
+                ErrorLog
+                CustomLog
+                <Directory "xx">
+                    xxx
+                </Directory>
+            </VirtualHost>
 
-17、服务器status页面
-    内生的status信息，且此信息可以通过web予以显示
+            配置示例：建议/etc/httpd/conf.d/vhost.conf
+                <VirtualHost 172.16.60.7:80>
+                    ServerName www.liu2lin.com
+                    DocumentRoot "/web/hosta"
+                </VirtualHost>
 
-    基于URL访问属性
-    <Location [~] "">
-    </Location >
+                <VirtualHost 172.16.60.8:80>
+                    ServerName www.liu2lin.com
+                    DocumentRoot "/web/hostb"
+                </VirtualHost>
 
-    基于单个文件的访问属性
-     <File [~] "">
-     </File>
+                <VirtualHost 172.16.60.8:8080>
+                    ServerName www.liu2lin.com
+                    DocumentRoot "/web/hostc"
+                </VirtualHost>
+
+                <VirtualHost 172.16.60.8:80>
+                    ServerName www2.liu2lin.com
+                    DocumentRoot "/web/hostd"
+                </VirtualHost>
+
+            测试语法并重载配置，在相应目录下创建测试页面
+        
+
+    16. https协议,http over ssl/tls
+        SSL会话的简化过程：
+            (1) 客户端发送可供选择的加密方式，并向服务器请求证书；
+            (2) 服务器端发送证书以及选定的加密方式给客户端；
+            (3) 客户端取得证书并进行证书验正：
+                如果信任给其发证书的CA：
+                    (a) 验正证书来源的合法性；用CA的公钥解密证书上数字签名
+                    (b) 验正证书的内容的合法性: 完整性验正
+                    (c) 检查证书的有效期限
+                    (d) 检查证书是否被吊销
+                    (e) 证书中拥有者的名字，与访问的目标主机要一致
+            (4) 客户端生成临时会话密钥（对称密钥），并使用服务器端的公钥加密此数据发送给服务器，完成密钥交换；
+            (5) 服务用此密钥加密用户请求的资源，响应给客户端
+
+            注意：SSL会话是基于IP地址创建；所以单IP的主机上，仅可以使用一个https虚拟主机；
 
 
-     也可以使用<LocationMatch "">
-     </LocationMatch>来实现正则表达式的配置
+        配置httpd支持https：
+            (1) 为服务器申请数字证书
+                测试：通过私建CA发证书
+                    (a) 创建私有CA
+                    (b) 在服务器创建证书签署请求
+                    (c) CA签证
+                    
+            (2) 配置httpd支持使用ssl，及使用的证书；
+                yum -y install mod_ssl
 
-     如果要配置其属性的URL能映射到某具体文件系统路径，建议使用<Directory>
+                配置文件：/etc/httpd/conf.d/ssl.conf
+                    DocumentRoot
+                    ServerName
+                    SSLCertificateFile
+                    SSLCertificateKeyFile
+                    
+            (3) 测试基于https访问相应的主机；
+                openssl  s_client  [-connect host:port] [-cert filename] [-CApath directory] [-CAfile filename]
+        
 
-    处理器：当文件被调用时，Apache内部表现形式：一般每种文件类型都有其隐式处理器；否则需要自己定义
-       显式的定义使用的处理器：SetHandler
+    17、服务器status页面
+        内生的status信息，且此信息可以通过web予以显示
 
+        LoadModule status_module modules/mod_status.so
+        ExtendedStatus {On|Off}     # 显示更详细
 
-    <Location /URL>
-        setHeandler server-status
-    </Location>
+        示例：
+            <Location /server-status>
+                SetHandler sever-status
+                AuthType Basic
+                AuthName "Sever Status"
+                AuthUserFile "/etc/http/conf/.htpasswd"
+                Require user tom
+                Order deny,allow
+                Allow from all
+            </Location>
 
+            注：如没有用户帐号文件需先生成，htpasswd -c -m /etc/http/conf/.htpasswd tom
 
-    定义访问控制机制
-        基于IP控制
-        基于用户控制
+            访问：http://IP/server-status
 
-    示例：
-     <Location /server-status>
-          SetHandler sever-status
-          AuthType Basic
-          AuthName "Sever Status"
-          AuthUserFile "/etc/http/conf/.htpasswd"
-          Require valid-user
-          Order deny,allow
-          Allow from all
-      </Location>
+    18、curl命令
 
+    curl是基于URL语法在命令行方式下工作的文件传输工具，它支持FTP, FTPS, HTTP, HTTPS, GOPHER, TELNET, DICT, FILE及LDAP等协议。curl支持HTTPS认证，并且支持HTTP的POST、PUT等方法， FTP上传， kerberos认证，HTTP上传，代理服务器， cookies， 用户名/密码认证， 下载文件断点续传，上载文件断点续传,，http代理服务器管道（ proxy tunneling）， 甚至它还支持IPv6， socks5代理服务器,，通过http代理服务器上传文件到FTP服务器等
 
-18、curl命令
+    格式：curl [OPTIONS] [URL...]
 
-curl是基于URL语法在命令行方式下工作的文件传输工具，它支持FTP, FTPS, HTTP, HTTPS, GOPHER, TELNET, DICT, FILE及LDAP等协议。curl支持HTTPS认证，并且支持HTTP的POST、PUT等方法， FTP上传， kerberos认证，HTTP上传，代理服务器， cookies， 用户名/密码认证， 下载文件断点续传，上载文件断点续传,，http代理服务器管道（ proxy tunneling）， 甚至它还支持IPv6， socks5代理服务器,，通过http代理服务器上传文件到FTP服务器等等，功能十分强大。
+    curl的常用选项：
+        -I/--head：只显示响应报文首部信息
+        -H/--header <line>：自定义头信息传递给服务器
+        -A/--user-agent <string>：设置用户代理发送给服务器，即告诉服务器浏览器是什么
+        -basic：使用HTTP基本验证
+        --tcp-nodelay：使用TCP_NODELAY选项
+        -e/--referer <URL>：来源网址，跳转过来的网址
+        --cacert <file>：指定CA证书 (SSL)
+        --compressed：要求返回是压缩的形势，如果文件本身为一个压缩文件，则可以下载至本地
+        --limit-rate <rate>：设置传输速度
+        -u/--user <user[:password]>：设置服务器的用户和密码
+        -0/--http1.0：使用HTTP 1.0
 
-curl的常用选项：
+    19、使用mod_deflate模块压缩页面优化传输速度，可以写为一行，也可以写多行，默认为gzip
+        适用场景：
+            (1) 节约带宽，额外消耗CPU；同时，可能有些较老浏览器不支持
+            (2) 压缩适于压缩的资源，例如文件文件
 
-    -A/--user-agent <string> 设置用户代理发送给服务器，即告诉服务器浏览器为什么
-    -basic 使用HTTP基本验证
-    --tcp-nodelay 使用TCP_NODELAY选项
-    -e/--referer <URL> 来源网址，跳转过来的网址
-    --cacert <file> 指定CA证书 (SSL)
-    --compressed 要求返回是压缩的形势，如果文件本身为一个压缩文件，则可以下载至本地
-    -H/--header <line>自定义头信息传递给服务器
-    -I/--head 只显示响应报文首部信息
-    --limit-rate <rate> 设置传输速度
-    -u/--user <user[:password]>设置服务器的用户和密码
-    -0/--http1.0 使用HTTP 1.0
+        SetOutputFilter DEFLATE
 
-19、使用mod_deflate模块压缩页面优化传输速度，可以写为一行，也可以写多行，默认为gzip
-
-SetOutputFilter DEFLATE
-
-# mod_deflate configuration
-<IfModule mod_deflate.c>
- 
-    # Restrict compression to these MIME types
-    AddOutputFilterByType DEFLATE text/plain
-    AddOutputFilterByType DEFLATE text/html
-    AddOutputFilterByType DEFLATE application/xhtml+xml
-    AddOutputFilterByType DEFLATE text/xml
-    AddOutputFilterByType DEFLATE application/xml
-    AddOutputFilterByType DEFLATE application/x-javascript
-    AddOutputFilterByType DEFLATE text/javascript
-    AddOutputFilterByType DEFLATE text/css
- 
-    # Level of compression (Highest 9 - Lowest 1)默认为6
-    DeflateCompressionLevel 9
+        # mod_deflate configuration
+        # Restrict compression to these MIME types
+        AddOutputFilterByType DEFLATE text/plain 
+        AddOutputFilterByType DEFLATE text/html
+        AddOutputFilterByType DEFLATE application/xhtml+xml
+        AddOutputFilterByType DEFLATE text/xml
+        AddOutputFilterByType DEFLATE application/xml
+        AddOutputFilterByType DEFLATE application/x-javascript
+        AddOutputFilterByType DEFLATE text/javascript
+        AddOutputFilterByType DEFLATE text/css
      
-    # Netscape 4.x has some problems.
-    BrowserMatch ^Mozilla/4 gzip-only-text/html
-     
-    # Netscape 4.06-4.08 have some more problems
-    BrowserMatch ^Mozilla/4\.0[678] no-gzip
-     
-    # MSIE masquerades as Netscape, but it is fine
-    BrowserMatch \bMSI[E] !no-gzip !gzip-only-text/html
+        # Level of compression (Highest 9 - Lowest 1)
+        DeflateCompressionLevel 9
+         
+        # Netscape 4.x has some problems.
+        BrowserMatch ^Mozilla/4 gzip-only-text/html
+         
+        # Netscape 4.06-4.08 have some more problems
+        BrowserMatch ^Mozilla/4\.0[678] no-gzip
+         
+        # MSIE masquerades as Netscape, but it is fine
+        BrowserMatch \bMSI[E] !no-gzip !gzip-only-text/html
 
-</IfModule>
+
+    20. httpd程序包自带的工具介绍
+        apachectl：httpd服务控制脚本，支持start和stop
+        ab：apache bench，httpd服务器性能测试工具
+        apxs：由httpd-devel包提供，httpd得以扩展使用第三方模块的工具
+        configure：配置源代码
+        dbmmanage：为基本认证创建和更新DBM格式的用户认证文件
+        htpasswd：为基本认证创建和更新用户认证文件
+        htdigest：为摘要认证创建和更新用户认证文件
+        htcacheclean：清理磁盘缓存
+        htdbm：操作 DBM 密码数据库
+        httxt2dbm：为 RewriteMap 创建 dbm 文件
+        logresolve：将 Apache 日志文件中的 IP 地址解析到主机名称
+        rotatelogs：不关闭 Apache 而切换日志文件
+        suexec：执行外部程序前切换用户
+
+    21. ab工具的初步使用
+        同类工具：http_load, webbench, seige, tcpcopy
+        用法：ab [options] [http[s]://]hostname[:port]/path
+            -c #: 模拟的并发数
+            -n #: 总的请求数
+                -n的值一定要大于等于-c的值
+            -k: 以持久连接方式测试
+
+        结果说明：
+            Time per request: 每并发平均时长
+            Time per request: 每次请求平均时长
+
+    22. 资源限定
+        软限制：可以超出的限制，但仅能超出一定时长
+        硬限制：绝对不能超出的限制
+        ulimit：只能修改软限制
+            -n [N]：显示或限制能打开的最大的文件句柄数，
+            -u [N]：所能够打开的最大进程数
+        如果修改硬限制
+          /etc/security/limits.conf,扩展配置etc/security/limits.d/ *.conf
+        对谁进行限定    类型  要限定的选项 值
 
 
-扩展功能
-    apachectl
-       Apache HTTP服务控制工具
-    ab
-       Apache HTTP服务器性能测试工具
-    apxs
-       Apache 扩展工具
-    configure
-       配置源代码
-    dbmmanage
-       为基本认证创建和更新DBM格式的用户认证文件
-    htcacheclean
-       清理磁盘缓存
-    htdigest
-        为摘要认证创建和更新用户认证文件。
-    htdbm
-        操作 DBM 密码数据库。
-    htpasswd
-        为基本认证创建和更新用户认证文件。
-    httxt2dbm
-        为 RewriteMap 创建 dbm 文件。
-    logresolve
-        将 Apache 日志文件中的 IP 地址解析到主机名称。
-    rotatelogs
-        不关闭 Apache 而切换日志文件。
-    suexec
-        执行外部程序前切换用户。
 
-20.资源限定
-    软限制：可以超出的限制，但仅能超出一定时长
-    硬限制：绝对不能超出的限制
-   ulimit：只能修改软限制
-       -n [N]：显示或限制能打开的最大的文件句柄数，
-       -u [N]：所能够打开的最大进程数
-    如果修改硬限制
-      /etc/security/limits.conf,扩展配置etc/security/limits.d/*.conf
- 对谁进行限定    类型  要限定的选项 值
+httpd-2.4的新特性：
+    1. MPM支持在运行时装载；
+        --enable-mpms-shared=all --with-mpm={prefork|worker|event}
+    2. 支持event mpm
+    3. 异步读写
+    4. 在每模块及每目录分别使用不同的日志级别
+    5. 每请求的配置；<If>,<Elseif>
+    6. 增强版的表达式分析器
+    7. 毫秒级的持久连接
+        KeepAlive On
+        KeepAliveTimeout 500ms
+        MaxKeepAliveRequest 100
+    8. 基于FQDN的虚拟主机不再需要NameVirtualHost指令
+    9. 支持用户使用自定义变量
 
- 21、ab工具的初步使用
-    -c 模拟的并发数
-    -n 模拟的总请求数
-   一般并发数应该小于等于请求数
-   http_load webbench seige(只做参考)
-   tcp_copy
+    新增模块：
+        mod_proxy_fcgi
+        mode_ratelimit
+        mod_request
+        mod_remoteip
 
-22、httpd-2.4编译安装
-    依赖于更高版本的apr和apr-util 
-    apr全程 apache portable runtime
+    修改了一些配置机制：
+        1. 不再支持使用order, allow, deny定义基于ip的访问控制；改为require
+            <RequireAll>
+                Require all granted         # 允许所有
+                Require all denied          # 拒绝所有
+            </RequireAll>
+            Require [not] ip IP             # 允许或拒绝指定ip或网络
+            Require [not] host HOSTNAME     # 主机
+        
+        2. 默认目录权限为拒绝，需<Directory>中添加Require all granted
 
-     1）解决依赖关系
-         yum -y install pcre-devel
-     2)编译安装apr
+
+httpd-2.4编译安装：
+    依赖于更高版本的apr-1.4+,apr-utils-1.4+ 及可选apr-iconv
+        apr:apache portable runtime (相当于apache专用虚拟机)
+
+    1. 解决依赖关系
+        yum -y install pcre-devel
+    2. 编译安装apr
         tar 
         cd
         ./configure --prefix=/usr/local/apr
         make && make install
-     3)编译安装apr-util
-         tar
-         cd
-          ./configure --frefix=/usr/local/apr-util --with-apr=/usr/local/apr
-          make && make install
-
-      httpd2.4新特性
-        1）MPM支持在运行时装载
-             --enable-mpms-shared=all --with-mpm=event 启用默认的event
-        2) 支持event
-        3）异步读写
-        4) 在每模块及每目录上指定日志级别
-        5）每请求配置：<If> <Elseif>
-        6) 增强版的表达式分析器
-        7) 毫秒级的keepalive timeout
-        8）支持主机名的虚拟主机不在需要NameVirtualHost指令
-        9) 支持使用自定义变量
-        新增一些模块：mod_proxy_fcgi,mod_ratelimit,mod_request,mod_remoteip
-        对于基于IP的访问做了修改，不在使用order,allow,deny这些机制；而是统一使用require进行
-    4)编译httpd
-       tar
-       cd
-       ./configure --prefix=/usr/local/apache --sysconfdir=/etc/httpd24 --enable-so --enable--ssl --enable-cgi --enable-rewrite --with-zlib --with-pcre --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr-util --enable-modeles=most(常用的) --enable-mpms-shared=all --with-mpm=event
-       make && make install
-       头文件、库文件、帮助文档、二进制
-       后续的配置
-       1 导出头文件
-       ln -sv /usr/local/appache/include /usr/include/httpd
-       2 导出库文件
-        ldconfig -p 显示当前系统的库文件
-        ？？？
-       3 导出帮助文件
-       4 修改环境变量
+    3. 编译安装apr-util
+        tar
+        cd
+        ./configure --prefix=/usr/local/apr-util --with-apr=/usr/local/apr
+        make && make install
+    4. 编译httpd
+        tar
+        cd
+        ./configure --prefix=/usr/local/apache --sysconfdir=/etc/httpd24 --enable-so --enable-ssl --enable-cgi --enable-rewrite --with-zlib --with-pcre --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr-util --enable-modeles=most(常用的) --enable-mpms-shared=all --with-mpm=event
+        make && make install
+        
+    5. 头文件、库文件、帮助文档、二进制及后续的配置
+        1) 导出头文件
+            ln -sv /usr/local/appache/include /usr/include/httpd
+        2) 导出库文件
+            ldconfig -p 显示当前系统的库文件
+        3) 导出帮助文件
+        4) 修改环境变量

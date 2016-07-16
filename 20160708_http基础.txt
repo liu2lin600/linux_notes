@@ -36,84 +36,81 @@ c/s：
    应用层协议：特定的
       http，https，smtp,pop,imap,ftp,ldap
 
-http 超文本传输协议（hyprttext transport protcol）
-   html:hypertext mark language(超文本标记语言)
-
-   client:browser
-     URI（统一资源提示符）的子集：URL（统一资源定位符）
-   server:http server
-
-GUI
-CLI
-
-html格式的文件
-  <html>
-     <head>
-        <title></title>
-     </head>
-     <boby>
-          <h1></h1>
-            <p><img src=""></p>
-           <h2></h2>
-            <p>  <a href="a.html" > </a>  </p>
-     </body>
-   </html>
 
 
-css: Cascading style sheet(层叠样式表)
+http： 超文本传输协议（hyprttext transport protcol）
+    html:hypertext mark language(超文本标记语言)
+
+    client:browser
+        URI（统一资源提示符）的子集：URL（统一资源定位符）
+    server:http server
+
+
+
 
 动态页面：
     程序脚本
         客户端
         服务器端 CGI(common gateway interface程序通用接口)
-          c,c++
-          perl
-          python
-          php
-          asp.net
-          jsp
+            c,c++,perl,python,php,asp.net,jsp
 
-一个页面中可能会包含多个页面对象
+web资源：一个页面中可能会包含多个页面对象
 
-URI：Uniform Resource Identifier
-URL: Uniform Resource Locator
+    URI：Uniform Resource Identifier
+    URL：Uniform Resource Locator
 
-方案：主机地址：资源
+        组成：协议:主机地址:资源
 
 http协议的版本：
     http0.9：只能传输html文档，1991年
     http1.0：支持多媒体数据的处理，保持连接。有缓存功能
+        cache, MIME:multipurpose Internet mail extension 互联网多用户邮件扩展
     http1.1：支持更多的请求方法，更加精细的缓存控制，持久连接
+        speedy:spdy
+    http2.0：
 
-MIME:multipurpose Internet mail extension 互联网多用户邮件扩展
-  nase64：将二进制数据编码成文本发送，并能够让接受方还原回原来的格式
+http协议实现：
+    简单的基本http协议服务器：httpd(apache), nginx, lighttpd
+    动态服务器技术：IIS,tomcat, jetty, resin...
+
+一个http请求的基本过程：
+    建立连接 -> 接收请求 -> 处理请求 -> 访问资源 -> 构建响应 -> 发送响应 -> 记录日志
+
+并发响应模型：
+    1. 单线程I/O结构:串行响应
+    2. 多线程I/O结构:同时启动多个进程，每个进程响应一个请求
+    3. 复用的I/O结构:
+        多进程模型：一进程生成多个线程，每个线程响应一个请求
+        事件驱动：一个进程响应多个请求
+    4. 复用多线程I/O结构:多个线程，每个线程响应多个请求
+
 
 HTTP报文：
     HTTP事务：一次请求以与其对应的响应
     HTTP方法：GET、PUT、HEAD、POST、DELETE
+    
     HTTP请求：request
         请求报文格式：
             <method><request-url><version>
-            <headers>
+            <headers>...
             <entity-body>
-            首部headers：
+            首部headers组成：
                 name：value
                 content-type：images/gif
 
+    HTTP响应：response
+        响应报文格式：
+            <version><status><reason-phrase>
+            <headers>
+            <entity-body>
 
-HTTP响应：response
-    响应报文格式：
-        <bersion><status><reason-phrase>
-        <headers>
-        <entity-body>
-
-        <method>：请求方法，希望服务器端执行的动作，如GET、HEAD、POST等
-        <request-url>：请求的资源，可以是相对路径，也可以是完整的URL
-        <version>：协议版本，格式HTTP/<major>。<minor>，如http/1.0
-        <headers>：HTTP首部
-        <status>：状态码
-        <reason-phrase>：原因短语，数字状态吗易读信息
-        <entity-body>：主体部分
+            <method>：请求方法，希望服务器端执行的动作，如GET、HEAD、POST等
+            <request-url>：请求的资源，可以是相对路径，也可以是完整的URL
+            <version>：协议版本，格式HTTP/<major>。<minor>，如http/1.0
+            <headers>：HTTP首部
+            <status>：状态码
+            <reason-phrase>：原因短语，数字状态吗易读信息
+            <entity-body>：主体部分
 
         http协议：是一种stateless（无状态）协议，一次HTTP事务结束后，链接即行断开
 
@@ -121,54 +118,57 @@ HTTP响应：response
                 并行请求
                 持久连接
 
-HTTP的请求方法：
-    安全的方法：GET、HEAD
-    POST、PUT、DELETE、OPTIONS、TRACE
-    扩展方法：LOCK、MKCOL、COPY、MOVE
+HTTP的请求方法：method
+    1. 安全的方法：GET、HEAD
+    2. POST、PUT、DELETE、OPTIONS、TRACE
+    3. 扩展方法：LOCK、MKCOL、COPY、MOVE
 
     GET：请求获取一个资源，需要服务器发送
     HEAD：跟GET相似，但其不需要服务发送资源而仅传回响应首部
     POST：支持HTML表单提交，表单中有用户填入的数据，这些数据会发送到服务器端，由服务器存储至某位置（例如发送处理程序）
-    PUT：与GET相反，向服务写入文档；发布系统
+    PUT：与GET相反，向服务写入文档,发布系统,不安全
     DELETE：请求删除URL指向的资源
     OPTIONS：探测服务器端对某资源所支持的请求方法
-    TRACE：追踪请求资源要经过的防火墙、代理或网关等
+    TRACE：追踪请求资源要经过的web网关等
 
-    请求响应报文代码：
-       1XX：信息性状态码
-           100：
-       2XX：成功状态码
-           200：OK
-           201：Created OK
-       3XX：重定向状态码
-           301：Moved Permanebtly 永久重定向，在响应报文中使用首部“Location：URL”指定资源现在所在的位置
-           302：Found 临时重定向，在响应报文中使用首部“Location：URL”指定临时资源位置
-           304：Not Modified，条件式请求中使用
-       4XX：客户端的错误
-           403：Forbidden,请求被服务器拒绝
-           404：Not Found，服务器无法找到请求的URL
-           405：Method Not Allowed,不允许使用此方法请求响应的URL
-       5XX：服务器类的错误
-           500：Internal Server Error，服务器内部错误
-           502：Bad Gateway：代理服务器从上游收到一条伪响应
-           503：Service Unavailable，服务器此时无法提供服务，但将来可能可用
 
-HTTP首部：
+请求响应状态码：status
+    1XX：信息性状态码
+        100：
+    2XX：成功状态码
+        200：OK
+        201：Created OK
+    3XX：重定向状态码
+        301：Moved Permanebtly 永久重定向，在响应报文中使用首部"Location: URL"指定资源现在所在的位置
+        302：Found 临时重定向，在响应报文中使用首部"Location: URL"指定临时资源位置
+        304：Not Modified，请求的资源与客户端未改变
+    4XX：客户端的错误
+        401：认证质询
+        403：Forbidden,请求被服务器拒绝
+        404：Not Found，服务器无法找到请求的URL
+        405：Method Not Allowed,不允许使用此方法请求响应的URL
+    5XX：服务器类的错误
+        500：Internal Server Error，服务器内部错误
+        502：Bad Gateway：代理服务器从上游收到一条伪响应
+        503：Service Unavailable，服务器此时无法提供服务，但将来可能可用
+
+HTTP首部：headers
     1. 通用首部：请求和响应都可以使用的
+        Date：报文创建时间
         Connection：定义C/S之间关于请求/响应的有关选项
             对于http/1.0，Connection keep-alive
         Via：显示了报文经过的中间节点
-        Cache-Control：缓存指示
-        Pragma
+        Cache-Control：缓存控制
+        Pragma：(1.0中使用)
 
-    2. 请求首部：
+    2. 请求首部：请求专用
         Client-IP：请求端IP
         Host：请求的主机名和端口号，虚拟主机环境下用于不同的虚拟主机
         Referer：指明了请求当前资源的原始资源的URL
         User-Agent：用户代理，使用什么工具发出的请求
 
         Accept首部：用户标明客户自己更倾向于支持使用的能力
-            Accept：指明服务器能发送的媒体类型
+            Accept：指明服务器能发送的媒体类型，MIME，如images/jpeg
             Accept-Charset：支持使用的字符集
             Accept-Encoding：支持使用的编码方式
             Accept-Language：支持使用语言
@@ -176,16 +176,18 @@ HTTP首部：
         条件请求首部：
             Expect：期望的行为
             If-Modified-Since：是否在指定的时间以来修改过此资源
-            If-None-Match
+            IF-Unmodified-Since：
+            If-None-Match：是否不匹配，ETag值
+            IF-Match：
 
         跟安全相关的请求首部：
             Authorication：客户端提交给服务端的认证数据，如账号和密码
             Cookie：客户端发送给服务器端身份标识
-            Cookie2
+            Cookie2：
     
-    3. 响应首部：
-        Age：响应持续的时间
-        Server：向客户端标明服务器程序名称和版本
+    3. 响应首部：响应专用 
+        Age：响应持续的时长
+        Server：向客户端标明服务器程序名称和版本等
 
         协商首部：
             Accept-Ranges：对当前资源来讲，服务器所能够接受的范围类型
@@ -201,24 +203,20 @@ HTTP首部：
         Allow：允许对此资源使用的请求方法
 
         内容首部：
-            Contern-Encoding
-            Contern-Language
-            Contern-Length
-            Contern-type
-            Contern-Range
-            Contern-Location
+            Content-Encoding
+            Content-Language
+            Content-Length
+            Content-Type
+            Content-Range
+            Content-Location
 
         缓存首部：
             ETag：实体标签
             Expires：过期标签
             Last-Modified：上一次的修改时间
 
-一个Web请求的基本过程：
-    建立连接 -> 接收请求 -> 处理请求 -> 访问资源 -> 构建响应 -> 发送响应 -> 记录日志
+    5. 扩展首部：用户自定义
+        X-Forward-For：
 
-Web服务器的输入输出结构：
-    1. 单线程I/O结构
-    2. 多线程I/O结构
-    3. 复用的I/O结构（一个进程响应多个请求）
-    4. 复用多线程I/O结构:多个线程，每个线程响应多个请求
+    更多参考《HTTP权威指南》
 
