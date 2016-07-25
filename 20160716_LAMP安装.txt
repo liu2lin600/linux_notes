@@ -31,14 +31,13 @@ II. 快速安装一(centos7)，php以模块方式安装
               ss -tunl
               ps aux | grep httpd
 
-        添加测试：echo "<?php phpinfo();?>" > /var/www/html/index.php
+        测试：curl 192.168.1.71 (如果没有/var/www/html/index.html此文件，手动添加)
 
     2. php-5.4
         配置文件：/etc/php.ini, /etc/php.d/*.ini
 
     3. mariadb-5.5
-        配置文件：/etc/my.cnf
-                  /etc/my.cnf.d/ *.cnf
+        配置文件：/etc/my.cnf,/etc/my.cnf.d/*.cnf
             /etc/my.cnf中添加：
                 [mysqld]
                 innodb_file_per_table = On
@@ -165,7 +164,7 @@ IV. 编译安装LAMP(centos7)
         3) 编译安装httpd
             tar xf httpd-2.4.23.tar.bz2
             cd httpd-2.4.23
-            ./configure --prefix=/usr/local/apache2 --sysconfdir=/etc/httpd24 --enable-so --enable-ssl --enable-cgi --enable-rewrite --with-zlib --with-pcre --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr-util --enable-modules=most --enable-mpms-shared=all --with-mpm=event
+            ./configure --prefix=/usr/local/apache2 --sysconfdir=/etc/httpd2 --enable-so --enable-ssl --enable-cgi --enable-rewrite --with-zlib --with-pcre --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr-util --enable-modules=most --enable-mpms-shared=all --with-mpm=event
             make -j N       # N为物理核心的2倍，加速编译
             make install
 
@@ -183,8 +182,18 @@ IV. 编译安装LAMP(centos7)
             AddType application/x-httpd-php-source  .phps
             DirectoryIndex  index.php  index.html
 
+        5) MAN, 头文件
+            vim /etc/man_db.conf  ==> MANDATORY_MANPATH  /usr/local/apache2/man
+            ln -sv /usr/local/apache2/include /usr/include/apache
+            ldconfig
+
+
     2. mariadb (二进制包安装)
-        0) 安装
+        0) 创建mysql用户
+            groupadd -r mysql
+            useradd -g mysql -r -s /sbin/nologin -M -d /mydata/ mysql
+
+        1) 安装
             tar xf mariadb-5.5.50-linux-x86_64.tar.gz -C /usr/local
             cd /usr/local/
             ln -sv mariadb-5.5.50-linux-x86_64  mysql   # 方便滚动升级
@@ -192,10 +201,12 @@ IV. 编译安装LAMP(centos7)
             chown -R mysql:mysql .
             scripts/mysql_install_db --user=mysql --datadir=/mydata      # 初始化并指定数据存放路径
             chown -R root .
+            cp /usr/local/mysql/support-files/mysql.server /etc/rc.d/init.d/mysqld  # 启动脚本
+            chmod +x /etc/rc.d/init.d/mysqld
 
             注：数据建议存放在lvm上
 
-        1) 配置
+        2) 配置
             cp /usr/local/mysql/support-files/my-large.cnf  /etc/my.cnf
             vim /etc/my.cnf
                 [mysqld]
@@ -203,12 +214,18 @@ IV. 编译安装LAMP(centos7)
                 innodb_file_per_table = On
                 skip_name_resolve = On
 
-        2) PATH路径,MAN文档,头文件
-            echo "$PATH:/usr/local/mysql/bin" > /etc/profile.d/mysql.conf       # PATH环境变量
+        3) PATH路径,MAN文档,头文件
+            echo 'export PATH=$PATH:/usr/local/mysql/bin' > /etc/profile.d/mysql.sh       # PATH环境变量
             vim /etc/man_db.conf  ==> MANDATORY_MANPATH  /usr/local/mysql/man   # 帮忙文档
             ln -sv /usr/local/mysql/include  /usr/include/mysql         # 头文件
             echo '/usr/local/mysql/lib' > /etc/ld.so.conf.d/mysql.conf  # 输出mysql的库文件给系统库查找路径
             ldconfig [-v]   # 系统重新载入系统库
+
+        4) 启动测试
+            service mysqld start
+            ss -tlun | grep :80     
+            mysql                   # 连接
+
 
     3. php
         0) 安装
@@ -219,8 +236,8 @@ IV. 编译安装LAMP(centos7)
             make install
 
         1) 配置
-            cp /usr/local/php/etc/php.ini-production /etc/php5.ini
-            cp /usr/local/php/etc/php-fpm.conf.default /usr/local/php/etc/php-fpm.conf 
+            cp ./php.ini-production /etc/php5.ini       # 源码目录下
+            cp /usr/local/php5/etc/php-fpm.conf.default /usr/local/php5/etc/php-fpm.conf 
                 pm.max_children = 50
                 pm.start_servers = 5
                 pm.min_spare_servers = 2
@@ -230,6 +247,8 @@ IV. 编译安装LAMP(centos7)
         注：--enable-maintainer-zts为支持apache的worker或event
 
     4. xcache加速
+        tar
+        cd
         /usr/local/php5/bin/phpize
         ./configure --enable-xcache --with-php-config=/usr/local/php5/bin/php-config
         make && make install

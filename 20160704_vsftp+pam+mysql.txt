@@ -18,8 +18,8 @@ vsftp+pam+mysql应用文档：
 
     mysql> create database vsftpd;
 
-    mysql> grant select on vsftpd.* to vsftpd@localhost identified by 'www.magedu.com';
-    mysql> grant select on vsftpd.* to vsftpd@127.0.0.1 identified by 'www.magedu.com';
+    mysql> grant select on vsftpd.* to vsftpd@localhost identified by 'liu2lin';
+    mysql> grant select on vsftpd.* to vsftpd@127.0.0.1 identified by 'liu2lin';
     mysql> flush privileges;
 
     mysql> use vsftpd;
@@ -34,8 +34,8 @@ vsftp+pam+mysql应用文档：
 
     根据需要添加所需要的用户，需要说明的是，这里将其密码为了安全起见应该使用PASSWORD函数加密后存储。
 
-    mysql> insert into users(name,password) values('tom',password('magedu'));
-    mysql> insert into users(name,password) values('jerry',password('magedu'));
+    mysql> insert into users(name,password) values('tom',password('liu2lin'));
+    mysql> insert into users(name,password) values('jerry',password('liu2lin'));
 
 
 三、配置vsftpd
@@ -44,8 +44,8 @@ vsftp+pam+mysql应用文档：
 
         vi /etc/pam.d/vsftpd.mysql
     添加如下两行
-        auth required /lib/security/pam_mysql.so user=vsftpd passwd=www.magedu.com host=localhost db=vsftpd table=users usercolumn=name passwdcolumn=password crypt=0
-        account required /lib/security/pam_mysql.so user=vsftpd passwd=www.magedu.com host=localhost db=vsftpd table=users usercolumn=name passwdcolumn=password crypt=0
+        auth required /usr/lib/security/pam_mysql.so user=vsftpd passwd=liu2lin host=localhost db=vsftpd table=users usercolumn=name passwdcolumn=password crypt=2
+        account required /usr/lib/security/pam_mysql.so user=vsftpd passwd=liu2lin host=localhost db=vsftpd table=users usercolumn=name passwdcolumn=password crypt=2
 
         crypt：加密存放密码，0不加密, 1.crypt, 2.password(mysql), 3.MD5, 4.sha1
 

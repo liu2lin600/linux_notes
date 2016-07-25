@@ -1,0 +1,100 @@
+2016-07-22
+# edit by liu2lin600
+
+# tcp_wrapper  PAM
+
+tcp_wrapper：tcp包装器
+
+    守护进程：tcpd
+    配置文件：/etc/hosts.allow,/etc/hosts.deny
+    
+    注意：
+        1.并非所有服务均能由tcp_wrapper
+        2.判断某服务程序是否能由tcp_wrap
+            动态链接至libwrap.so库：
+                ldd命令检测其是否链接至libwrap库上即可
+                libwarp.so.0 =>/lib64/libwarp.so.0
+            静态编译：
+                strings /path/to/program
+                    hosts.allow
+                    hosts.deny
+    配置文件语法：
+        格式：daemon_list:client_list[:options]
+       
+        I. daemon_list：服务列表
+            1. 单个应用程序文件名称，如vsftpd、sshd
+            2. 应用程序列列表: 如果有多个，用逗号分隔即可
+            3. ALL: 匹配所有受tcpwrap控制的程序
+        
+        II. client_list：客户端列表
+            1. ip地址：172.16.100.100
+            2. 域名：www.magedu.com
+            3. 网络地址[/mask]：如有掩码必须使用长格式
+                172.16. : 表示172.16.0.0/255.255.0.0
+            4. 内置的ACL：
+                ALL: 
+                KEOWN: 主机名能正常解析的
+                UNKNOWN: 主机名不能正常解析
+                PARANOID: 主机名正反项解析不匹配的
+            5. EXCEPT：除外，如 vsftpd: 172.16. EXCEPT 172.16.11.11
+
+        III. [:options]：
+            1. allow：在hosts.allow文件中使用deny选项，用于定义拒绝规则
+            2. deny：在hosts.deny文件中使用allow选项，用于定义放行规则
+
+            3. spawn：记录被匹配的日志
+                echo 
+                    %c:user@host
+                    %s:server@host
+                    %h:客户端主机名
+                    %p:服务器上的进程PID
+                
+                如：sshd,vsftpd: ALL :spawn echo `date` form %c to %s >> /var/log/tcp_wrapper.log
+
+                man 5 hosts_access：获取其完整帮助信息
+
+        匹配机制：
+            1. 先检查/etc/hosts.allow,如果被允许，则直接放行
+            2. 如果/etc/hosts.allow没有匹配项，则检查/etc/hosts.deny，如果被拒绝，则禁止访问
+            3. 如果二者均无匹配，则放行
+
+PAM：Pluggable Authentication Moudle 
+    nsswitch：为名称解析功能提供一个统一的框架
+    libnss
+       /lib64
+       /usr/lib6
+
+   getent database [key ....]
+     /lib64/security
+
+     glibc: GNU C standard Library
+
+
+     配置文件：/etc/pam.conf
+               /etc/pam.d/*
+
+     type: 栈
+         account：跟认证无关的账号检测机制，
+         auth:实现认证和授权
+         password：用户在修改密码时要完成的检测
+         session：建立会话前或后需要做一些侦测机制
+
+    control：在验证成功或失败时要采取的行为
+       有两种类型的control
+       简单的额control：使用关键字required requisite sufficient
+       required：必须的,此关不过，仍需检测同一栈中的其他模块，最后返回failure，认证失败
+          拥有参考其他模块以及基础之上的一票否决权
+       requisite：一票否决，此关不过，立即返回failure
+       sufficient：一票通过，此关一过，立即返回OK
+       optional：参考意见，可选模块
+       include：包含进来指定的其他配置文件中同名栈中的规则，并以之进行检测
+       复杂的control：
+
+   pam模块：
+    pam_unix.so
+    pam_cracklib.so
+    pam_shell.so
+    pam_securetty.so
+    pam_deny.so
+    pam_listfile.so
+    pam_limits.so
