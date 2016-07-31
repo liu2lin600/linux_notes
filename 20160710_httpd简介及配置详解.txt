@@ -103,8 +103,8 @@ httpd-2.2配置文件说明：/etc/httpd/conf/httpd.conf
     3. MPM(Multi-Processing Module) 多道处理模块，2.2版本不支持DSO机制，event为测试
         httpd -l    # 查看编译进内核的模块
 
-        vim /etc/syconfig/httpd         # 使用不同的机制配置文件
-            HTTPD=/usr/sbin/httpd.worker  # 默认关闭，即默认运行httpd.prefork
+        vim /etc/syconfig/httpd             # 使用不同的机制配置文件
+            HTTPD=/usr/sbin/httpd.worker    # 默认关闭，即默认运行httpd.prefork
     　
         <IfModule preforck.c>判断模块是否存在
             StartServers       8        # 默认启动的工作进程数

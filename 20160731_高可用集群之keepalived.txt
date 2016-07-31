@@ -1,0 +1,409 @@
+2016-07-31
+# edit by liu2lin600
+
+
+HA Cluster（keepalived）：
+    
+    系统可用性：
+        A = MTBF/(MTBF+MTTR)
+            (0,1), 95%,
+            几个9: 99%, 99.9%, 99.99%, 99.999%
+                    1%,  0.1%,  0.01%
+                
+            降低MTTR：冗余（redundant）
+                
+    高可用服务：
+        高可用资源：
+            web service:
+                ip/httpd/filesystem
+                
+        network partition：
+            隔离设备：
+                node：STONITH
+                资源：fence
+                
+    HA Cluster实现方案：
+        1. vrrp协议的实现
+            keepalived
+        
+        2. ais完备HA集群
+            heartbeat
+            corosync
+        
+    keepalived：
+        
+        vrrp协议 ：Virtual Redundant Routing Protocol 虚拟冗余路由协议
+            虚拟路由器、VRID、master、backup、VIP、VMAC（00-00-5e-00-01-VRID）、优先级
+            抢占式、非抢占式
+            
+            工作模式：
+                主/备：一主一备或多备
+                主/主：多主多备，配置多个virtual router
+            
+            认证方式：
+                无认证 
+                简单字符串
+                MD5
+            
+        keepalived：是vrrp协议的软件实现，原生设计的目的为了高可用ipvs服务
+            功能：
+                1. vrrp协议完成地址流动
+                2. 为vip地址所在的节点生成ipvs规则（定义在配置文件中）
+                3. 为各rs做健康状态检测
+                4. 基于脚本调用接口通过执行脚本完成脚本中定义的功能
+                
+            组件：
+                控制组件：配置文件分析器
+                内存管理：
+                IO复用器：
+                核心组件：
+                    vrrp stack
+                    checkers
+                    ipvs wrapper
+                    watch dog
+                    
+            HA Cluster的配置前提：
+                1. 各节点时间必须同步；ntp, chrony
+                2. 确保iptables及selinux不会成为阻碍
+                3. 各节点之间可通过主机名互相通信（对keepalived非必须）
+                4. 各节点之间的root用户，可以基于密钥认证的ssh互相通信
+                
+            安装：
+                CentOS 6.4+,  CentOS 7.2上可直接yum安装
+            
+            程序环境：
+                配置文件：/etc/keepalived/keepalived.conf
+                程序文件：/usr/sbin/keepalived
+                Unit File：keepalived.service 
+                
+                配置文件组成：
+                    GLOBAL CONFIGURATION
+                        Global definations
+                        static routes
+                    VRRPD CONFIGURATION
+                        VRRP synchronization group(s)
+                        VRRP instance(s)
+                    LVS CONFIGURATION
+                        Virtual server group(s)
+                        Virtual server(s)
+                     
+            配置语法：
+                global_defs {                    # 全局设置段
+                    notification_email {
+                        admin@example1.com       # 发送的邮件地址
+                    }
+                    notification_email_from admin@example.com
+                    smtp_server 127.0.0.1        # 邮件服务地址
+                    smtp_connect_timeout 30      # 邮件服务连接超时时长
+                    router_id my_hostname        # 机器标示
+                                                 # (doesn't have to be hostname).
+                    vrrp_mcast_group4 224.0.0.18 # 组播地址
+                    enable_traps                 # enable SNMP traps
+                }
+
+                vrrp_script CHK_NAME {          # 定义监控脚本
+                    script "xxx"                # 检测此命令结果    
+                    interval INT                # 命令返回值为此值时触发
+                    weight -INT                 # 权重降低
+                }
+
+                vrrp_instance NAME {            # 实例设置段，可设多个
+                    state MASTER|BACKUP         # 当前节点在此虚拟路由器上的初始状态，只能有一个MASTER主机，余下的都应该为BACKUP
+                    interface IFACE_NAME        # vrrp实例绑定的接口
+                    virtual_router_id N         # 虚拟路径器的VRID，范围是0-255；
+                    priority 100                # 当前主机在此虚拟路径器中的优先级，范围是1-254
+                    advert_int N                # vrrp通告时间的间隔
+                    
+                    authentication {            # 认证信息
+                        auth_type PASS          # 简单字符认证方式
+                        auth_pass dDF53hEb      # 8个字符有效
+                    }
+                    
+                    virtual_ipaddress {         # vip地址设置
+                        <IPADDR>/<MASK> brd <IPADDR> dev <STRING> scope <SCOPE> label <LABEL>
+                        192.168.200.17/24 dev eth1
+                        192.168.200.18/24 dev eth2 label eth2:1
+                    }   
+                    
+                    track_interface {   # 配置要监控的网络接口，一旦接口出现故障，则转为FAULT状态
+                        eth0
+                        eth1
+                        ...
+                    }                   
+                        
+                    track_script {      # 追踪vrrp_script定义的脚本完成资源监控，实现优先动态调整 
+                        CHK_NAME
+                    }
+                    
+                    notify_master <STRING>|<QUOTED-STRING>  # 当前主机转为master时触发
+                    notify_backup <STRING>|<QUOTED-STRING>  # 转为backup时触发
+                    notify_fault <STRING>|<QUOTED-STRING>
+                    notify <STRING>|<QUOTED-STRING>                 
+                }
+
+                virtual_server IP PORT|fwmark INT {     # 虚拟服务器配置段，主要2种方式
+                    lb_algo rr|wrr|lc|wlc|lblc|sh|dh    # 定义调度方法
+                    delay_loop <INT>                    # 服务轮询的时间间隔
+                    lb_kind NAT|DR|TUN                  # lvs的类型
+                    persistence_timeout <INT>           # 持久连接时长
+                    protocol TCP                        # 服务协议，仅支持TCP
+                    sorry_server <IPADDR> <PORT>        # 所有RS均故障时用于向用户 say sorry的主机；
+                    
+                    real_server <IPADDR> <PORT> {
+                        weight <INT>                            # 权重
+                        notify_up <STRING>|<QUOTED-STRING>      # RS状态改变通知脚本
+                        notify_down <STRING>|<QUOTED-STRING>
+                            
+                        HTTP_GET|SSL_GET {              # 设置对rs健康状况检测
+                            url {
+                                path <STRING>           # 检测路径，如/
+                                digest <STRING>         # 摘要检测，使用genhash命令生成
+                                status_code <INT>       # 状态码检测，如200，跟摘要2选1
+                            }
+                            nb_get_retry <INT>          # 重试的次数
+                            delay_before_retry <INT>    # 重试之前延迟时长
+                            connect_ip <IP ADDRESS>     # 向当前RS的哪个IP地址发起健康状态检测请求
+                            connect_port <PORT>         # 向当前RS的哪个PORT发起健康状态检测请求
+                            bindto <IP ADDRESS>         # 发出健康状态检测请求时使用的源地址
+                            bind_port <PORT>            # 源端口
+                            connect_timeout <INTEGER>   # 连接超时时长
+                        }
+                        
+                        TCP_CHECK {
+                            nb_get_retry <INT>          # 重试的次数
+                            delay_before_retry <INT>    # 重试之前延迟时长
+                            connect_ip <IP ADDRESS>     # 向当前RS的哪个IP地址发起健康状态检测请求
+                            connect_port <PORT>         # 向当前RS的哪个PORT发起健康状态检测请求
+                            bindto <IP ADDRESS>         # 发出健康状态检测请求时使用的源地址
+                            bind_port <PORT>            # 源端口
+                            connect_timeout <INTEGER>   # 连接超时时长
+                        }
+                    }
+                }
+
+            配置示例IP分配：
+                master:172.16.60.3 
+                backup:172.16.60.4
+                vip:172.16.60.100(200)
+                web1:172.16.60.73
+                web2:172.16.60.74
+
+            配置示例1：(主备模型)
+                ! Configuration File for keepalived
+
+                global_defs {
+                    notification_email {
+                        root@localhost
+                    }
+                    notification_email_from keepalived@localhost
+                    smtp_server 127.0.0.1               
+                    smtp_connect_timeout 30             
+                    router_id node1                     
+                    vrrp_mcast_group4 224.0.60.18       
+                }
+
+                vrrp_instance VI_1 {      
+                    state MASTER                # 备路由为BACKUP
+                    interface eno16777736 
+                    virtual_router_id 15  
+                    priority 100                # 备路由小于此值
+                    advert_int 1
+                    authentication {
+                        auth_type PASS
+                        auth_pass RrpIoZU7
+                    }
+                    virtual_ipaddress {
+                        172.16.60.100
+                    }
+                }
+                
+            配置示例2：(双主模型)
+                ! Configuration File for keepalived
+
+                global_defs {
+                    notification_email {
+                        root@localhost
+                    }
+                    notification_email_from keepalived@localhost
+                    smtp_server 127.0.0.1
+                    smtp_connect_timeout 30
+                    router_id node1             # 备路由需修改!!!
+                    vrrp_mcast_group4 224.0.60.18
+                }
+
+                vrrp_instance VI_1 {
+                    state MASTER                # 备为BACKUP!!!
+                    interface eno16777736
+                    virtual_router_id 15
+                    priority 100                # 备小于此值!!!
+                    advert_int 1
+                    authentication {
+                        auth_type PASS
+                        auth_pass RrpIoZU7
+                    }
+                    virtual_ipaddress {
+                        172.16.60.100
+                    }
+                }
+
+                vrrp_instance VI_2 {
+                    state BACKUP                # 主要MASTER
+                    interface eno16777736
+                    virtual_router_id 16
+                    priority 98                 # 主高于此值
+                    advert_int 1
+                    authentication {
+                        auth_type PASS
+                        auth_pass 7r0IoZU7
+                    }
+                    virtual_ipaddress {
+                        172.16.60.200
+                    }
+                }   
+                
+                通知脚本示例：
+                    #!/bin/bash
+                    #
+                    contact='root@localhost'
+
+                    notify() {
+                        mailsubject="$(hostname) to be $1, vip floating."
+                        mailbody="$(date +'%F %T'): vrrp transition, $(hostname) changed to be $1"
+                        echo "$mailbody" | mail -s "$mailsubject" $contact
+                    }
+
+                    case $1 in
+                    master)
+                        notify master
+                        ;;
+                    backup)
+                        notify backup
+                        ;;
+                    fault)
+                        notify fault
+                        ;;
+                    *)
+                        echo "Usage: $(basename $0) {master|backup|fault}"
+                        exit 1
+                        ;;
+                    esac        
+                    
+                脚本调用方法示例：
+                    notify_master "/etc/keepalived/notify.sh master"
+                    notify_backup "/etc/keepalived/notify.sh backup"
+                    notify_fault "/etc/keepalived/notify.sh fault"              
+            
+                
+            配置示例3：(虚拟服务器+lvs)
+                ! Configuration File for keepalived
+
+                global_defs {
+                    notification_email {
+                        root@localhost
+                    }
+                    notification_email_from keepalived@localhost
+                    smtp_server 127.0.0.1
+                    smtp_connect_timeout 30
+                    router_id node1
+                    vrrp_mcast_group4 224.0.100.18
+                }
+
+                vrrp_instance VI_1 {
+                    state MASTER
+                    interface eno16777736
+                    virtual_router_id 57
+                    priority 100
+                    advert_int 1
+                    authentication {
+                        auth_type PASS
+                        auth_pass 98181111
+                    }
+                    virtual_ipaddress {
+                        172.16.60.100/32 dev eno16777736 brd 172.16.60.100 label eno16777736:0
+                    }
+                }
+
+                virtual_server 172.16.60.100 80 {
+                    delay_loop 3
+                    lb_algo rr 
+                    lb_kind DR
+                    nat_mask 255.255.0.0
+                    protocol TCP
+
+                    sorry_server 127.0.0.1 80
+
+                    real_server 172.16.60.73 80 {
+                        weight 1
+                        HTTP_GET {
+                            url { 
+                                path /index.html
+                                status_code 200
+                            }
+                            connect_timeout 3
+                            nb_get_retry 3
+                            delay_before_retry 3
+                        }
+                    }
+                    real_server 172.16.60.74 80 {
+                        weight 1
+                        HTTP_GET {
+                            url { 
+                                path /index.html
+                                status_code 200
+                            }
+                            connect_timeout 3
+                            nb_get_retry 3
+                            delay_before_retry 3
+                        }
+                    }
+                }
+                
+            配置示例4：(调用外部脚本，动态调整优先能)
+                ! Configuration File for keepalived
+
+                global_defs {
+                    notification_email {
+                        root@localhost
+                    }
+                    notification_email_from keepalived@localhost
+                    smtp_server 127.0.0.1
+                    smtp_connect_timeout 30
+                    router_id node1
+                    vrrp_mcast_group4 224.0.100.18
+                }
+
+                vrrp_script chk_down {
+                    script "[[ -f /etc/keepalived/down ]] && exit 1 || exit 0"
+                    interval 1
+                    weight -5
+                }
+
+                vrrp_script chk_httpd {
+                    script "killall -0 httpd && exit 0 || exit 1"
+                    interval 1
+                    weight -5
+                }
+
+                vrrp_instance VI_1 {
+                    state MASTER
+                    interface eno16777736
+                    virtual_router_id 57
+                    priority 100
+                    advert_int 1
+                    authentication {
+                        auth_type PASS
+                        auth_pass 98181111
+                    }
+                    virtual_ipaddress {
+                        172.16.60.100/32 dev eno16777736
+                    }
+
+                    track_script {
+                        chk_down
+                        chk_httpd
+                    }
+                    notify_master "/etc/keepalived/notify.sh master"
+                    notify_backup "/etc/keepalived/notify.sh backup"
+                    notify_fault "/etc/keepalived/notify.sh fault"
+                }
+

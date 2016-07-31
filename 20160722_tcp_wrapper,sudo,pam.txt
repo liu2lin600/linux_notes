@@ -58,6 +58,73 @@ tcp_wrapper：tcp包装器
             2. 如果/etc/hosts.allow没有匹配项，则检查/etc/hosts.deny，如果被拒绝，则禁止访问
             3. 如果二者均无匹配，则放行
 
+
+sudo：
+    sudo可将一些管理命令授权给某些普通用户使用，并且还能限定其仅能够在某些主机上执行此类的命令，操作过程还会被记录与日志中，以便于日后审计
+
+    su：switch user 
+        su - USER：登录式切换
+        su USER：非
+        -c：不切换用户，以用户的身份执行命令
+    root：
+        用户管理：
+            useradd，userdel，usermod，passwd
+        网络管理：
+            ifconfig ifup ifdowm ip route netstat
+
+    1、定义sudo授权，/etc/sudoers
+    
+    语法： who   where=(whom)   command   ==> 谁能以谁的身份，在那些主机上执行那些命令(多命令间用逗号隔开)
+        who：
+            username: 单个用户
+            #uid: 单用户id
+            %group: 组内所有用户
+            %#gid: 组内所有用户
+            user_alias: 用户别名
+        where：
+            ip或hostname:
+            netAddr:
+            host_alias:
+        whom：
+            username
+            #uid
+            runas_alias
+        command：
+            command
+            directory
+            sudoedit
+            cmd_alias
+
+    编辑：visudo命令
+
+        hadoop ALL=(root) /usr/sbin/useradd, /usr/sbin/usermod
+
+        别名：都以大写字母定义
+            Host_Alias：定义主机别名，使用，分隔
+            User_Alias：定义用户别名，可以是用户名，也可以是组名(%组名)
+            Cmnd_Alias：定义命令别名，可以定义不能执行的命令，使用!/usr/bin/passwd root
+            Runas_Alias：定义以那些用户执行
+            NOPASSWD：定义用户执行命令时可以不输入密码
+            PASSWD：定义用户执行命令时需要输入密码
+
+            示例：
+                User_Alias USERADMINS = jerry, lily
+                Cmnd_Alias USERADMINSD = /usr/sbin/useradd, /usr/sbin/userdel, /usr/sbin/passwd [a-z]*, !/usr/sbin/passwd root
+
+                USERADMINS  ALL=(root)  USERADMINSD
+
+        标签：
+            PASSWD：切换指定命令时需要输入密码
+            NOPASSWD：
+                如：jerry  ALL=(root) PASSWD:/usr/sbin/su, NOPASSWD:/usr/sbin/useradd 
+
+    2、普通用户执行可以执行管理命令
+        sudo：5分钟倒计时，用于记录用户以前输入的密码，在后续操作时可以不用输入密码
+            -u USER：以指定的用户作为新的身份。不加则默认以root作为新的身份
+            -l：可以查看sudo模式可以执行的命令
+            -k：将会强迫用户在下一次使用sudo命令时必须输入密码
+
+
 PAM：Pluggable Authentication Moudle 
     nsswitch：为名称解析功能提供一个统一的框架
     libnss

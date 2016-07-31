@@ -93,6 +93,7 @@ HTTP报文：
         请求报文格式：
             <method><request-url><version>
             <headers>...
+
             <entity-body>
             首部headers组成：
                 name：value
@@ -102,6 +103,7 @@ HTTP报文：
         响应报文格式：
             <version><status><reason-phrase>
             <headers>
+            
             <entity-body>
 
             <method>：请求方法，希望服务器端执行的动作，如GET、HEAD、POST等
