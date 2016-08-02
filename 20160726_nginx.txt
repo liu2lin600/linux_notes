@@ -83,10 +83,9 @@ Ngnix：
 
     Nginx配置语法：
         Directive  value1 [value2...];
-        指令 值1...;
+            指令     值1...;
 
-        每条配置以分号结尾
-        可使用内置变量和自定义变量
+        每条配置以分号结尾，可使用内置变量和自定义变量
 
     Nginx配置文件结构：
         main block      # 主配置段
@@ -95,6 +94,9 @@ Ngnix：
         }
         http {          # http/https相关
             ...
+            upstream {  # 负载均衡服务器配置
+                ...
+            }
             server {    # 虚拟主机
                 ...
                 location /xxx {     # URI定位后配置
@@ -102,7 +104,7 @@ Ngnix：
                 }
             }
         }
-        upstream {        # 上游服务器配置
+        stream {
             ...
         }
         mail {          # 邮件代理配置
@@ -369,20 +371,20 @@ Ngnix：
                 $document_root：当前请求映射到的root配置
 
     其它重要模块配置：
-        0. ngx_http_headers_module：响应头设置
-            add_header NAME VALUE [always];
-            expires [modified] time ｜ epoch | max | off;
+        0. ngx_http_headers_module：响应报文首部设置
+            • add_header NAME VALUE [always];
+            • expires [modified] time ｜ epoch | max | off;
 
                 expires    24h;
                 expires    modified +24h;
                 expires    @24h;
-                add_header X-Via $server_addr;              # 添加主机地址
+                add_header X-Via $server_addr;              # 添加代理主机地址
                 add_header X-Cache $upstream_cache_status;  # 添加代理缓存使用状况
                 add_header Cache-Control private;
 
         1. ngx_http_access_module：实现基于ip的访问控制功能
-            allow address | CIDR | unix: | all;
-            deny address | CIDR | unix: | all;
+            • allow address | CIDR | unix: | all;
+            • deny address | CIDR | unix: | all;
             
             可用上下文：http, server, location, limit_except
                 location / {
@@ -394,8 +396,8 @@ Ngnix：
                 }
 
         2. ngx_http_auth_basic_module：用户认证示例
-            auth_basic STRING | off;    # 使用basic机制进行用户认证或关闭
-            auth_basic_user_file FILE;  # 认证用的账号密码文件
+            • auth_basic STRING | off;    # 使用basic机制进行用户认证或关闭
+            • auth_basic_user_file FILE;  # 认证用的账号密码文件
 
                 location /admin/ {
                     root /www/b.org;
@@ -434,7 +436,7 @@ Ngnix：
                     Waiting: 开启 keep-alive 的情况下，这个值等于前两者之和
 
         5、ngx_http_referer_module：防盗链
-            valid_referers none|blocked|server_names|string ...;   # 定义合规的引用
+            • valid_referers none|blocked|server_names|string ...;   # 定义合规的引用
                 none：无referer，即直接输入网址
                 blocked：判断合法性
 
@@ -447,7 +449,7 @@ Ngnix：
                 }
 
         6、ngx_http_rewrite_module：URL重写
-            rewrite REGEX REPLACE [flag];
+            • rewrite REGEX REPLACE [flag];
 
                 flag标志：
                     last：一旦被当前规则匹配并重写后立即停止检查后续的其它rewrite的规则，而后通过重写后的规则重新发起请求
@@ -468,13 +470,13 @@ Ngnix：
 
                     注意：nginx最多循环10次，超出之后会返回500错误，一般将rewrite写在location中时都使用break标志，或者将rewrite写在if上下文中
 
-            rewrite_log on|off;
+            • rewrite_log on|off;
                 是否把重写过程记录在错误日志中，默认为notice级别off
 
-            return code;
+            • return code;
                 用于结束rewrite规则，并且为客户返回状态码，可以使用的状态码有204, 400, 402-406, 500-504等
 
-            if (condition) { ... }
+            • if (condition) { ... }
                 condition比较操作符：
                     ==, !=
                     ~：模式匹配，区分字符大小写；
@@ -486,24 +488,24 @@ Ngnix：
                     -d, !-d：
                     -x, !-x：
 
-            set $var VALUE;
+            • set $var VALUE;
                 设置自定义变量
 
         7、ngx_http_gzip_module：压缩，适用于http, server, location
-            gzip on | off;
-            gzip_buffers 32 4k;         # 用于实现压缩功能的缓存区数量及大小
-            gzip_comp_level 6;          # 压缩级别1-9，默认1
-            gzip_disable regex ...;     # 对客户端浏览器类型字符串匹配至此处的regex所描述的模式的请求禁用压缩功能
-            gzip_min_length LENGTH;     # 默认20字节
-            gzip_proxied off | expired | no-cache | no-store | private | no_last_modified | no_etag | auth | any ...;
+            • gzip on | off;
+            • gzip_buffers 32 4k;         # 用于实现压缩功能的缓存区数量及大小
+            • gzip_comp_level 6;          # 压缩级别1-9，默认1
+            • gzip_disable regex ...;     # 对客户端浏览器类型字符串匹配至此处的regex所描述的模式的请求禁用压缩功能
+            • gzip_min_length LENGTH;     # 默认20字节
+            • gzip_proxied off |expired|no-cache |no-store|private|no_last_modified|no_etag|auth|any ...;
                 对代理的请求所获取的响应报文是否启动压缩功能，以及如何启用，默认关闭
-            gzip_types mime-type ...;   #压缩过滤器，仅对此处设定的类型的内容启用压缩功能，默认为text/html
+            • gzip_types mime-type ...;   #压缩过滤器，仅对此处设定的类型的内容启用压缩功能，默认为text/html
 
         8、ngx_http_fastcgi_module：fastcgi代理，nginx与php结合只能通过fastcgi协议
-            fastcgi_pass address;       # address为php-fpm服务器监听的地址
-            fastcgi_index name;         # fastcgi默认的主页资源
-            fastcgi_param  parameter value [if_not_empty];      # 
-            fastcgi_cache_path path [levels=levels] [use_temp_path=on|off] keys_zone=name:size [inactive=time] [max_size=size] [loader_files=number] [loader_sleep=time] [loader_threshold=time] [purger=on|off] [purger_files=number] [purger_sleep=time] [purger_threshold=time];     # 缓存设置
+            • fastcgi_pass address;       # address为php-fpm服务器监听的地址
+            • fastcgi_index name;         # fastcgi默认的主页资源
+            • fastcgi_param  parameter value [if_not_empty];      # 
+            • fastcgi_cache_path path [levels=levels] [use_temp_path=on|off] keys_zone=name:size [inactive=time] [max_size=size] [loader_files=number] [loader_sleep=time] [loader_threshold=time] [purger=on|off] [purger_files=number] [purger_sleep=time] [purger_threshold=time];     # 缓存设置，定义在http中
             
                 path                    # 缓存目录路径；
                 levels=                 # 缓存目录层级数量，以及每一级的目录数量
@@ -512,17 +514,20 @@ Ngnix：
                 max_size=SIZE           # 磁盘上用于缓存数据的缓存空间上限
                 inactive=TIME           # 缓存时长
                 
-            fastcgi_cache zone | off;       # 调用指定的缓存空间来缓存数据
-            fastcgi_cache_key STRING;       # 定义用作缓存项的key的字符串
-            fastcgi_cache_methods GET...;   # 对哪些请求方法来检查缓存
-            fastcgi_cache_min_uses NUM;     # 缓存有指定时间内最少引用
-            fastcgi_cache_valid [code ...] time;    # 对不同的响应码的资源可缓存时长
+            • fastcgi_cache zone | off;       # 调用指定的缓存空间来缓存数据
+            • fastcgi_cache_key STRING;       # 定义用作缓存项的key的字符串
+            • fastcgi_cache_methods GET...;   # 对哪些请求方法来检查缓存
+            • fastcgi_cache_min_uses NUM;     # 缓存有指定时间内最少引用
+            • fastcgi_cache_valid [code ...] time;    # 对不同的响应码的资源可缓存时长
                 
             注意：调用缓存时，至少应该设定三个参数
                 fastcgi_cache
                 fastcgi_cache_key
                 fastcgi_cache_valid 
-
+            
+            http{
+                fastcgi_cache_path  /var/nginx/cache  key_zone=WORD:10m level=1:2 
+                
                 location / {
                     fastcgi_pass  127.0.0.1:9000;
                     fastcgi_index index.php;
@@ -530,18 +535,18 @@ Ngnix：
                     fastcgi_param SCRIPT_FILENAME /home/www/scripts/php$fastcgi_script_name;
                     include       fastcgi_params;
 
-                    fastcgi_cache_path  /var/nginx/cache  level=1:2  
-                    fastcgi_cache  WORDPRESS;
-                    fastcgi_cache_key  localhost:9000$request_uri;
+                    fastcgi_cache  WORD;
+                    fastcgi_cache_key  $request_uri;
                     fastcgi_cache_valid 200 302 1h;
                     fastcgi_cache_min_uses  2;
                 }
+            }
 
         9、ngx_http_log_module：日志记录模块
-            access_log PATH [format [buffer=size] [gzip[=level]] [flush=time] [if=condition]]|off;
+            • access_log PATH [format [buffer=size] [gzip[=level]] [flush=time] [if=condition]]|off;
                 日志路径、格式、缓冲等设置，默认access_log logs/access.log combined;  combined格式无需定义
                 
-            log_format NAME string ...;     # 日志格式设置
+            • log_format NAME string ...;     # 日志格式设置
                 
                 内置combined格式及反代格式时：
                     log_format combined '$remote_addr - $remote_user [$time_local] '
@@ -551,7 +556,7 @@ Ngnix：
                                         '"$request"  $status $body_bytes_sent '
                                         '"$http_referer"  "$http_user_agent" ';
 
-            open_log_file_cache max=N [inactive=time] [min_uses=N] [valid=time];
+            • open_log_file_cache max=N [inactive=time] [min_uses=N] [valid=time];
                 日志文件缓存，默认是off
 
                     max:设置缓存中的最大文件描述符数量，如果被占满，采用LRU算法将描述符关闭
@@ -561,18 +566,35 @@ Ngnix：
 
         10、ngx_http_upstream_module：设置负载均衡
             upstream NAME {
-                ip_hash;    # 实现IP绑定
-                server ADDR [weight=N] [max_fails=N] [fail_timeout=TIME] [slow_start=TIME] [backup] [down]...;
+                • ip_hash;    # 实现IP绑定
+                • server ADDR [weight=N] [max_fails=N] [fail_timeout=TIME] [slow_start=TIME] [backup] [down]...;
+                    ADDR格式：
+                        IP[:PORT]
+                        HOSTNAME[:PORT]
+                        unix:/PATH/TO/SOME_SOCK_FILE
                     weight：权重
                     max_fails：最大失败连接次数，失败连接的超时时长由fail_timeout指定
                     fail_timeout：等待请求的目标服务器发送响应的时长
                     backup：用于fallback的目的，所有服务均故障时才启动此服务器
                     down：手动标记其不再处理任何请求
-                health_check [interval=time] [fails=number] [passes=number] [uri=uri] [match=name];
-                ...
+                • health_check [interval=time] [fails=number] [passes=number] [uri=uri] [match=name];
+                    只能用于location中
+                • least_conn;
+                    最少连接调度算法； 当server拥有不同的权重时为wlc
+                • hash key [consistent];
+                    基于指定的key的hash表实现请求调度，此处的key可以文本、变量或二者的组合；
+                    
+                    consistent：参数，指定使用一致性hash算法
+                    
+                    示例：
+                        hash $request_uri consistent
+                        hash $remote_addr
+                        hash $cookie_name
+                        
+                • keepalive connections;      # 可使用长连接的连接数量
             }
 
-            注：1.只能用于http上下文
+            注：1.upstream只能用于http上下文
                 2.各server只能直接使用IP或主机名，不要加协议
 
             例子：
@@ -594,10 +616,85 @@ Ngnix：
                     }
                 }
 
-        11、ngx_http_proxy_module
-        12、
-        13、
-        14、
+        11、ngx_http_proxy_module：反向代理
+            接收完整报文分析后先查看本地缓存是否有需要资源，如果没有再向后端转发(将自己当作客户端去请求资源)
+            为什么需要反代？？
+
+            • proxy_pass URL;         # 用于location, if in location, limit_except
+                
+            注意：proxy_pass后面的路径不带uri时，其会将location的uri传递给后端主机
+                    location /uri/ {
+                        proxy_pass http://HOST;
+                    }
+                    
+                proxy_pass后面的路径是一个uri时，其会将location的uri替换为proxy_pass的uri；
+                    location /uri/ {
+                        proxy_pass http://HOST/new_uri/;
+                    }
+                    
+                如果location定义其uri时使用正则表达式的模式，则proxy_pass之后必须不能使用uri；
+                    location ~|~* PATTERN {
+                        proxy_pass http://HOST;
+                    }
+                    
+            • proxy_set_header field value;       # 设定发往后端主机的请求报文的请求首部的值； 
+            
+                示例：
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
+                    
+            • proxy_cache_path;               # 定义代理缓存，只能用于http中
+            
+                proxy_cache_path path [levels=levels] [use_temp_path=on|off] keys_zone=name:size [inactive=time] [max_size=size] [loader_files=number] [loader_sleep=time] [loader_threshold=time] [purger=on|off] [purger_files=number] [purger_sleep=time] [purger_threshold=time];
+                    
+            • proxy_cache zone | off;         # 调用的缓存的名称，或禁用缓存
+            • proxy_cache_key string;         # 缓存条目的键
+            • proxy_cache_valid [code] time;  # 对各类响应码的缓存时长
+                
+            使用示例：
+                定义在http{}中：
+                    proxy_cache_path /var/cache/nginx/proxy_cache levels=1:2:1 keys_zone=pcache:10m max_size=1g;
+                    
+                定义在server{}及其内部的组件中：
+                    proxy_cache pcache;
+                    proxy_cache_key $request_uri;
+                    proxy_cache_valid 200 302 10m;
+                    proxy_cache_valid 301 1h;
+                    proxy_cache_valid any 1m;               
+                
+            • proxy_cache_use_stale error | timeout | invalid_header | updating | http_500 | http_502 | http_503 | http_504 | http_403 | http_404 | off ...;
+            
+            • proxy_connect_timeout       # 代理连接、请求、响应超时时长
+                proxy_read_timeout
+                proxy_send_timeout
+                
+            • proxy_buffering             # 开启代理缓冲、缓冲数量及大小
+                proxy_buffer_size
+                proxy_buffers
+
+        12、ngx_stream_core_module：设置tcp/udp代理
+        
+            • listen address:port [ssl] [udp] [backlog=number] [bind] [ipv6only=on|off] [reuseport] [so_keepalive=on|off|[keepidle]:[keepintvl]:[keepcnt]];
+            
+            监听的端口：
+                默认为tcp协议
+                udp: 监听udp协议的端口
+                        
+            示例：
+                stream {
+                    upstream sshsrvs {
+                        server 192.168.10.130:22;
+                        server 192.168.10.131:22;
+                        hash $remote_addr consistent;
+                    }
+
+                    server {
+                        listen 172.16.100.6:22202;
+                        proxy_pass sshsrvs; 
+                    }
+                }       
+
+        待继......
 
 
 

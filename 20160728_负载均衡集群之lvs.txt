@@ -81,7 +81,7 @@ Linux Cluster集群
                     
                     通过为请求报文重新封装一个MAC首部进行转，源MAC是DIP所在的接口的MAC，目标MAC是某挑选出的RS的RIP所在接口的MAC地址，源IP/PORT，以及目标IP/PORT均保持原状
                     
-                    (1) 确保前端路由器将目标IP为VIP的请求报文发往Director
+                    (1) 确保前端路由器将目标IP为VIP的请求报文发往Director，3种方式如下
                         (a) 在前端路由器绑定，可实现但不实用
                         (b) 在RS使用arptables
                         (c) 在RS上修改内核参数限制通告及应答级别，RS上的VIP配置在lo接口别名上
@@ -199,7 +199,7 @@ Linux Cluster集群
 
             FWM：firewall mark 防火墙标记
         
-                在netfilter上，为某些匹配规则匹配到报文添加标记：mangle表；
+                在netfilter上，为某些匹配规则匹配到报文添加标记：mangle表上
                     打标记方法：
                         iptables -t mangle -A PREROUTING -d $vip -p $protocol --dport $port -j MARK --set-mark 6
                         
@@ -207,19 +207,18 @@ Linux Cluster集群
                         ipvsadm -A -f 6 -s rr
                         
             lvs persistence：持久连接
-            
                 基于持久连接模板，实现无论使用任何算法，在一段时间将来自同一个地址的请求始终发往同一个RS；
                 
                 Port Affinity：
-                    每端口持久：仅在一段时间内，将对来自于同一个IP地址的访问相同服务的请求发往后端的同一个RS；
+                    每端口持久：仅在一段时间内，将对来自于同一个IP地址的访问相同服务的请求发往后端的同一个RS
                         $vip:PORT
-                    每客户端持久：仅在一佒时间内，将对所有端口的请求始终发往后端的一同一个RS；
+                    每客户端持久：仅在一佒时间内，将对所有端口的请求始终发往后端的一同一个RS
                         $vip:0              
-                    每防火墙标记持久：在一段时间内，将对绑定为同一个FWM的请求发往同一个后端RS；
+                    每防火墙标记持久：在一段时间内，将对绑定为同一个FWM的请求发往同一个后端RS
                         FWM 
 
 
-lvs-dr设置脚本示例： 
+lvs-dr中rs网卡设置脚本示例： 
     #!/bin/bash
     #
     vip=172.16.60.100

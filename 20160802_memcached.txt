@@ -1,0 +1,205 @@
+2016-08-02
+# edit by liu2lin600
+
+memcached：
+
+    简介：
+        Memcached是一款开源、高性能、分布式内存对象缓存系统，可应用各种需要缓存的场景，其主要目的是通过降低对Database的访问来加速web应用程序。它是一个基于内存的'键值对'存储，用于存储数据库调用、API调用或页面引用结果的直接数据，如字符串、对象等
+        
+        memcached是以LiveJournal旗下Danga Interactive 公司的Brad Fitzpatric 为首开发的一款软件。现在已成为mixi、hatena、Facebook、Vox、LiveJournal等众多服务中提高Web应用扩展性的重要因素
+
+    特性：
+        • k/v cache, 可序列化数据，无持久存储功能，存储项:key, value, flag, expire time; 单数据项1m
+        • 功能的实现一半依赖于memcache server，一半依赖memcache client
+        • 分布式缓存：互不通信的分布式集群 
+            分布式系统请求路由方法：取模法、一致哈希算法
+        • O(1)的执行效率
+        • 清理过期数据
+            缓存耗尽：LRU，最近最少使用
+            缓存项过期：惰性清理机制
+        • 最长可设置有效期为30天，即2592000秒
+        • 缺乏认证及安全管制
+                
+    安装配置：
+        由CentOS base仓库直接提供；
+            监听的端口：
+                11211/tcp, 11211/udp
+                
+            主程序：/usr/bin/memcached
+            环境配置文件：/etc/sysconfig/memcached
+            
+        memcache协议格式：
+            文本格式
+            二进制格式
+            
+        命令：
+            统计类：stats, stats items, stats slabs, stats sizes, stats cachedump ID 0,
+            存储类：set, add, replace, append, prepend
+            获取数据类：get, delete, incr/decr
+            清空：flush_all
+            
+        memcached程序的常用选项：
+            -m <num>：缓存空间大小，单位为MB，默认为64
+            -c <num>：并发连接数，默认为1024
+            -u USERNAME：程序的运行者
+            -p PORT：监听的TCP端口
+            -U PORT：监听的UDP端口
+            -l <ip_addr>：监听的IP地址
+            -M： 缓存空间耗尽时，向请求存储缓存项返回错误信息，而非使用默认的LRU算法清理缓存
+            -f <factor> ：chunk size growth factor (default: 1.25)
+            -n：指定最小的slab chunk大小；单位是字节
+            -S：启用sasl进行用户认证
+
+        使用telnet命令测试memcached的使用：
+            Memcached提供一组基本命令用于基于命令行调用其服务或查看服务器状态等
+
+            telnet 127.0.0.1 11211      # telnet连接
+                add命令：add keyname flag  timeout  datasize
+                    add mykey 0 10 12
+                    Hello world!
+
+                get命令：get keyname
+                    get mykey
+                    VALUE mykey 0 12
+                    Hello world!
+                    END
+
+    与php结合：
+        php扩展：推荐使用memcached
+            • php-pecl-memcache: 
+                比较老(2004)基于php实现的扩展版本，它的函数受php.ini影响
+
+            • php-pecl-memcached: 
+                基于原生的c的libmemcached的扩展(2009)，更加完善
+
+        memcached缓存session：不推荐使用
+            • 如果使用的是memcache扩展 
+                在php.ini配置文件中进行设置：
+                    session.save_handler = memcache
+                    session.save_path = "tcp://127.0.0.1:11211?persistent=1&weight=1&timeout=1&retry_interval=15"
+                或者在PHP程序中设置：
+                    ini_set("session.save_handler","memcache");
+                    ini_set("session.save_path","tcp://127.0.0.1:11211?persistent=1&weight=1&timeout=1&retry_interval=15");
+
+            • 如果使用的是memcached扩展 
+                在配置文件中进行设置：
+                    session.save_handler = memcached
+                    session.save_path = "127.0.0.1:11211?persistent=1&weight=1&timeout=1&retry_interval=15"
+                
+                    注意：这里的session.save_path不需要tcp://
+
+                或者在PHP程序中设置：
+                    ini_set("session.save_handler","memcached");
+                    ini_set("session.save_path","127.0.0.1:11211?persistent=1&weight=1&timeout=1&retry_interval=15");    
+
+            测试：
+                1. 新建php页面setsess.php，为客户端设置启用session：
+                    <?php
+                        session_start();
+                        if (!isset($_SESSION['time'])) {
+                            $_SESSION['time'] = time();
+                        }
+                        print $_SESSION['time'];
+                        print "<br>";
+                        print "Session ID: " . session_id();
+
+                        注：如果在不能在memcached中生成，可在php文件中使用ini_set()尝试
+
+                2. 新建php页面showsess.php，获取当前用户的会话ID：
+                    <?php
+                        # 以memcache扩展为例
+                        session_start();
+                        $mem = new Memcache();   
+                        $mem->connect('127.0.0.1', 11211) or die('connect fail');
+                        $mysess = session_id();
+                        var_dump($mem->get($mysess));
+                        $mem->close();
+
+                        # 具体函数参考如下
+                        # http://php.net/manual/zh/class.memcache.php
+                        # http://php.net/manual/zh/class.memcached.php
+
+补充：
+
+stats：显示服务状态的详细列表信息
+    pid 7862                # memcache服务器进程ID
+    uptime  972             # 服务器已运行秒数
+    time    1470105730      # 服务器当前Unix时间戳
+    version 1.4.5           # memcache版本
+    pointer_size  64        # 操作系统指针大小
+    rusage_user 1.731736    # 进程累计用户时间
+    rusage_system 251.4217  # 进程累计系统时间
+    curr_connections  41    # 当前连接数量
+    total_connections  84   # Memcached运行以来连接总数
+    connection_structures 4 # Memcached分配的连接结构数量
+    cmd_get 164377          # get命令请求次数
+    cmd_set 58617           # set命令请求次数
+    cmd_flush   0           # flush命令请求次数
+    get_hits    105598      # get命令命中次数
+    get_misses  58779       # get命令未命中次数
+    delete_misses   0       # delete命令未命中次数
+    delete_hits 0           # delete命令命中次数
+    incr_misses 0           # incr命令未命中次数
+    incr_hits   0           # incr命令命中次数
+    decr_misses 0           # decr命令未命中次数
+    decr_hits   0           # decr命令命中次数
+    cas_misses  0           # cas命令未命中次数
+    cas_hits    0           # cas命令命中次数
+    cas_badval  0           # 使用擦拭次数
+    auth_cmds   0           # 认证命令处理的次数
+    auth_errors 0           # 认证失败数目
+    bytes_read  2621        # 读取总字节数
+    bytes_written   4600    # 发送总字节数
+    limit_maxbytes  5368    # 分配的内存总大小（字节）
+    accepting_conns 1       # 服务器是否达到过最大连接（0/1）
+    listen_disabled_num 0   # 失效的监听数
+    threads 4               # 当前线程数
+    conn_yields 0           # 连接操作主动放弃数目
+    bytes   1941693         # 当前存储占用的字节数
+    curr_items  476         # 当前存储的数据总数
+    total_items 58617       # 启动以来存储的数据总数
+    evictions   0           # LRU释放的对象数目
+    reclaimed   4           # 已过期的数据条目来存储新数据的数目
+
+stats items：查看各个Slab中Item的数目和年龄
+    STAT items:1:number 2       # item id 为1的有2条缓存条目
+    STAT items:1:age 782
+    STAT items:2:number 1       # item id 为1的有1条缓存条目
+    STAT items:2:age 921
+    END
+
+stats cachedump 2 0：查看id为2中的所有key(0为所有)，再通过get获取相应key的值
+    ITEM ua0is2uqn6thiedsr9d3fit3k7 [20 b; 1470106679 s]
+    END
+
+
+扩展阅读：
+    https://blog.linuxeye.com/345.html
+    http://blog.wpjam.com/m/memcache-vs-memcached/
+
+
+memcached扩展测试：
+<?php
+    $ip = '192.168.1.8';
+    $port = 11211;
+    ini_set("session.save_handler", "memcached");
+    ini_set("session.save_path", $ip.":".$port."?persistent=1&weight=1&timeout=1&retry_interval=15");
+
+    session_start();
+    $_SESSION['test'] = 'kelly';
+    $_SESSION['mysql'] = 'world';
+    $_SESSION['php'] = 'nice';
+
+    $mem = new Memcached();
+    $mem->addServer($ip,$port);
+
+    $keys = $mem->getAllKeys();
+    print_r($keys);
+    echo '<br>';
+
+    $values = $mem->getMulti($keys);
+    print_r($values);
+    echo '<br>';
+
+    $ss = $mem->get('memc.sess.key.'.session_id());
+    print_r($ss);

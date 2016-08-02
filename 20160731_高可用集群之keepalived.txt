@@ -101,9 +101,9 @@ HA Cluster（keepalived）：
                     enable_traps                 # enable SNMP traps
                 }
 
-                vrrp_script CHK_NAME {          # 定义监控脚本
-                    script "xxx"                # 检测此命令结果    
-                    interval INT                # 命令返回值为此值时触发
+                vrrp_script CHK_NAME {          # 定义监控脚本，动态调整优先级
+                    script "xxx"                # 返回值不为0时触发    
+                    interval INT                # 检测间隔
                     weight -INT                 # 权重降低
                 }
 
@@ -188,7 +188,7 @@ HA Cluster（keepalived）：
                 web1:172.16.60.73
                 web2:172.16.60.74
 
-            配置示例1：(主备模型)
+            配置示例1：(主备模型)，主备都配置
                 ! Configuration File for keepalived
 
                 global_defs {
@@ -217,7 +217,7 @@ HA Cluster（keepalived）：
                     }
                 }
                 
-            配置示例2：(双主模型)
+            配置示例2：(双主模型)，主备都配置
                 ! Configuration File for keepalived
 
                 global_defs {
@@ -294,7 +294,9 @@ HA Cluster（keepalived）：
                     notify_fault "/etc/keepalived/notify.sh fault"              
             
                 
-            配置示例3：(虚拟服务器+lvs)
+            配置示例3：(虚拟服务器+lvs-dr)，主备都配置
+                前提：rs中在lo:0上添加vip且关闭其通告功能，见lvs-dr
+
                 ! Configuration File for keepalived
 
                 global_defs {
@@ -358,7 +360,7 @@ HA Cluster（keepalived）：
                     }
                 }
                 
-            配置示例4：(调用外部脚本，动态调整优先能)
+            配置示例4：(调用外部脚本，动态调整优先能)，主备都配置
                 ! Configuration File for keepalived
 
                 global_defs {
