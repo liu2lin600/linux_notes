@@ -68,6 +68,7 @@ Ngnix：
 
 二.Nginx安装配置：
     官方的预制包：
+        http://nginx.org/packages/centos/6/x86_64/
         http://nginx.org/packages/centos/7/x86_64/
         
     编译安装：
@@ -118,45 +119,45 @@ Ngnix：
         4. 事件类的配置
 
         I. 正常运行的必备配置：
-            user username [groupname];    # 指定运行worker进程的用户和组
-            pid /path/to/pidfile_name;    # 指定nginx的pid文件
-            worker_rlimit_nofile 10240;   # 指定一个worker进程所能够打开的最大文件句柄数
-            worker_rlimit_sigpending N;   # 设定每个用户能够发往worker进程的信号的数量
+            • user username [groupname];    # 指定运行worker进程的用户和组
+            • pid /path/to/pidfile_name;    # 指定nginx的pid文件
+            • worker_rlimit_nofile 10240;   # 指定一个worker进程所能够打开的最大文件句柄数
+            • worker_rlimit_sigpending N;   # 设定每个用户能够发往worker进程的信号的数量
 
         II. 优化性能相关的配置：
-            worker_processes NUM|auto;        # worker进程的个数，通常其数值应该为CPU的物理核心数减1
-            worker_cpu_affinity cpumask ...;  # 绑定cpu亲缘性
+            • worker_processes NUM|auto;        # worker进程的个数，通常其数值应该为CPU的物理核心数减1
+            • worker_cpu_affinity cpumask ...;  # 绑定cpu亲缘性
                 0000 0001 == 第一颗
                 0000 0010 == 第二颗
 
-            worker_priority NICE;             # NICE值在-20~19之间，越低优先级越高
-            ssl_engine device;                # 在存在ssl硬件加速器的服务器上，指定所使用的ssl硬件加速设备
+            • worker_priority NICE;             # NICE值在-20~19之间，越低优先级越高
+            • ssl_engine device;                # 在存在ssl硬件加速器的服务器上，指定所使用的ssl硬件加速设备
 
         III. 事件相关的配置：event {...}
-            worker_connections 2048;      # 每个worker能够并发响应最大请求数
-            use epoll;                    # 定义使用的事件模型，建议让nginx自动选择
-            accept_mutex [on|off]
-                是否打开Ningx的负载均衡锁，此锁能够让多个worker进轮流地、序列化地与新的客户端建立连接，而通常当一个worker进程的负载达到其上限的7/8，master就尽可能不再将请求调度此worker
+            • worker_connections 2048;      # 每个worker能够并发响应最大请求数
+            • use epoll;                    # 定义使用的事件模型，建议让nginx自动选择
+            • accept_mutex [on|off]
+                是否打开Ningx的负载均衡锁，此锁能够让多个worker进轮流地、序列化地与新的客户端建立连接，而通常当一个worker进程的负载达到其上限的7/8，master就尽可能不再将请求调度此worker。off时一个连接请求唤醒多个worker 进程，同时只有一个worker获得连接，存在惊群问题，不过由于nginx进程数少，问题不大
 
-            accept_mutex_delay #ms;
+            • accept_mutex_delay #ms;
                 accept锁模式中，一个worker进程为取得accept锁的等待时长，如果某worker进程在某次试图取得锁时失败了，至少要等待#ms才能再一次请求锁
 
-            lock_file /path/to/lock_file; # lock文件
-            multi_accept on|off;          # 是否允许一次性地响应多个用户请求，默认为Off
+            • lock_file /path/to/lock_file; # lock文件
+            • multi_accept on|off;          # 是否允许一次性地响应多个用户请求，默认为Off
 
         IV. 用于调试及定位问题配置：
-            1、daemon on|off;          # ningx运行后台默认为on，调试时可设为off，所有信息接输出控制台
-            2、master_process on|off;
+            • daemon on|off;          # ningx运行后台默认为on，调试时可设为off，所有信息接输出控制台
+            • master_process on|off;
                 是否以master/worker模式运行，默认为on，调试时可设off以方便追踪
 
-            3、error_log /path/to/error_log LEVEL;
+            • error_log /path/to/error_log LEVEL;
                 错误日志文件及其级别，默认为error级别，调试时可以使用debug级别，但要求在编译时必须使用--with-debug启用debug功能
 
         V. http配置：
             必须使用虚拟机来配置站点，每个虚拟主机使用一个server {}段配置，非虚拟主机的配置或公共配置，需要定义在server之外，http之内
 
             A. 虚拟主机相关的配置：  
-                1、server {...}
+                • server {...}
                     定义一个虚拟主机,nginx支持使用基于主机名或IP的虚拟主机
                     server {
                         listen 80;
@@ -164,7 +165,7 @@ Ngnix：
                         root /web/www;
                     }
 
-                2、listen 
+                • listen 
                     listen address[:port];
                     listen port 
                     listen unix:path
@@ -175,22 +176,22 @@ Ngnix：
                         rcvbuf=SIZE：接收缓冲大小
                         sndbuf=SIZE：发送缓冲大小
 
-                3、server_name [...];
+                • server_name [...];
                     当前server的主机名，可指定一个或空白字符分隔的多个主机，支持使用通配及正则匹配，优先级如下
                         (1) 首先做精确匹配；www.liu2lin.com 
                         (2) 左侧通配符匹配；*.liu2lin.com
                         (3) 右侧通配符匹配；www.abc.com, www.*
                         (4) 正则表达式匹配: ~^.*\.liu2lin\.com$
 
-                4、server_name_hash_bucket_size 32|64|128;
+                • server_name_hash_bucket_size 32|64|128;
                     为了实现快速主机查找，nginx使用hash表来保存主机名；
 
 
             B. 路径定义相关配置：
-                1、root PATH;
+                • root PATH;
                     设置web资源路径，用于指定请求的根文档目录，可用于http, server, location中
 
-                2、location [ = | ~ | ~* | ^~ ] uri { ... }
+                • location [ = | ~ | ~* | ^~ ] uri { ... }
                    location @name { ... }
                     功能：允许根据用户请求的URI来匹配指定的各location以进行访问配置；匹配到时，将被location块中的配置所处理
 
@@ -206,7 +207,7 @@ Ngnix：
                     匹配优先级：= > ^~ > ~|~* > 无符号
                         字符字面量最精确匹配、正则表达式检索（由第一个匹配到所处理）、按字符字面量
 
-                3、alias PATH;       # 用于定义的路径别名，只能用于location中
+                • alias PATH;       # 用于定义的路径别名，只能用于location中
                     location /data/ {
                         alias /web/images/; 
                     }
@@ -216,16 +217,16 @@ Ngnix：
                         root指令：给定的路径对应于location中的URI左侧的'/'
                         alias指令：给定的路径对应于location中的URI右侧的'/'
 
-                4、index file ...;
+                • index file ...;
                     定义默认页面，可跟多个值
 
-                5、error_page code ... [=[response]] uri;
+                • error_page code ... [=[response]] uri;
                     自定义错误页重定向，当对于某个请求返回错误时，如果匹配上了error_page指令中设定的code，则重定向到新的URI中，默认返回相应响应码，如加上'=xxx'，则发生相应改变
 
                     error_page  404  /404.html
                     error_page  500  502  503  /50x.html
 
-                6、try_files path1 [path2 ...] uri;
+                • try_files path1 [path2 ...] uri;
                     自左至右尝试读取由path所指定路径，在第一次找到即停止并返回，如果所有path均不存在，则返回最后一个uri; 
 
                     location ~* ^/documents/(.*)$ {
@@ -238,29 +239,29 @@ Ngnix：
                         http://www.liu2lin.com/temp.html
 
             C. 网络连接相关的设置：
-                1、keepalive_timeout TIME;
+                • keepalive_timeout TIME;
                     保持连接的超时时长，默认为75秒，0表示禁止使用长连接
 
-                2、keepalive_requests N;
+                • keepalive_requests N;
                     在一次长连接上允许承载的最大请求数，默认100个
 
-                3、keepalive_disable [msie6 | safari | none ]
+                • keepalive_disable [msie6 | safari | none ]
                     对指定的浏览器禁止使用长连接
 
-                4、tcp_nodelay on|off
+                • tcp_nodelay on|off
                     对keepalive连接是否使用TCP_NODELAY选项，DELAY为将多个报文合并再一起发送
 
-                5、client_header_timeout TIME; 
+                • client_header_timeout TIME; 
                     读取http请求首部的超时时长，默认60s
 
-                6、client_body_timeout TIME;
+                • client_body_timeout TIME;
                     读取http请求包体的超时时长，默认60s
 
-                7、send_timeout TIME;
+                • send_timeout TIME;
                     向客户端发送响应的超时时长，指两次写操作之间的间隔时长
 
             D. 对客户端请求的限制：
-                1、limit_except METHOD ... { ... };
+                • limit_except METHOD ... { ... };
                     指定对范围之外的其它方法的访问控制，只能用于location中
                     limit_except GET {
                         allow 172.16.0.0/16;
@@ -268,27 +269,27 @@ Ngnix：
                     }
                         表示除了GET以外的方法仅允许172.16网络主机访问
 
-                2、client_max_body_size SIZE;
+                • client_max_body_size SIZE;
                     http请求包体的最大值，常用于限定客户所能够请求的最大包体，根据请求首部中的Content-Length来检测，以避免无用的传输
 
-                3、limit_rate RATE;
+                • limit_rate RATE;
                     限制客户端每秒钟传输的字节数，默认为0，表示没有限制
                     location /download/ {
                         root /web/;
                         limit_rate 20480;
                     }
 
-                4、limit_rate_after TIME;
+                • limit_rate_after TIME;
                     nginx向客户发送响应报文时，如果时长超出了此处指定的时长，则后续的发送过程开始限速
 
             E. 文件操作的优化：
-                1、sendfile on|off;
+                • sendfile on|off;
                     是否启用sendfile功能，开启后会减少用户空间到内核空间的上下文切换。对于普通应用设为 on，如果用来进行下载等应用磁盘IO重负载应用，可设置为off，默认off
 
-                2、aio on|off;
+                • aio on|off;
                     是否启用aio(异步非阻塞)功能
 
-                3、open_file_cache max=N [inactive=TIME]|off;
+                • open_file_cache max=N [inactive=TIME]|off;
                     是否打开文件缓存功能
 
                     max：缓存条目的最大值，当满了以后将根据LRU算法进行置换
@@ -299,55 +300,55 @@ Ngnix：
                         2. 已经打开的目录结构
                         3. 没有找到或没有访问权限的信息
 
-                4、open_file_cache_errors on|off;
+                • open_file_cache_errors on|off;
                     是否缓存文件找不到或没有权限访问等相关信息
 
-                5、open_file_cache_valid TIME;
+                • open_file_cache_valid TIME;
                     多长时间检查一次缓存中的条目是否超出非活动时长，默认为60s
 
-                6、open_file_cache_min_use N;
+                • open_file_cache_min_use N;
                     在inactive指定的时长内被访问超此处指定的次数地，才不会被删除
 
             F. 对客户端请求的特殊处理：
-                1、ignore_invalid_headers on|off;
+                • ignore_invalid_headers on|off;
                     是否忽略不合法的http首部，默认为on，off意味着请求首部中出现不合规的首部将拒绝响应。只能用于server和http
 
-                2、log_not_found on|off;
+                • log_not_found on|off;
                     是否将文件找不到的信息也记录进错误日志中
 
-                3、resolver ADDRESS;
+                • resolver ADDRESS;
                     指定nginx使用的DNS服务器地址
 
-                4、resover_timeout TIME;
+                • resover_timeout TIME;
                     指定DNS解析超时时长，默认为30s
 
-                5、server_tokens on|off;
+                • server_tokens on|off;
                     是否在错误页面中显示nginx的版本号，建议关闭
 
             G. 内存及磁盘资源分配：
-                1、client_body_in_file_only on|clean|off;
+                • client_body_in_file_only on|clean|off;
                     HTTP的包体是否存储在磁盘文件中；非off表示存储，即使包体大小为0也会创建一个磁盘文件；on表示请求结束后包体文件不会被删除，clean表示会被删除
 
-                2、client_body_in_single_buffer on|off;
+                • client_body_in_single_buffer on|off;
                     HTTP的包体是否存储在内存buffer当中；默认为off
 
-                3、cleint_body_buffer_size size;
+                • cleint_body_buffer_size size;
                     接收请求包体的内存缓冲区大小，默认16k，超出时将被暂存在磁盘上
 
-                4、client_body_temp_path PATH [level1 [level2 [level3]]];
+                • client_body_temp_path PATH [level1 [level2 [level3]]];
                     HTTP包体存放的临时目录，对应几位16位进制个数
                     client_body_temp_path /var/tmp/client/  1 2 ==> /var/tmp/client/{0-f}/{00-ff}
 
-                5、client_header_buffer_size size;
+                • client_header_buffer_size size;
                     正常情况下接收用户请求的http报文header部分时分配的buffer大小，默认为1k
 
-                6、large_client_header_buffers number size; 
+                • large_client_header_buffers number size; 
                     存储超大Http请求首部的内存buffer大小及个数
 
-                7、connection_pool_size size;
+                • connection_pool_size size;
                     nginx对于每个建立成功的tcp连接都会预先分配一个内存池，此处即用于设定此内存池的初始大小；默认为256
 
-                8、request_pool_size size;
+                • request_pool_size size;
                     nginx在处理每个http请求时会预先分配一个内存池，此处即用于设定此内存池的初始大小；默认为4k;
 
 
@@ -379,7 +380,7 @@ Ngnix：
                 expires    modified +24h;
                 expires    @24h;
                 add_header X-Via $server_addr;              # 添加代理主机地址
-                add_header X-Cache $upstream_cache_status;  # 添加代理缓存使用状况
+                add_header X-Cache $upstream_cache_status;  # 添加代理缓存使用状况，有HIT,MISS,BYPASS...
                 add_header Cache-Control private;
 
         1. ngx_http_access_module：实现基于ip的访问控制功能
@@ -564,7 +565,73 @@ Ngnix：
                     min_uses:在inactive时间段内，缓存最少需被使用次数，默认1
                     valid:设置检查频率，默认60s
 
-        10、ngx_http_upstream_module：设置负载均衡
+        10、ngx_http_proxy_module：反向代理
+            接收完整报文分析后先查看本地缓存是否有需要资源，如果没有再向后端转发(将自己当作客户端去请求资源)
+
+            • proxy_pass URL;         # 用于location, if in location, limit_except
+                
+            注意：
+                (1) proxy_pass后面的路径不带uri时，其会将location的uri传递给后端主机
+                    location /uri/ {
+                        proxy_pass http://HOST;
+                    }
+                        http://xx/img/a.jpg ==> http://HOST/img/a.jpg
+                    
+                (2) proxy_pass后面的路径是一个uri时，其会将location的uri替换为proxy_pass的uri
+                    location /uri/ {
+                        proxy_pass http://HOST/new_uri/;
+                    }
+                        http://xx/uri/a.jpg ==> http://HOST/new_uri/a.jpg
+                    
+                (3) location定义uri使用正则表达式，则proxy_pass之后必须不能使用uri
+                    location ~|~* PATTERN {
+                        proxy_pass http://HOST;
+                    }
+                    
+            • proxy_set_header field value;         # 设定发往后端主机的请求报文的请求首部的值，后端访问日志做相应修改
+                如：
+                    代理设置：proxy_set_header X-Real-IP $remote_addr;
+                    后端主机日志修改：
+                        LogFormat "%{X-Real-IP}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined
+
+            • proxy_cache_path;                     # 定义代理缓存，只能用于http中
+            
+                proxy_cache_path PATH [levels=levels] [use_temp_path=on|off] keys_zone=name:size [inactive=time] [max_size=size] [loader_files=number] [loader_sleep=time] [loader_threshold=time] [purger=on|off] [purger_files=number] [purger_sleep=time] [purger_threshold=time];
+                    
+            • proxy_cache zone | off;         # 开启或禁用缓存
+            • proxy_cache_key string;         # 缓存条目的键
+            • proxy_cache_valid [code] time;  # 对各类响应码的缓存时长
+                注：正常以上3项内容必备
+            
+            • proxy_cache_use_stale error|timeout|invalid_header|updating|http_code|off ...;
+            • proxy_connect_timeout           # 代理连接、请求、响应超时时长
+              proxy_read_timeout
+              proxy_send_timeout
+                
+            • proxy_buffering                 # 开启代理缓冲、缓冲数量及大小
+              proxy_buffer_size
+              proxy_buffers
+
+            使用示例：
+                定义在http{}中：缓存设置，只能定义在http中
+                    proxy_cache_path /var/cache/nginx/proxy_cache levels=1:2:1 keys_zone=pcache:10m max_size=1g;
+                    
+                server {
+                    proxy_set_header X-Real-IP $remote_addr;    # 添加客户端IP给后端服务器
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for     # 多级代理追加
+
+                    proxy_cache pcache;             # 开启缓存
+                    proxy_cache_key $request_uri;
+                    proxy_cache_valid 200 302 10m;
+                    proxy_cache_valid 301 1h;
+                    proxy_cache_valid any 1m;  
+
+                    location / {
+                        proxy_pass http://192.168.1.8;
+                    }
+                }
+
+        11、ngx_http_upstream_module：设置负载均衡
             upstream NAME {
                 • ip_hash;    # 实现IP绑定
                 • server ADDR [weight=N] [max_fails=N] [fail_timeout=TIME] [slow_start=TIME] [backup] [down]...;
@@ -577,8 +644,7 @@ Ngnix：
                     fail_timeout：等待请求的目标服务器发送响应的时长
                     backup：用于fallback的目的，所有服务均故障时才启动此服务器
                     down：手动标记其不再处理任何请求
-                • health_check [interval=time] [fails=number] [passes=number] [uri=uri] [match=name];
-                    只能用于location中
+
                 • least_conn;
                     最少连接调度算法； 当server拥有不同的权重时为wlc
                 • hash key [consistent];
@@ -591,7 +657,7 @@ Ngnix：
                         hash $remote_addr
                         hash $cookie_name
                         
-                • keepalive connections;      # 可使用长连接的连接数量
+                • keepalive NUM;      # 可使用长连接的连接数量，默认关闭
             }
 
             注：1.upstream只能用于http上下文
@@ -612,67 +678,10 @@ Ngnix：
                 server {
                     location / {
                         proxy_pass http://dynamic;
-                        health_check;
                     }
                 }
 
-        11、ngx_http_proxy_module：反向代理
-            接收完整报文分析后先查看本地缓存是否有需要资源，如果没有再向后端转发(将自己当作客户端去请求资源)
-            为什么需要反代？？
-
-            • proxy_pass URL;         # 用于location, if in location, limit_except
-                
-            注意：proxy_pass后面的路径不带uri时，其会将location的uri传递给后端主机
-                    location /uri/ {
-                        proxy_pass http://HOST;
-                    }
-                    
-                proxy_pass后面的路径是一个uri时，其会将location的uri替换为proxy_pass的uri；
-                    location /uri/ {
-                        proxy_pass http://HOST/new_uri/;
-                    }
-                    
-                如果location定义其uri时使用正则表达式的模式，则proxy_pass之后必须不能使用uri；
-                    location ~|~* PATTERN {
-                        proxy_pass http://HOST;
-                    }
-                    
-            • proxy_set_header field value;       # 设定发往后端主机的请求报文的请求首部的值； 
-            
-                示例：
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
-                    
-            • proxy_cache_path;               # 定义代理缓存，只能用于http中
-            
-                proxy_cache_path path [levels=levels] [use_temp_path=on|off] keys_zone=name:size [inactive=time] [max_size=size] [loader_files=number] [loader_sleep=time] [loader_threshold=time] [purger=on|off] [purger_files=number] [purger_sleep=time] [purger_threshold=time];
-                    
-            • proxy_cache zone | off;         # 调用的缓存的名称，或禁用缓存
-            • proxy_cache_key string;         # 缓存条目的键
-            • proxy_cache_valid [code] time;  # 对各类响应码的缓存时长
-                
-            使用示例：
-                定义在http{}中：
-                    proxy_cache_path /var/cache/nginx/proxy_cache levels=1:2:1 keys_zone=pcache:10m max_size=1g;
-                    
-                定义在server{}及其内部的组件中：
-                    proxy_cache pcache;
-                    proxy_cache_key $request_uri;
-                    proxy_cache_valid 200 302 10m;
-                    proxy_cache_valid 301 1h;
-                    proxy_cache_valid any 1m;               
-                
-            • proxy_cache_use_stale error | timeout | invalid_header | updating | http_500 | http_502 | http_503 | http_504 | http_403 | http_404 | off ...;
-            
-            • proxy_connect_timeout       # 代理连接、请求、响应超时时长
-                proxy_read_timeout
-                proxy_send_timeout
-                
-            • proxy_buffering             # 开启代理缓冲、缓冲数量及大小
-                proxy_buffer_size
-                proxy_buffers
-
-        12、ngx_stream_core_module：设置tcp/udp代理
+       12、ngx_stream_core_module：设置tcp/udp代理
         
             • listen address:port [ssl] [udp] [backlog=number] [bind] [ipv6only=on|off] [reuseport] [so_keepalive=on|off|[keepidle]:[keepintvl]:[keepcnt]];
             
@@ -683,13 +692,13 @@ Ngnix：
             示例：
                 stream {
                     upstream sshsrvs {
-                        server 192.168.10.130:22;
-                        server 192.168.10.131:22;
+                        server 192.168.1.8:22;
+                        server 192.168.1.9:22;
                         hash $remote_addr consistent;
                     }
 
                     server {
-                        listen 172.16.100.6:22202;
+                        listen 172.16.60.4:22022;
                         proxy_pass sshsrvs; 
                     }
                 }       

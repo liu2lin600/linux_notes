@@ -28,7 +28,7 @@ httpd的功能特性：
     ......
 
 httpd安装配置：
-    安装：yum -y install  httpd
+    安装：
         CentOS 6:httpd-2.2
         CentOS 7:httpd-2.4  
     服务脚本：

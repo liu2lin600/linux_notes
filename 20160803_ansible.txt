@@ -1,0 +1,396 @@
+2016-08-03
+# edit by liu2lin600
+
+
+运维工具：Operations
+
+    1.OS Provision：系统安装
+        bare metal：pxe, cobbler
+        virtual machine：
+    2.Configuration：
+        puppet (ruby)
+        saltstack (python)
+        chef
+        cfengine
+        ...
+    3.Command and Control：
+        fabric、func
+    
+    4.Deployment：程序发布
+        人工智能（手动发布）
+        脚本
+        发布程序（运维程序）
+        
+        要求：
+            1、不能影响用户体验；
+            2、系统不能停机；
+            3、不能导致系统故障或造成系统完全不可用；
+            
+        灰度模型：
+            主机
+            用户 
+        
+            发布路径：
+                /webapps/tuangou
+                /webapps/tuangou-1.1
+                /wepapps/tunagou-1.2
+                
+            在调度器上下线一批主机（标记为维护模式）--> 关闭服务 --> 部署新版本 --> 启动服务 --> 在调度器上启用这一批主机
+        
+
+ansible：
+    Configuration
+    Command and Control
+    
+    运维工具的分类：
+        agent：puppet, func, ...
+        agentless（ssh,）：ansible, fabric
+        
+    特性：
+        • 模块化：调用特定的模块，完成特定任务
+            基于Python语言实现，由Paramiko, PyYAML和Jinja2三个关键模块
+        • 部署简单：agentless
+        • 支持自定义模块
+        • 支持playbook(剧本)
+        • 幂等性(一个操作执行一次跟多次的结果一致)
+
+    架构：
+        ansible core ：ansible 自身核心模块
+        host inventory：主机库，定义可管控的主机列表
+        connection plugins：连接插件，一般默认基于ssh协议连接
+        modules：core modules (自带模块) 、 custom modules (自定义模块)
+        playbooks：剧本，按照所设定编排的顺序执行完成安排任务
+        
+    程序环境：
+        安装：epel源
+
+        配置文件：/etc/ansible/ansible.cfg
+        主机清单：/etc/ansible/hosts
+        角色目录：/etc/ansible/roles
+            
+        主程序：
+            ansible             # 主命令行工具
+            ansible-playbook    # 跑剧本命令
+            ansible-doc         # 查看文档命令
+            
+    ansible相关命令使用：
+        • ansible
+            ansible  HOST-PATTERN  -m MOD_NAME  -a MOD_ARGS [options]
+            # ansible all -m ping  测试与所有主机连接
+            
+        • ansible-doc
+            ansible-doc -h          # doc帮助
+            ansible-doc -l          # 获取模块列表
+            ansible-doc -s cron     # 查看模块帮助
+
+        • ansible-playbook
+            ansible-playbook --check xx.yaml
+                只检测可能会发生的改变，但不真正执行操作
+            ansible-playbook  --list-hosts xx.yaml
+                列出运行任务的主机
+            ansible-playbook xx.yaml
+                运行playbook
+
+    ansible的常用模块：
+            
+        • command模块：在远程主机运行命令，-m MOD 可省，不支持管道
+            # ansible all -a 'ls'
+        
+        • shell模块：在远程主机在shell进程下运行命令，支持shell特性，如管道等
+            # ansible all -m shell -a 'echo 123 | passwd --stdin user1'
+
+        • copy模块：复制本机文件到远程主机
+            用法：
+                (1) src=  dest=
+                (2) content=  dest=
+                owner, group, mode 
+
+                # ansible all -m copy -a "src=/etc/issue dest=/tmp"
+                # ansible all -m copy -a "content='hello ansible' dest=/tmp/hello.yml"
+                
+        • cron模块：Manage cron.d and crontab entries.
+            minute=, day=, month=, weekday=, hour=, job=, name=(必给)
+            state=
+                present：创建(默认)
+                absent：删除
+
+                # ansible all -m cron -a "minute=*/5 job='/sbin/ntpdate 172.16.0.1 > /dev/null' name=Synctime"
+                
+        • fetch模块：从远程拉取文件到本机
+        
+        • file模块：设置文件属性
+            *path=
+
+            (1) 创建链接文件：src=, path=, state=link
+                ansible all -m file -a "src=/etc/fstab path=/tmp/fstab.link state=link"
+            (2) 修改属性：path=, owner=, mode=, group= 
+            (3) 创建目录：path=, state=directory
+                
+        • hostname模块：管理主机名
+            name=
+            
+        • pip模块：管理Python库依赖
+        
+        • yum模块：yum工具
+            *name=：程序包名称，可以带版本号
+            state=
+                present, install, latest    # 安装，默认不指表示安装
+                absent                      # 卸载
+
+            # ansible all -m yum -a "name=zsh state=latest"
+        
+        • service模块：管理服务
+            *name=
+            state=
+                started
+                stopped
+                restarted
+            enabled=    # 开机是否启动
+            runlevel=   # 启动在哪些级别
+
+            # ansible all -m service -a "name=httpd state=started enabled=true"
+            
+        • user模块：管理用户及组
+            *name=(用户名), system=(是否为系统帐号) , uid=(指定uid), shell=(默认shell), group=(指定组), groups=(附加组), comment=(备注), home=(家目录)
+            state=present|absent
+
+            # ansible all -m user -a "name=user1 system=yes state=present uid=333"
+            
+        • setup模块：获取facts变量
+            # ansible all -m setup
+
+        • group模块：添加或删除组
+            *name=
+            state=
+            system=
+            gid=
+
+        • script模块：
+            -a "/PATH/TO/SCRIPT_FILE"
+            
+        • template模块：基于模板方式生成一个文件复制到远程主机
+            *src=
+            *dest=
+            owner=
+            group=
+            mode=
+
+        注：以上带*表示必备选项
+
+    YAML：语法格式
+        注：-和: 后必须空格
+        name: John Smith
+        age: 41
+        gender: Male
+        spouse:
+        - name: Jane Smith
+          age: 37
+          gender: Female
+        children:
+        - name: Jimmy Smith
+          age: 17
+          gender: Male
+        - name: Jenny Smith
+          age 13
+          gender: Female
+        
+
+    Playbook：剧本
+        核心元素：
+            • Hosts：远程主机
+            • Tasks：任务
+            • Variables：变量
+            • Templates：包含了模板语法的文本文件
+            • Handlers：由特定条件触发的任务
+            • Roles：角色管理
+        
+        基础组件：
+            • hosts：运行指定任务的目标主机
+            • remoute_user：在远程主机上执行任务的用户
+                sudo_user：
+            • tasks：任务列表
+                - name: xxx         # 任务名
+                  MOD: xxx          # 使用模块名
+                  notify: xxx       # 当此任务运行后
+                  tags: xxx
+                  template: xxx
+                  when: xxx
+                
+                格式：
+                    (1) action: module arguments    # 模块，模块参数
+                    (2) module: arguments
+                    
+                    注意：shell和command模块后面直接跟命令，而非key=value类的参数列表
+                    
+                (1) 某任务的状态在运行后为changed时，可通过'notify'通知给相应的handlers
+                (2) 任务可以通过'tags'打标签，而后可在ansible-playbook命令上使用-t指定进行调用
+
+            • handlers：触发器
+                任务，在特定条件下触发；
+                接收到其它任务的通知时被触发；
+            
+            • 变量：
+                (1) facts：可直接调用(ansible HOST -m setup 查看可用变量)
+                (2) ansible-playbook命令的命令行中的自定义变量：-e VARS
+                    # ansible-playbook -e pkname=memcached xx.yml
+                    在xx.yml文件中使用 {{ pkname }} 引用
+
+                (3) 通过roles传递变量
+                (4) 主机仓库配置文件中定义
+                    (a) 向不同的主机传递不同的变量
+                        [websrvs]
+                        192.168.1.100  host=liu2lin1 var2=value2
+                        192.168.1.200  host=liu2lin2 var2=value2
+                    
+                    (b) 向组中的主机传递相同的变量
+                        [websrvs:vars]      # 向websrvs组中传递变量http_PORT
+                        http_PORT=8080  
+                        
+                    注意：invertory参数：
+                        用于定义ansible远程连接目标主机时使用的参数，而非传递给playbook的变量，直接定义连接时候的密码不安全，一般建议基于 ssh 的密钥认证方式实现
+                            ansible_ssh_user=root       # 用户名
+                            ansible_ssh_pass=liu2lin    # 密码
+                            ansible_ssh_port=22022      # 端口
+                            ansible_ssh_host=
+                            ansbile_sudo_pass=
+                            ...
+
+                            # 连接远程主机使用参数
+                            [group1]
+                            192.168.1.100 ansible_ssh_user=root ansible_ssh_pass=liu2lin
+
+            • templates：模板，文本文件，嵌套有脚本（使用模板编程语言编写）
+                Jinja2：
+                    字面量：
+                        字符串：使用单引号或双引号
+                        数字：整数，浮点数
+                        列表：[item1, item2, ...]
+                        元组：(item1, item2, ...)
+                        字典：{key1:value1, key2:value2, ...}
+                        布尔型：true/false
+                        
+                    算术运算：
+                        +, -, *, /, //, %, **
+                        
+                    比较操作：
+                        ==, !=, >, >=, <, <=
+                        
+                    逻辑运算：
+                        and, or, not 
+                            
+            完整示例：
+                yml文件：web.yml 
+                    - hosts: websrvs
+                      remote_user: root
+                      tasks:
+                      - name: install nginx
+                        yum: name=nginx state=present
+                      - name: install conf file
+                        template: src=files/nginx.conf.j2 dest=/etc/nginx/nginx.conf
+                        notify: restart nginx
+                        tags: instconf
+                      - name: start nginx service
+                        service: name=nginx state=started
+                      handlers:
+                      - name: restart nginx
+                        service: name=nginx state=restarted                 
+                        
+                模板配置文件 ：files/nginx.conf.j2
+                    worker_processes {{ ansible_processor_vcpus }};
+                    listen {{ http_port }};
+
+                主机配置：/etc/ansible/hosts
+                    [websrvs]
+                    192.168.1.100  host=liu2lin1
+                    192.168.1.200  host=liu2lin2
+                    [websrvs:vars]
+                    http_port=8080
+
+                运行：
+                    ansible-playbook [-t instconf] web.yml
+                        -t instconf: 指定只运行第二个任务
+                        
+            • 条件测试：
+                when语句：在task中使用，jinja2的语法格式
+                    tasks: 
+                    - name: install conf file to centos7
+                      template: src=files/nginx.conf.c7.j2 dest=xxxx
+                      when: ansible_distribution_major_version == "7"
+                    - name: install conf file to centos6 dest=xxx
+                      template: src=files/nginx.conf.c6.j2
+                      when: ansible_distribution_major_version == "6"               
+            
+            • 循环：迭代，需要重复执行的任务；
+                对迭代项的引用，固定变量名为'item'，而后，要在task中使用with_items给定要迭代的元素列表
+                    列表方法：
+                        字符串
+                        字典
+                                        
+                - name: install some packages
+                  yum: name={{ item }} state=present
+                  with_items:
+                  - nginx
+                  - memcached
+                  - php-fpm
+                  
+                - name: add some groups
+                  group: name={{ item }} state=present
+                  with_items:
+                  - group11
+                  - group12
+                  - group13
+
+                - name: add some users
+                  user: name={{ item.name }} group={{ item.group }} state=present
+                  with_items:
+                  - { name: 'user11', group: 'group11' }
+                  - { name: 'user12', group: 'group12' }
+                  - { name: 'user13', group: 'group13' }
+
+                    注：注意空格，否则语法错误
+                  
+        roles：角色
+            角色集合：目录型式，每个角色一个目录
+                /etc/ansible/roles/
+                    mysql/
+                    httpd/
+                    nginx/
+                    memcached/
+                    
+            每个角色，以特定的层级目录结构进行组织：
+                mysql/
+                    files/：存放由copy或script模块等调用的文件
+                    templates/：template模块查找所需要模板文件的目录
+                    tasks/：任务列表文件，至少有一个叫做main.yml的文件，其它的文件通过include包含
+                    handlers/：至少应该包含一个名为main.yml的文件，其它的文件需要在此文件中通过include进行包含
+                    vars/：至少应该包含一个名为main.yml的文件，其它的文件需要在此文件中通过include进行包含
+                    meta/：至少应该包含一个名为main.yml的文件，定义当前角色的特殊设定及其依赖关系，其它的文件需要在此文件中通过include进行包含
+                    default/：设定默认变量时使用此目录中的main.yml文件
+                    
+            在playbook调用角色方法1：
+                - hosts: websrvs
+                  remote_user: root
+                  roles:
+                  - mysql
+                  - memcached
+                  - nginx
+                
+            在playbook调用角色方法2：传递变量给角色
+                - hosts: 
+                  remote_user:
+                  roles:
+                  - { role: nginx, username: nginx }
+                    键role用于指定角色名称，后续的k/v用于传递变量给角色
+                    
+                还可以基于条件测试实现角色调用：
+                    roles:
+                    - { role: nginx, when: ansible_distribution_major_version == '7' }
+                
+        实战项目：
+            主/备模式高可用keepalived+nginx(proxy)
+            两台主机：httpd+php
+            一台主机：mysql-server或mariadb-server；
+        
+        http://www.ansible.com.cn
+                  
+
