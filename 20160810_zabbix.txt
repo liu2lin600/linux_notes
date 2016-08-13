@@ -1,0 +1,545 @@
+2016-08-10
+# edit by liu2lin600
+
+
+
+zabbix：
+
+    监控系统：硬件、软件、业务指标
+        sensor：传感器，数据指标
+            1.采样：             
+            2.数据存储：
+                历史数据: 采样生成的数据
+                趋势数据: 每小时的最大值、最小值、平均值、统计
+            3.报警：
+                脚本
+                媒介
+            4.展示：Visual
+
+            
+        监控数据采集通道：
+            SNMP：Simple Network Management Protocol
+            ssh/telnet：
+            IPMI：
+            agent：
+                master/agent
+            
+        NMS：
+            网络监控系统      
+            
+            开源监控工具：
+                cacti, nagios, zabbix, ganglia
+                    cacti， nagios
+                    zabbix
+                    ganglia
+                
+            数据：
+                历史数据: NVPS
+                趋势数据
+                    
+                存储系统：
+                    关系型数据库：MySQL
+                    rrd：roundrobin database
+                    NoSQL：redis/mongodb
+                        时间序列存储
+                        
+        SNMP协议：
+            nms/agent
+                nms: cli/gui
+                agent: service
+                
+            v1
+            v2c: community，public
+            v3
+            
+            MIB, OID, ...
+            
+    ZABBIX：
+        版本：LTS(long time support) v1.8, v2.0, v2.2, v2.4, v3.0 
+            
+        特性：
+            数据采样：
+                snmp, ssh/telnet, agent, ipmi, jmx(java Management eXtensions)
+                自定义采样机制：UserPrameter
+            告警：
+                升级:
+                    script
+                    notification
+            数据存储：
+                mysql/pgsql
+            展示：
+                实时绘图：graph, screen, slide show, map
+            
+            支持模板：
+            网络自动发现：
+            分布式监控：
+                Server <--> Proxy <--> agent/ssh/ipmi 
+            API
+            
+        zabbix程序的组件：
+            zabbix_server：服务端守护进程
+            zabbix_agentd：agent守护进程
+            zabbix_proxy：代理服务器，可选组件
+            zabbix_get：命令行工具，手动测试向agent发起数据采集请求
+            zabbix_sender：命令行工具，运行于agent端，手动向server端发送数据
+            zabbix_java_gateway：java网关
+            zabbix_database：MySQL或PostgreSQL
+            zabbix_web：Web GUI
+
+            相应程序包：
+                zabbix-server-mysql
+                zabbix-get 
+                zabbix-web 
+                zabbix-web-mysql 
+                zabbix-agent 
+                zabbix-sender
+                zabbix-proxy
+            
+        zabbix逻辑组件：
+            主机组：host group
+            主机：host 
+            监控项(item)：
+                key：实现获取监控的目标上的数据的命令或脚本的名称
+            应用(application)：同一类监控项的集合
+            触发器(trigger)：表达式: PROBLEM <--> OK
+            事件(event)：
+            动作(action)：由条件(condition)和操作(operation)组成
+            媒介(media)：发送通知的通道
+            通知(notification)：
+            远程命令(remote command)：
+            报警升级()：
+            模板(template)：快速定义被监控主机的各监控项的预设项目集合
+            图形(graph)：用于展示历史数据或趋势数据的图像
+            屏幕(screen)：由多个graph组成
+            
+        zabbix-server安装配置：
+            0. 升级zabbix的yum源
+                rpm -ivh http://repo.zabbix.com/zabbix/3.0/rhel/7/x86_64/zabbix-release-3.0-1.el7.noarch.rpm
+
+            1. 设置Zabbix DB：
+                mysql> CREATE DATABASE zabbix CHARSET 'utf8';
+                mysql> GRANT ALL ON zabbix.* TO zbxuser@'%' identified by 'zbxpass';
+                
+            2. 安装服务端：
+                yum install zabbix-server-mysql zabbix-get
+                
+                注意：CentOS 7.0和7.1需要升级trousers程序包
+                
+            3. 安装web GUI：
+                yum install zabbix-web zabbix-web-mysql
+                
+            4. 安装agent端：服务端自我监控也可安装
+                yum install zabbix-agent zabbix-sender
+                 
+        服务端数据库初始化：
+            v2.x：三个sql脚本
+            v3.x：一个sql脚本
+                cd /usr/share/doc/zabbix-server-mysql-3.0.4
+                zcat create.sql.gz | mysql -uzbxuser -h127.0.0.1 -p zabbix
+                
+        zabbix-server配置启动：
+            配置文件：/etc/zabbix/zabbix_server.conf
+            配置段：
+                • GENERAL PARAMETERS        # 通用参数
+                • ADVANCED PARAMETERS       # 高级参数
+                    LOADABLE MODULES        # 模块加载
+                    TLS-RELATED PARAMETERS  # tls安全设置
+                
+            通用参数：GENERAL PARAMETERS
+                ListenPort=10051
+                SourceIP=
+                LogType=file
+                LogFile=/var/log/zabbix/zabbix_server.log
+                LogFileSize=0   # 日志不滚动，单位M
+                DebugLevel=3
+                
+                DBHost=localhost
+                DBName=zabbix
+                DBUser=xxx
+                DBPassword=xxx
+                # DBSocket=/tmp/mysql.sock
+                # DBPort=3306
+                
+            配置zabbix-web：
+                配置php的时区设定：
+                    (1) /etc/php.ini 
+                    (2) /etc/httpd/conf.d/zabbix.conf   # 开启如下
+                        php_value date.timezone=Asia/Shanghai
+                
+            访问URL：
+                http://HOST/zabbix/ 
+                
+                安装生成的配置文件：/etc/zabbix/web/zabbix.conf.php
+        
+                登录：
+                    用户名：admin
+                    密码：zabbix 
+
+                主选项：
+                    Monitoring
+                    Inventory
+                    Reports
+                    Configuration
+                    Administration
+            
+        zabbix-agent端的配置：
+            
+            安装：yum install zabbix-agent zabbix-sender
+        
+            Unit file： zabbix-agent.service 
+        
+            配置文件：/etc/zabbix/zabbix_agentd.conf 
+                • GENERAL PARAMETERS
+                    Passive checks related      # 被动监控相关配置
+                    Active checks related       # 主动监控相关配置，agent端主动向server周期性发送数据
+                • ADVANCED PARAMETERS
+                    USER-DEFINED MONITORED PARAMETERS   # 用户自定义参数
+                    LOADABLE MODULES                    # 
+                    TLS-RELATED PARAMETERS              #
+        
+                Passive checks related：被动
+                    Server=IP1, IP2, ...    # 定义哪些主机可以来数据采样
+                    ListenPort=10050        # 默认端口
+                    ListenIP=0.0.0.0        # 监听本地所有可用地址
+                    StartAgents=3           # 启动多少个agent来处理数据
+            
+                Active checks related：主动
+                    ServerActive=IP1[:port], IP2[:port], ...
+                    Hostname=Unique_HOSTNAME    # 主机名，可以不跟当前主机hostname一样
+                        必须与服务器配置的监控主机的主机名称保持完全一致，区分大小写
+            
+            启动服务：
+                systemctl start zabbix-agent.service
+
+            被监控主机的可用接口：
+                agent, IPMI, snmp, jmx 
+
+                    IPMI: Intelligent Platform Management Interface，智慧平台管理接口原本是一种Intel架构的企业系统的周边设备所采用的一种工业标准
+           
+
+
+    监控配置：
+        术语：host groups --> host --> application --> item --> trigger(event) --> action(conditions, operations)
+                graph: 
+                    simple: 每个item定义完成后自动生成 
+                    customed: 用于将多个item的数据整合于一个图形中展示
+                
+        • host：主机
+            item: key+parameter 
+                key：
+                    1. zabbix内建
+                        类型: 
+                            agent 
+                            agent(active)
+                            snmp v1...
+                            
+                    2. 用户自定义(UserParameter)
+                    
+                采集到的数据的类型：
+                    数值：整数, 浮点数 
+                    字符串：字符串, 文本
+                        
+                存储的值：
+                    As is：不对数据做任何处理
+                    Delta：(simple change)，本次采样减去前一次采样的值的结果
+                    Delta：(speed per second)，本次采样减去前一次采样的值，再除以经过的时长
+                
+        • trigger：触发器
+            逻辑表达式，阈值，通常用于定义数据的不合理区间
+                OK：正常 状态 --> 较老的zabbix版本，其为FALSE；
+                PROBLEM：非正常 状态 --> 较老的zabbix版本，其为TRUE；
+                
+                OK --> PROBLEM 
+                Recovery：PROBLEM --> OK 
+                
+            function：触发器存在可调用的函数
+                nodata(), avg(), diff(), sum(), count(), change(), date(), delta(), last()...
+
+                函数参数：
+                    sum(300): 最近300s取值之和
+                    sum(#10): 最近10次之和
+                    last(0) == last(#1)
+                
+            Severity：级别
+                Not classified
+                Information
+                Warning
+                Average
+                High
+                Disaster(灾难)
+                
+            触发器表达式：
+                {hostname:key[paramters].function(arguments)}<operator>NUM
+                    opetator：操作符
+                        >, <, =, #(不等)...
+                        +, -, *, /
+                        &, |
+                
+                如：{n1.liu2lin.com:net.if.in[eno16777736,packets].last(#1)}>15
+                
+            注：trigger间存在依赖关系
+            
+        • Media：媒介，告警信息的传递通道
+            类型：
+                Email：邮件
+                Script：自定义脚本
+                SMS：短信(北美短信网关)
+                Jabber：
+                Ez Texting：
+                
+            接收信息的目标为zabbix用户：
+                需要用户上定义对应各种媒介通道的接收方式
+
+            注：先定义发信方式再定义用户接收
+                
+        • Action：动作
+            action：定义名称及内容
+            conditions： 多个条件之间存在逻辑关系 (A && B && C ...)
+            operations：条件满足时触发的操作符
+                1. send message
+                    Media type：传递信息的通道
+                        (a) Email
+                        (b) Script: 报警脚本
+                            脚本放置路径：zabbix_server.conf配置文件中AlertScriptsPath参数定义的路径下；
+                                /usr/lib/zabbix/alertscripts/
+                            zabbix服务器在调用脚本时，会向其传递三个参数：
+                                $1：{ALERT.SENDTO} 收信方  
+                                $2：{ALERT.SUBJECT} 标题
+                                $3：{ALERT.MESSAGE} 内容
+
+                                注：3.x版本中需要在定义脚本时添加以上3个参数，之前版本则无需手动添加
+
+                    Send to User groups：
+                    Send to Users：选择发送用户
+                    Send only to：选择发送通道
+                    
+                2. remote command
+                    功能：在agent所在的主机上运行用户指定的命令或脚本，如
+                        重启服务
+                        通过IPMI重启服务器
+                        任何用户自定义脚本中定义的操作
+                            
+                    可执行的命令类型：
+                        IPMI
+                        ssh 
+                        telnet 
+                        Custom Script: 自定义脚本
+                        Global Script
+                        
+                    配置前提：在agent端需要完成的配置
+                        (1) zabbix用户拥有所需要的管理权限
+                            编辑/etc/sudoers文件，注释如下行：
+                                Defaults requiretty
+                            添加如下行：
+                                zabbix  ALL=(ALL)  NOPASSWD: ALL
+                            
+                        (2) agent进程要允许执行远程命令
+                            编辑/etc/zabbix/zabbix_agentd.conf，设置如下配置：
+                                EnableRemoteCommands=1
+                            
+                        (3) 重启服务生效
+
+            注：在更改时注意有2个update都需要点击才行
+
+
+                                
+        基本配置总结：
+            步骤：host groups  -->  host --> application --> item (key) --> trigger --> action
+                        |             |           |           |                |           |
+            例子：(test server) (n1.liu.com) (cpu stats)<--(cpu cs)  <--  (too high) (act.,cond.,op.)
+                                                                               ^            ｜
+                                                                               |————————————/
+            
+        • 展示接口：
+            graph: simple, custom
+            screen: 把多个graph整合于同一屏幕进行展示
+            slide show: 把多个screen以slide show的方式进行展示
+            
+        • templates：模板
+            主机配置模板：用于链接至目标主机实现快速监控管理
+                link, unlink, unlink and clear 
+                
+            模板具有可继承性
+            
+        • macro：宏，预设的文本替换模式
+            级别：
+                全局: adminitration --> general --> macros
+                模板: configration --> templates --> macros
+                主机: configration --> hosts --> macros
+
+                优先级：主机 > 模板 > 全局
+                
+            类型：
+                内建：{MACRO_NAME}
+                自定义：{$MACRO_NAME}
+                    命名方式：大写字母、数字和下划线
+                    
+        • discovery：网络发现
+            zabbix server扫描指定网络范围内的主机；
+            
+            发现方式：
+                ip地址范围；
+                    可用服务（ftp, ssh, http, ...）
+                    zabbix_agent的响应；
+                    snmp_agent的响应； 
+                    
+            分两个阶段：
+                1. discovery： 发现 --> discovery events 
+                    Service, Host 
+                    
+                    UP/DOWN, DICOVERED/LOST 
+                    
+                2. actions：可采取的动作
+                    send message, remote command
+                    add/remove host 
+                    enable/disable host 
+                    add host to group
+                    link  template to host
+                    ...
+                    
+        • 自定义key：
+            
+            item type： 不同的类型适用的接口有可能不同，有些key仅能用在指定的接口之上
+                agent
+                agent(active)
+                simple
+                snmpv1
+                snmpv2
+                snmpv3
+                ssh 
+                ...
+                
+            接口类型：agent, ipmi, snmp, jmx
+                
+            自定义key：在zabbix agent端的配置文件上由用户通过UserParameter指令定义的key；
+                zabbix_agentd.conf文件中
+                    UserParameter=<key>,<command>
+                    
+                UserParameter=nginx.active,curl -s http://localhost/status | awk '/^Active/{print $3}'
+                UserParameter=nginx.accepts,curl -s http://localhost/status | awk '/^[[:space:]]*[0-9]/{print $1}'
+                UserParameter=nginx.handled,curl -s http://localhost/status | awk '/^[[:space:]]*[0-9]/{print $2}'
+                UserParameter=nginx.requests,curl -s http://localhost/status | awk '/^[[:space:]]*[0-9]/{print $3}'         
+                        
+            实践：
+                监控lvs director上web服务的相关统计数据及速率数据；
+                
+                制定出lvs director的监控模板：
+                    items, trigger, graph 
+            
+        • Web监控：
+            监控指定的站点的资源下载速度，及页面响应时间
+            
+        • 主动/被动 检测：
+            被动检测：相对于agent而言；agent,  server向agent请求获取配置的各监控项相关的数据，agent接收请求、获取数据并响应给server；
+            主动检测：相对于agent而言；agent(active),agent向server请求与自己相关监控项配置，主动地将server配置的监控项相关的数据发送给server；
+                agent端所需要基本配置：
+                    ServerActive=
+                    Hostname=
+                    
+        • 基于SNMP监控：
+            
+            SNMP：简单网络管理协议；
+                agent/nms
+                
+                读（get, getnext）、写（set）、trap（陷阱）；
+                
+                161/udp
+                162/udp
+
+            SNMP协议的版本：
+                v1(1989), v2(1993), v3(1998)
+                v2c: NMS --> agent 
+                    mageedu.com
+                v3: 认证、加密、解密
+           
+            MIB：Management Information Base
+            OID：Object ID
+            
+            Linux启用snmp的方法：
+                # yum install net-snmp net-snmp-utils 
+                配置文件：
+                    /etc/snmp/snmpd.conf
+                    定义ACL 
+                    
+                启动服务：
+                    systemctl  start  snmpd.service 
+                    
+            测试工具：
+                # snmpget -v 2c  -c  public  HOST  OID
+                # snmpwalk  -v 2c -c public  HOST  OID 
+                
+            Key <Unique string to be used as reference to triggers> For example, “my_param”.
+            
+        • Zabbix Proxy的配置：
+            server-node-agent, server-proxy-agent
+            
+            应用场景：
+                监控远程网络中的主机
+                监控那些不具备可靠网络连接的网络中的主机
+                zabbix-server负载过大
+                简化分布式监控的维护操作
+
+            使用中：
+                1、在zabbix-server上指定zabbix-proxy时必须使用zabbix-proxy配置文件的hostname参数所指定的名字
+                2、各通过zabbix-proxy监控的zabbix-agent端，其server参数值列表中应该包含此proxy的地址；
+                3、zabbix-proxy要使用独立的数据库
+            
+            配置过程：
+                1、配置proxy主机：
+                    (1) 安装程序包 
+                        zabbix-proxy-mysql zabbix-get 
+                        zabbix-agent zabbix-sender 
+                        
+                    (2) 准备数据库
+                        创建、授权用户、导入schema.sql
+                        
+                    (3) 修改配置文件
+                        Server=
+                            zabbix server主机地址；
+                        Hostname=
+                            当前代理服务器的名称；在server添加proxy时，必须使用此处指定的名称
+                            需要事先确保server能解析此名称
+                        DBHost=
+                        DBName=
+                        DBUser=
+                        DBPassword=
+                        
+                        ConfigFrequency=10
+                        DataSenderFrequency=1
+                        
+                2、在server端添加此Porxy
+                    Administration --> Proxies 
+                    
+                3、在Server端配置通过此Proxy监控的主机
+                
+
+
+    zabbix性能调优：
+        nvps：new values per second 
+            100w/m, 15000/s
+            
+        调优：
+            数据库：
+                历史数据不要保存太长时长
+                尽量让数据缓存在数据库服务器的内存中
+            触发器表达式：减少使用min(), max(), avg()；尽量使用last()，nodata()
+            数据收集：polling较慢(减少使用SNMP/agentless/agent）；尽量使用trapping（agent(active））
+            数据类型：文本型数据处理速度较慢；尽量少收集类型为text或string类型的数据；多使用类型为numeric的
+            
+        zabbix服务器的器：
+            (1) 服务器组件的数量
+                alerter, discoverer, escalator, http poller, hourekeeper, icmp pinger, ipmi polller, poller, trapper, configration syncer, ...
+                
+                StartPollers=60
+                StartPingers=10
+                ...
+                StartDBSyncer=5
+                ...
+                
+            (2) 数据库优化
+                分表：
+                    history_*
+                    trends*
+                    events*
+
+

@@ -1,0 +1,198 @@
+2016-08-08
+# edit by liu2lin600
+
+cobbler：
+
+概述：
+    Cobbler由python语言开发，是对PXE和Kickstart以及DHCP的封装。融合很多特性，提供了CLI和Web的管理形式。更加方便的实行网络安装。同时，Cobbler也提供了API接口，使用其它语言也很容易做扩展。它不紧可以安装物理机，同时也支持kvm、xen虚拟化、Guest OS的安装。更多的是它还能结合Puppet等集中化管理软件，实现自动化的管理。
+
+设计方式：
+    Cobbler 的配置结构基于一组注册的对象。每个对象表示一个与另一个实体相关联的实体（该对象指向另一个对象，或者另一个对象指向该对象）。当一个对象指向另一个对象时，它就继承了被指向对象的数据，并可覆盖或添加更多特定信息。以下对象类型的定义为:
+
+    • distros(发行版)：表示一个操作系统。它承载了内核和initrd的信息，以及内核参数等其他数据
+    • profiles(配置文件)：包含一个发行版、一个 kickstart 文件以及可能的存储库，还包含更多特定的内核参数等其他数据
+    • system(系统)：表示要配给的机器。它包含一个配置文件或一个镜像，还包含IP和MAC 地址、电源管理（地址、凭据、类型）以及更为专业的数据等信息
+    • repos(存储库)：保存一个 yum 或 rsync 存储库的镜像信息
+    • images(镜像)：可替换一个包含不属于此类别的文件的发行版对象（例如，无法分为内核和initrd的对象）
+
+
+其它功能：
+    为了协助管理系统，Cobbler 可通过 fence scripts 连接到各种电源管理环境。Cobbler 支持 apc_snmp、bladecenter、bullpap、drac、ether_wake、ilo、integrity、ipmilan、ipmitool、lpar、rsa、virsh 和 wti。
+
+    除了这些特性，还可使用一个配置管理系统 (CMS)。您有两种选择：该工具内的一个内部系统，或者集成一个现有的外部 CMS，比如 Chef 或 Puppet。借助内部系统，您可以指定文件模板，这些模板会依据配置参数进行处理（与 kickstart 模板的处理方式一样），然后复制到您指定的位置。如果必须自动将配置文件部署到特定机器，那么此功能很有用
+
+过程：
+    Server：
+        1. 启动Cobbler服务
+        2. 进行Cobbler错误检查，执行cobbler check命令
+        3. 进行配置同步，执行cobbler sync命令
+        4. 复制相关启动文件文件到TFTP目录中
+        5. 启动DHCP服务，提供地址分配
+        6. DHCP服务分配IP地址
+        7. TFTP传输启动文件
+        8. Server端接收安装信息
+        9. Server端发送ISO镜像与Kickstart文件
+    Client：
+        1. 客户端以PXE模式启动
+        2. 客户端获取IP地址
+        3. 通过TFTP服务器获取启动文件
+        4. 进入Cobbler安装选择界面
+        5. 客户端确定加载信息
+        6. 根据配置信息准备安装系统
+        7. 加载Kickstart文件
+        8. 传输系统安装的其它文件
+        9. 进行安装系统
+
+程序环境：
+    安装：由epel源提供，所依赖包有httpd, rsync, tftp-server, syslinux, dhcp [xinetd]
+    命令：cobbler
+        语法：cobbler import|reposync|buildiso|distro|sync|profile|check  [add|edit|copy|getks*|list|remove|rename|report]
+            import：从光盘中导入 Install Tree。会自动定义到Repository
+            reposync：从互联网中同步的Install Tree
+            buildiso：主要用于安装的机器不支持网卡引导，此时就需要制作ISO镜像完成安装
+            distro：定义Distribution
+            sync：完成配置文件的同步
+            profile：定义Profile
+            check：检查cobbler的配置文件
+
+    配置文件：
+        /etc/cobbler/setting
+
+
+安装配置：
+    1. yum -y install cobbler rsynxhttpd tftp-server syslinux dhcp
+    2. 启动httpd, cobblerd服务
+    3. cobbler check            # 配置检测，首次启动检测会比较如下问题
+
+        1 : The 'server' field in /etc/cobbler/settings must be set to something other than localhost, or kickstarting features will not work.  This should be a resolvable hostname or IP for the boot server as reachable by all machines that will use it.
+        2 : For PXE to be functional, the 'next_server' field in /etc/cobbler/settings must be set to something other than 127.0.0.1, and should match the IP of the boot server on the PXE network.
+        3 : some network boot-loaders are missing from /var/lib/cobbler/loaders, you may run 'cobbler get-loaders' to download them, or, if you only want to handle x86/x86_64 netbooting, you may ensure that you have installed a *recent* version of the syslinux package installed and can ignore this message entirely.  Files in this directory, should you want to support all architectures, should include pxelinux.0, menu.c32, elilo.efi, and yaboot. The 'cobbler get-loaders' command is the easiest way to resolve these requirements.
+        4 : change 'disable' to 'no' in /etc/xinetd.d/rsync
+        5 : debmirror package is not installed, it will be required to manage debian deployments and repositories
+        6 : ksvalidator was not found, install pykickstart
+        7 : The default password used by the sample templates for newly installed machines (default_password_crypted in /etc/cobbler/settings) is still set to 'cobbler' and should be changed, try: "openssl passwd -1 -salt 'random-phrase-here' 'your-password-here'" to generate new one
+        8 : fencing tools were not found, and are required to use the (optional) power management features. install cman or fence-agents to use them
+
+        Restart cobblerd and then run 'cobbler sync' to apply changes.
+
+        解决：对应上述问题
+            1. 修改/etc/cobbler/settings文件中的server参数的值为提供cobbler服务的主机相应的IP地址或主机名，如172.16.100.15
+            2. 修改/etc/cobbler/settings文件中的next_server参数的值为提供PXE服务的主机相应的IP地址，如172.16.100.16
+            3. 如果当前节点可以访问互联网，执行"cobbler get-loaders"命令即可；否则，需要安装syslinux程序包，而后复制/usr/share/syslinux/{pxelinux.0,memu.c32}等文件至/var/lib/cobbler/loaders/目录中
+            4. 执行"chkconfig rsync on"命令即可
+            5. 注释/etc/debmirror.conf文件中的"@dists="sid";"一行
+            6. 注释/etc/debmirror.conf文件中的"@arches="i386";"一行
+            7. 执行"openssl passwd -1 -salt $(openssl rand -hex 4)"生成密码，并用其替换/etc/cobbler/settings文件中default_password_crypted参数的值
+            8. 执行"yum install cman fence-agents"命令安装相应的程序包即可
+
+            接着重启cobblerd，而后执行"cobbler sync"同步新的配置至cobbler，568可忽略
+
+        注：如出现如下
+            Traceback (most recent call last):
+                File "/usr/bin/cobbler", line 36, in <module>
+                    sys.exit(app.main())
+                File "/usr/lib/python2.7/site-packages/cobbler/cli.py", line 657, in main
+                    rc = cli.run(sys.argv)
+                ......
+            解决：先解决上述第7个问题再重启，将出现上述报错信息，可以简单直接用/etc/shadow上的密码
+
+    4. 配置dhcp并启动
+        vim /etc/dhcp/dhcpd.conf
+
+            option domain-name "liu2lin.com";
+            option domain-name-servers 172.16.0.1;
+            default-lease-time 600;
+            max-lease-time 7200;
+            log-facility local7;
+            subnet 172.16.0.0 netmask 255.255.0.0 {
+                range 172.16.10.14 172.16.10.99;
+                next-server 172.16.10.9;
+                filename "pxelinux.0";
+            }
+
+        service dhcpd restart
+
+    5. 启动tftp-server,rsync
+        chkconfig tftp on
+        chkconfig rsync on
+        service xinetd restart
+
+        centos7：systemctl start tftp rsync
+
+    6. cobbler配置，挂载系统盘至/mnt/cdrom，并准备ks文件放置/root/下
+        vim /root/c6.cfg    # 修改安装树路径
+            url --url="http://IP/cobbler/ks_mirror/centos-6.8-x86_64"
+
+        cobbler import --name=centos-6.8-x86_64 --path=/mnt/cdrom       # 生成/var/www/cobbler/ks_mirror/目录下
+        cobbler profile add --name=centos6.8-x86_64-minimal --distro=centos-6.8-x86_64 --kickstart=/root/c6.cfg 
+        cobbler sync
+
+        添加profile时报错：
+            exception on server: 'Invalid kickstart template file location /root/c6.cfg, it is not inside /var/lib/cobbler/kickstarts/'
+
+        解决：将ks文件移动/var/lib/cobbler/kickstarts/目录下，再执行
+            cobbler profile add --name=centos6.8-x86_64-minimal --distro=centos-6.8-x86_64 --kickstart=/var/lib/cobbler/kickstarts/c6.cfg
+
+    7. 查看
+        cobbler distro list
+        cobbler profile list
+
+
+
+cobbler_web安装配置：实现上述操作在图形化界面完成
+    1. yum install cobbler_web
+    2. vim /etc/cobbler/modules.conf   # 修改如下
+        [authentication]
+        module = authn_pam
+
+    3. 添加系统用户
+        useradd cobbleradm
+        echo '78787878' | passwd --stdin cobbler
+
+    4. vim /etc/cobbler/users.conf      # 修改如下
+        [admins]
+        admin = "cobbleradm"
+
+    5. 重启cobbler，访问http://COBBLER_IP/cobbler_web
+
+    
+    补：使用authn_configfile模块认证cobbler_web用户
+
+        1. vim /etc/cobbler/modules.conf
+            [authentication]
+            module = authn_configfile
+
+        2. htdigest -c /etc/cobbler/users.digest Cobbler cobbleradm  
+            创建其认证文件并添加所需的用户，'-c'为首次添加使用，后继不能加
+
+        3. 重启cobblerd服务，通过http://COBBLERD_IP/cobbler_web访问即可
+
+
+
+备注：
+
+cobbler import报错：
+    cobbler import --name=centos-7.2 --path=/mnt/cdrom
+
+    task started: 2016-08-09_231016_import
+    task started (id=Media import, time=Tue Aug  9 23:10:16 2016)
+    Exception occured: <class 'cobbler.cexceptions.CX'>
+    Exception value: 'Command failed'
+    Exception Info:
+      File "/usr/lib/python2.6/site-packages/cobbler/remote.py", line 87, in run
+        rc = self._run(self)
+       File "/usr/lib/python2.6/site-packages/cobbler/remote.py", line 231, in runner
+        self.logger
+       File "/usr/lib/python2.6/site-packages/cobbler/api.py", line 892, in import_tree
+        utils.run_this(rsync_cmd, (spacer, mirror_url, path), self.logger)
+       File "/usr/lib/python2.6/site-packages/cobbler/utils.py", line 917, in run_this
+        die(logger,"Command failed")
+       File "/usr/lib/python2.6/site-packages/cobbler/utils.py", line 134, in die
+        raise CX(msg)
+
+    !!! TASK FAILED !!!
+
+    解决：
+        将光盘iso拷到主机上，使用"mount -o loop"挂载再重试
+        mount -o loop /root/xxx /mnt/loop
+        cobbler import --name=xxx --path=/mnt/loop 

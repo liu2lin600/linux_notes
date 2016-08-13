@@ -1,7 +1,7 @@
 2016-06-23
 # edit by liu2lin600
 
-DHCP：Dynamic Host Configuration Protocol, 动态地址配置协议
+DHCP：Dynamic Host Configuration Protocol, 动态主机配置协议
     前身bootp：分配出去以后，将绑定主机和IP
   
     C/S模式：
@@ -12,8 +12,8 @@ DHCP：Dynamic Host Configuration Protocol, 动态地址配置协议
             
             udp：适合发送较小的数据报文，且对时效性要求较高
 
-        过程：(广播方式)
-            C:DHCP DISCOVER (发现报文)
+        工作流程：
+            C:DHCP DISCOVER (发现) 广播方式
             S:DHCP OFFER(ip/netmask)
             C:DHCP REQUEST(确认使用)
             S:DHCP ACK
@@ -32,21 +32,22 @@ DHCP：Dynamic Host Configuration Protocol, 动态地址配置协议
         dhcpd：服务端用来分配地址
         dhcrelay：中继
 
-DHCP配置文件：/etc/dhcp/dhcpd.conf (复制/usr/share/doc/dhcp*/dhcp.conf.sample)
+DHCP配置文件：/etc/dhcp/dhcpd.conf (复制/usr/share/doc/dhcp*/dhcp.conf.example)
               /var/lib/dhcpd/dhcpd.leases : 租约日志记录
               /etc/rsyslog.conf : 日志服务的配置文件
 
     1.定义dhcpd自身的工作属性：
         log-facilify: 日志facilify
+
     2.全局地址分配属性：option打头
         option router
-    3.子网配置：
-        通常每个作用域通过一个subnet定义
+    
+    3.子网配置：通常每个作用域通过一个subnet定义
         subnet NETWORK_ADDR netmask NETMASK {
             xxx
         }
-    4.主机配置：
-        通常为某特定MAC地址固定的分配一个地址
+
+    4.主机配置：通常为某特定MAC地址固定的分配一个地址
         host 'HOST ID'{
             hardware ethernet 08:00:07:26:c0:a5; 
             fixed-address IP; 
@@ -57,8 +58,8 @@ DHCP配置文件：/etc/dhcp/dhcpd.conf (复制/usr/share/doc/dhcp*/dhcp.conf.sa
           dhcilent -d eth0  # 客户端重新获取dhcp地址,获取成功后不能直接再获取，需killall dhclient后再获取
 
 配置文件详解：
-    ption domain-name "example.org";                    # 搜索域
-    option domain-name-servers 172.16.0.1, 8.8.8.8;     # 全局默认网关
+    option domain-name "example.org";                   # 搜索域
+    option domain-name-servers 172.16.0.1, 8.8.8.8;     # dns服务器地址，最多3个
     default-lease-time 600;                             # 默认租约期限
     max-lease-time 7200;                                # 最长租约期限
     #ddns-update-style none;                            # 动态dns
@@ -68,21 +69,26 @@ DHCP配置文件：/etc/dhcp/dhcpd.conf (复制/usr/share/doc/dhcp*/dhcp.conf.sa
     subnet 172.16.0.0 netmask 255.255.0.0 {
         range 172.16.10.10 172.16.10.100;               # 地址池，必须在本机的网络内，本机地址静态给定
         
-        option domain-name-servers 172.16.0.1;          # dns
-        option domain-name "liu2lin.com";               # 域名
         option routers 172.16.0.1;                      # 默认网关
+        # option domain-name-servers 172.16.0.1;        # dns
+        # option domain-name "liu2lin.com";             # 域名
     }
 
     # 主机配置
-    host fantasia {
+    host liu2lin {
         hardware ethernet 00:0c:29:26:c0:a5; 
         fixed-address 192.168.1.101;       # 给指定的MAC绑定ip地址,在指定的范围以外
+        # option ...
     }
 
     # 定义函数，用来定义特定系统分配特定的地址
     class "foo" {
         match if substring (option vendor-class-identifier, 0, 4) = "SUNW";
     }
+
+    # 其它配置
+    filename="pxelinux.0";      # 指导引导文件名称
+    next-server IP;             # 指明引导文件所在服务器
 
 
 实验：在两台虚拟机上实现，DHCP服务器分配172.16.10.1~172.16.10.100
@@ -97,76 +103,193 @@ DHCP配置文件：/etc/dhcp/dhcpd.conf (复制/usr/share/doc/dhcp*/dhcp.conf.sa
     5. dhcp服务器上查看日志/var/log/boot.log
 
 
+
 PXE：Preboot Execution Environment,启动前的执行环境
     
     Client：网卡要支持网络引导
 
-tftp：Trivial FTP，简单文件传输协议，高效传输小文件，基于udp，监听端口69
+tftp：Trivial FTP，简单文件传输协议，高效传输小文件，监听69/udp，centos6上为xinetd监听
     默认共享目录：/var/lib/tftpboot/
 
-超级守护进程：xinetd，为那些极少接收用户请求的服务，专门提供监听功能，如tftp
-    独立守护进程：standlone, 能自我管理，无需xinted提供监听服务的进程
-    瞬时守护进程：他们无需定义在运行级别下，只需要一次性的定义xinetd的运行级别
- 
-        基于xinetd瞬时守护进程的配置文件：/etc/xinted.d/Service_name
+    超级守护进程：xinetd，为那些极少接收用户请求的服务，专门提供监听功能，如tftp
+        独立守护进程：standlone, 能自我管理，无需xinted提供监听服务的进程
+        瞬时守护进程：他们无需定义在运行级别下，只需要一次性的定义xinetd的运行级别
+     
+            基于xinetd瞬时守护进程的配置文件：/etc/xinted.d/Service_name
 
-        启动：
-            chkconfig xinetd on
+            启动：
+                chkconfig xinetd on
+                service xinetd start
+
+                chkconfig Service_name on
+                service xinetd restart
+
+    Linux上的tftp：
+        服务端：tftp-server
+        客户端：tftp
+    
+
+pxe自动安装系统流程：
+    1. 客户机网络引导启动，向本网络中的DHCP服务器索取IP，并搜寻引导文件的位置
+    2. DHCP服务器返回分给客户机IP以及pxe引导文件pxelinux.0(类似bootloader功能)路径
+    3. 客户机加载引导文件(pxelinux.0)，根据引导文件加载kernel和initrd
+    4. 加载default(光盘中isolinux.cfg)引导进入安装界面
+    5. ks文件及安装树(光盘)可以通过选择FTP,HTTP,NFS方式提供，执行自动安装过程
+
+
+PXE自动安装系统配置步骤：
+
+    I. centos6上，系统发行盘挂载至/mnt/cdrom
+
+        0. 安装相应程序
+            yum -y install dhcp tftp-server tftp httpd syslinux xinetd
+
+        1. 配置DHCP服务器
+            vim /etc/dhcp/dhcpd.conf
+                subnet 172.16.0.0 netmask 255.255.0.0 {
+                    range 172.16.60.11 172.16.60.20;
+                    next-server 172.16.60.2;    # tftp服务地址
+                    filename "pxelinux.0";      # 相当于bootloader,syslinux提供
+                }
+
+            dhcpd -t    # 语法检测
+            service dhcpd restart
+            tail -f /var/log/boot.log
+
+        2. 配置tftp-server
+            chkconfig xinetd on                 # 超级守护进程开机启动
+            service xinetd start                # 启动xinetd
+            chkconfig tftp on                   # tftp服务开机启动
             service xinetd start
+            ss -unl|grep ':69'
 
-            chkconfig Service_name on
-            service xinetd restart
+        3. 准备安装树，系统盘下的images目录下
+            mkdir /var/www/html/centos6
+            mount --bind /mnt/cdrom /var/www/html/centos6
+            service httpd start
 
-Linux上的tftp：
-    服务器：tftp-server
-    客户端：tftp
-在dhcp添加
-    next-server ip地址
-    filename="pxelinux.0"
+        4. 准备tftpboot下的文件
+            cp /mnt/cdrom/images/pxeboot/{vmlinuz,initrd.img}  /var/lib/tftpboot/
+            cp /mnt/cdrom/isolinux/{boot.msg,vesamenu.c32,splash.jpg}  /var/lib/tftpboot/
+            cp /usr/share/syslinux/pxelinux.0  /var/lib/tftpboot
+            mkdir /var/lib/tftpboot/pxelinux.cfg
+            cp /mnt/cdrom/isolinux/isolinux.cfg  /var/lib/tftpboot/pxelinux.cfg/default
+
+        5. 第一次测试引导
+
+        6. 提供kickstart文件，完成自动化，ks文件见下备注
+            1. 修改: url --url="http://172.16.0.1/centos6/"
+            2. 编辑好kickstart文件后保存至/var/www/html/centos6.cfg
+            3. chmod +r /var/www/html/centos6.cfg
+        
+        7. 配置引导程序能自动加载kickstart文件
+            vim /var/lib/tftpboot/pxelinux.cfg/default 添加如下:
+                label linux
+                menu label Install auto
+                kernel vmlinuz
+                append initrd=initrd.img ks=http://192.168.1.1/centos6.cfg
+        
+        8. 第二次测试自动安装
+                
+
+    II. centos7，0~3步骤同centos6
+        4. tftp目录文件准备
+            cp -v /usr/share/syslinux/{pxelinux.0,menu.c32,memdisk,mboot.c32,chain.c32}  /var/lib/tftpboot/ 
+            cp -v /mnt/images/pxeboot/{vmlinuz,initrd.img}  /var/lib/tftpboot/
+            mkdir /var/lib/tftpboot/pxelinux.cfg/
+            vim /var/lib/tftpboot/pxelinux.cfg/default 添加如下:
+                
+                default menu.c32
+                    promt 5
+                    timeout 30
+                    MENU TITLE CentOS 7 PXE Menu
+                    
+                    LABEL linux
+                    MENU LABEL Install CentOS 7 x86_64
+                    KERNEL vmlinuz
+                    APPEND initrd=initrd.img inst.repo=scheme://HOST:PORT/PATH/TO/REPO/ 
+                    LABEL linux_auto
+                    MENU LABEL Install CentOS 7 x86_64 auto 
+                    KERNEL vmlinuz
+                    APPEND initrd=initrd.img inst.repo=scheme://HOST:PORT/PATH/TO/REPO/  ks=http://HOST/centos7.cfg
+
+        5. 提供kickstart文件，修改同上
+        6. 测试
 
 
-PXE配置步骤：
 
-    1. 配置DHCP服务器
-        yum -y install dhcp
-        vim /etc/dhcp/dhcpd.conf
-        subnet{
-            ...
-            next-server 172.16.60.2    # tfpt服务地址
-            filename "pxelinux.0"
-        }
-        service dhcpd restart
-        tail -f /var/log/boot.log
+备注：
 
-    2. 配置tftp-server
-        yum -y install xinetd tftp-server tftp
-        chkconfig xinetd on
-        chkconfig tftp on
-        service xinetd start
-        ss -unl|grep ':69'
+创建kickstart 文件的两种方式：
+    1. 修改模版文件
+        cp /root/anaconda-ks.cfg ks.cfg
+    2. system-config-kickstart 命令
+        yum -y install system-config-kickstart
+        system-config-kickstart &  
 
-    3. 准备安装树，由apache提供服务，默认目录为/var/www/html
-        mkdir /var/www/html/centos6
-        mount --bind /media/cdrom /var/www/html/centos6
-        service httpd start
+    ksvalidator ks.cfg      # 检测centos6的kickstart 文件语法命令
 
-    4. 准备tftpboot下的文件
-        yum -y install syslinux
-        cp /media/cdrom/images/pxeboot/{vmlinuz,initrd.img} /var/lib/tftpboot/
-        cp /media/cdroom/isolinux/{boot.msg,vesamenu.c32,splash.jpg} /var/lib/tftpboot/
-        cp /usr/share/syslinux/pxelinux.0 /var/lib/tftpboot
-        mkdir /var/lib/tftpboot/pxelinux.cfg
-        cp /media/cdrom/isolinux/isolinux.cfg /var/lib/tftpboot/pxelinux.cfg/default
+centos6-x86_64的kickstart文件：
 
-    5. 第一次测试
+#platform=x86, AMD64, or Intel EM64T
+#version=DEVEL
+# Firewall configuration
+firewall --disabled
+# Install OS instead of upgrade
+install
+# Use network installation
+url --url="http://172.16.0.1/cobbler/ks_mirror/6"
+# Root password
+rootpw --iscrypted $6$CGsqab6d$Cd.PnnWtlL5XZAyr9J2zoMqyJH1QodcDp1pQp0uZ1f0Cq4eq9.TMkSQU6IfpvYZEYc32.lmF0lKuQwavnC49a0
+# System authorization information
+auth  --useshadow  --passalgo=sha512
+# Use text mode install
+text
+firstboot --disable
+# System keyboard
+keyboard us
+# System language
+lang en_US
+# SELinux configuration
+selinux --disabled
+# Reboot after installation
+reboot
+# System timezone
+timezone  Asia/Shanghai
+# System bootloader configuration
+bootloader --append="rhgb crashkernel=auto quiet" --location=mbr --driveorder="sda"
+# Clear the Master Boot Record
+zerombr
+# Partition clearing information
+clearpart --all  
+# Disk partitioning information
+part /boot --fstype="ext4" --size=200
+part pv.008 --size=61440
 
-    6. 完成自动化，提供kickstart文件
-        注意：url及repo后的路径要修改为可用安装树的路径
-        编辑好kickstart文件后保存至/var/www/html/ks.cfg，同时需要设置可读权限
-    
-    7. 配置引导程序能自动加载kickstart文件
-        编辑/var/lib/tftpboot/pxelinux.cfg/default
-            在label为linux项的append一行后附加ks路径: ks=http://IP/ks.cfg
-    
-    8. 第二次测试
-            
+volgroup vg0 --pesize=8192 pv.008
+logvol / --fstype=ext4 --name=root --vgname=vg0 --size=20480
+logvol swap --name=swap --vgname=vg0 --size=2048
+logvol /usr --fstype=ext4 --name=usr --vgname=vg0 --size=10240
+logvol /var --fstype=ext4 --name=var --vgname=vg0 --size=20480
+
+
+
+%packages
+@base
+@basic-desktop
+@chinese-support
+@client-mgmt-tools
+@core
+@desktop-platform
+@fonts
+@general-desktop
+@graphical-admin-tools
+@legacy-x
+@network-file-system-client
+@perl-runtime
+@x11
+
+tree
+lftp
+
+%end

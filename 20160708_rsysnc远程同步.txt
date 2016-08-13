@@ -2,7 +2,7 @@
 # edit by liu2lin600
 
 
-rsync: Remote Sync 远程同步工具，本身不具备加密功能
+rsync: Remote Sync 远程同步工具，具有可使本地和远程两台主机之间的数据快速复制同步镜像、远程备份的功能，本身不具备加密功能
 
     特点：
         1、可以镜像保存整个目录树或文件系统
@@ -17,10 +17,10 @@ rsync: Remote Sync 远程同步工具，本身不具备加密功能
         第四种模式：服务模式，此时rsync工作为守护进程，能接收客户端的数据同步请求
 
     rsync命令语法：rsync [opt] SRC DST
-        本地模式：
+        本地模式：类cp
             rsync [OPTION...] SRC... [DEST]
 
-        远程shell模式：
+        远程shell模式：类scp
             Pull: rsync [OPTION...] [USER@]HOST:SRC... [DEST]
             Push: rsync [OPTION...] SRC... [USER@]HOST:DEST
         服务daemon模式：
@@ -54,7 +54,7 @@ rsync: Remote Sync 远程同步工具，本身不具备加密功能
         --stats: 显示如何执行压缩和传输
         --password-file=/path/to/secrets_file: 指定密码文件
 
-    rsync的服务器模式：基于xinetd工作，监听端口默认873/tcp
+    rsync的服务器模式：以centos6为例，基于xinetd工作，监听端口默认873/tcp
         1、安装rsync服务
             yum -y install xinetd rsync
 
@@ -119,6 +119,15 @@ inotify：
         max_user_instances      #设置每个用户可以运行的inotifywait或inotifywatch命令的进程数
         max_queued_events       #设置inotify实例事件(event)队列可容纳的事件数量
 
+        修改参数：默认值比较小
+            sysctl -w fs.inotify.max_queued_events="99999999"
+            sysctl -w fs.inotify.max_user_watches="99999999"
+            sysctl -w fs.inotify.max_user_instances="65535"
+            vim /etc/sysctl.conf     #添加以下代码
+                fs.inotify.max_queued_events=99999999
+                fs.inotify.max_user_watches=99999999
+                fs.inotify.max_user_instances=65535
+
 inotify-tools：
     为linux下inotify文件监控工具提供的一套C的开发接口库函数，同时还提供了一系列的命令行工具，这些工具可以用来监控文件系统的事件。inotify-tools是用c编写的，除了要求内核支持inotify外，不依赖于其他
     
@@ -129,41 +138,44 @@ inotify-tools：
     安装：
         yum -y install inotify-tools    # 在EPEL源中
 
-    inotifywait命令选项：
-        -m：始终保持事件监听状态
-        -r：递归查询目录
-        -q：只打印监控事件的信息
-        -t：超时时间
-        -e：事件，包括删、增、改等
-        –excludei：排除文件或目录时，不区分大小写
-        –timefmt：指定时间输出格式
-        –format：指定输出内容格式
-            %w: 文件夹
-            %f: 变化的文件
-            %e: 
-            %Xe: 改变的方式，包括CREATE,MODIFY,ATTRIB,DELETE...
-            %T: 打印时间
+    inotifywait命令语法：
+        inotifywait [-hcmrq] [-e <event> ] [-t <seconds> ] [--format <fmt> ] [--timefmt <fmt> ] <file> [ ... ]
 
-        事件：
-            access：读取文件或目录内容
-            modify：修改文件或目录内容
-            attrib：文件或目录的属性改变
-            close_write：修改真实文件内容
-            close_nowrite：  
-            close：  
-            open：文件或目录被打开
-            moved_to：文件或目录移动到
-            moved_from：文件或目录从移动
-            move：移动文件或目录移动到监视目录
-            create：在监视目录下创建文件或目录
-            delete：删除监视目录下的文件或目录
-            delete_self：
-            unmount：卸载文件系统
+        inotifywait命令选项：
+            -m：始终保持事件监听状态
+            -r：递归查询目录
+            -q：只打印监控事件的信息
+            -t：超时时间
+            -e：事件，包括删、增、改等
+            –excludei：排除文件或目录时，不区分大小写
+            –timefmt：指定时间输出格式
+            –format：指定输出内容格式
+                %w: 文件夹
+                %f: 变化的文件
+                %e: 
+                %Xe: 改变的方式，包括CREATE,MODIFY,ATTRIB,DELETE...
+                %T: 打印时间
 
-    inotifywait监控实例：
-        inotifywait -mrq --timefmt '%Y/%m/%d-%H:%M:%S' --format '%T %Xe %w%f' -e modify,delete,create,move,attrib /root/tmp/
+            事件：
+                access：读取文件或目录内容
+                modify：修改文件或目录内容
+                attrib：文件或目录的属性改变
+                close_write：修改真实文件内容
+                close_nowrite：  
+                close：  
+                open：文件或目录被打开
+                moved_to：文件或目录移动到
+                moved_from：文件或目录从移动
+                move：移动文件或目录移动到监视目录
+                create：在监视目录下创建文件或目录
+                delete：删除监视目录下的文件或目录
+                delete_self：
+                unmount：卸载文件系统
 
-        持续监听/root/tmp目录及其子目录的文件变化，包括文件被修改、删除、创建、移动、属性更改，显示到屏幕
+        inotifywait监控实例：
+            inotifywait -mrq --timefmt '%Y/%m/%d-%H:%M:%S' --format '%T %Xe %w%f' -e modify,delete,create,move,attrib /root/tmp/
+
+            持续监听/root/tmp目录及其子目录的文件变化，包括文件被修改、删除、创建、移动、属性更改，显示到屏幕
 
 
 rsync + inotify 组合：inotifywait监控源目录下的变化，利用rsync同步工具将变化的内容pull到远程服务器上
