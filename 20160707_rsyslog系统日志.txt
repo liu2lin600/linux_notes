@@ -47,7 +47,7 @@ Linux日志：
     rsyslog的主配置文件：/etc/rsyslog.conf
         #### MODULES ####
         $ModLoad imudp              # 加载输入udp模块
-        $UDPServerRun 514           # 启用udp
+        $UDPServerRun 514           # 启用udp，监听514
         $ModLoad imtcp
         $InputTCPServerRun 514
 

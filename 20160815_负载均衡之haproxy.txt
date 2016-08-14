@@ -1,0 +1,181 @@
+
+
+HAPorxy：
+    
+    负载均衡解决方案：
+        硬件：
+            F5: BIG IP
+            Citrix: NetScaler
+            A10: A10
+            RedWare
+        软件：
+            4 layer：
+                lvs
+                haproxy
+            7 layer(http)：
+                httpd (tomcat)
+                nginx
+                haproxy (http)
+                缓存：varnish, squid
+                ats(apache traffic server)
+
+        lvs: 400W
+        haproxy: 3W
+
+        网站构建问题：
+            当用户请求超出流量时：
+                cdn
+                运营商的流量清洗
+                降级服务
+
+            后端存储超出怎么办?：
+                数据做切片
+                做分布式
+                共享存储
+                HAproxy提供高可用（后端服务器）
+
+
+    haproxy的配置：
+        ▫ global settings：全局配置段
+            主要用于定义haproxy进程自身的工作特性
+
+        ▫ proxies：代理配置段
+            1. backend: 后端服务器组
+            2. frontend: 定义面向客户的监听的地址和端口，以及关联到的后端服务器组
+            3. listen: 组合方式直接定义frontend及相关的backend的一种机制
+            4. defaults: 定义默认配置
+
+                frontend <name> IP:PORT
+                    use_backend
+                    default_backend
+
+                backend <name>
+                    cookie NAME xxx
+                    balance <scheduler>
+                    server <name> IP:PORT [check]
+                    ...
+
+                listen <name> IP:PORT
+                    balance
+                    server
+                    server
+
+                defaults
+
+        haproxy负载均衡调度方法：
+            • roundrobin: wrr, dynamic 动态加权轮询，支持慢启动
+            • static-rr: wrr, static 静态加权轮询，服务器重新上线时会被立即分配大量连接
+            • leastconn: wlc, dynamic 最少连接，支持慢启动
+            • source: 源地址hash实现会话保持
+                一般用于基于TCP模式调试，且不支持使用cookie插入模式时使用，由hash-type参数决定其为dynamic或者static
+                session保持的方式：
+                    session绑定：
+                        ipvs: sh
+                        nginx: ip_hash
+                        haproxy: source
+
+                        cookie
+                    session复制
+                    session服务器
+
+            • uri: 基于请求报文中的uri的左半部分(查询条件之前的部分)或全部的URI进行调度，常用于后端缓存服务器中
+                由hash-type参数决定其为dynamic或者static
+
+            • url_params: 常用于后端服务器需要对用户进行认证的场景中
+                由hash-type参数决定其为dynamic或者static
+
+            • hdr(<name>):
+                根据用户请求报文中，指定的http首部的值进行调度
+                    如：hdr(host) 表示实现将对同一个虚拟主机的请求始终发往同个后端服务器
+
+                        http://www.magedu.com/images/logo.gif
+
+                        www.magedu.com
+                        web.magedu.com
+                        wwwww.magedu.com
+
+                    use_domain_only：在计算hash值时仅使用域名
+
+                由hash-type参数决定其为dynamic或者static
+
+                调度至app servers？source
+                调用至image servers？roundrobin
+                调度至cache servers？uri
+                调度至mysql servers? leaseconn
+
+        基于cookie的session绑定机制：
+            backend NAME
+                cookie node insert nocache
+                server <name> IP: PORT cookie <name>
+
+
+        HAProxy的工作模式：调度时发生的协议层次
+            mode {http|tcp|health}
+
+                http：仅用于调度http协议的服务器
+                    会对应用层数据做深入分析，因此支持7层过滤、处理、转换等机制
+
+                tcp：非http协议的服务器调度，包括https, ssh, ssl, stmp
+                    默认模式，不会对应用层协议做任何检查；
+                    通过在客户端和backend server之间建立一个全双工的连接
+
+        日志相关参数：
+            • log global        # 使用全局中的定义
+            • log <address> [len <length>] <facility> [<level> [<minlevel>]]   #自定义
+            • no log            #不记录日志
+
+            • capture request header <name> len <length>    # 捕获请求首部
+            • capture response header <name> len <length>   # 捕获响应首部
+
+            例如：
+                capture request  header Host len 20
+                capture request  header Referer len 60
+
+    推荐对cache servers负载均衡调度时的配置
+        balance uri
+        hash-type consistent
+
+    server <name> <address>[:port] [param*]
+        param:
+            backup, check, cookie, manconn, weight, maxqueue, redir
+
+        option httpchk <uri>
+
+    stats:
+        active: 后端服务器中的active server
+        backup：后端服务器的中backup server
+
+
+    haproxy acl:
+        ACL：基于某些特性定义列表
+
+        cretirion:
+            be_sess_rate
+            fe_sess_rate
+            hdr(header)
+
+            path
+            path_beg
+            path_end
+            path_reg
+
+            url
+            url_beg
+            url_end
+            url_reg
+
+            method
+
+            dst
+            dst_port
+            src
+            src_port
+
+    use_backend <backend> if <condition>
+    use_backend <backend> unless <condition>
+
+    start line
+    Host:
+    connection:
+    X-FORWARD-FOR:
+
