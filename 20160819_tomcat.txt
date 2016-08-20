@@ -1,0 +1,671 @@
+2016-08-19
+# eidt by liu2lin600
+
+Tomcat：
+
+    ♦ 编程语言：
+        系统级：C、C++、go、...
+        应用级：Java, PHP, Python, Perl, C#, Ruby...
+            Python：PVM
+                Web Framework：Django，...
+            bash：bash explainer
+        
+        程序：指令+数据
+            过程式编程：以代码为中心，数据服务于代码；
+            对象式编程：以数据为中心，代码服务于数据；
+                类，class；类属性、类方法；
+                    对象，object
+                    
+    ♦ Java简介：
+        java历史：
+            Sun, Green Project, Oak, James Gosling, 
+            1995：Java 1.0, Write once, Run Anywhere
+            1996：JDK（Java Development Kit），包含类库、开发工具(javac)以及JVM（SUN Classic VM）
+                JDK 1.0： JVM，Applet, AWT
+            1997：JDK 1.1
+                JAR文档格式、JDBC、JavaBeans
+            1998：JDK 1.2
+                Sun分拆Java技术为三个方向：
+                    J2SE：Standard Edition
+                    J2EE：Enterprise Edition
+                    J2ME：Mobile Edition
+                    
+                代表性技术：EJB， jAVA plugin, Swing, JIT
+            2000：JDK 1.3
+                HotSpot VM
+            2002：JDK 1.4
+            
+            2006：Sun开源了Java技术，GPL，建立了一个称为OpenJDK组织
+                Java 2 SE
+                Java 2 EE
+                Java 2 ME 
+                
+            2011：JDK 1.7
+            2014：JDK 1.8
+            2016：JDK 1.9
+        
+        执行流程：    
+            *.java(source code) --> Javac(编译器) --> *.class(bytecode) --> jvm装载
+            jvm装载程序类文件及依赖到的类文件至执行引擎运行，表现为一个jvm进程
+        
+        应用程序文件：java
+        
+        java技术体系：
+            Java编程语言
+            Java Class文件格式
+            Java API 接口
+            Java VM 虚拟机(jvm)
+            
+        jvm的核心组件：
+            类加载器(class loader)
+            执行引擎
+            
+        jvm运行时区域：
+            方法区：线程，用于存储被JVM加载的class信息、常量、静态变量、方法等
+            堆：是jvm所管理的内存中占用空间最大的一部分，也是GC管理的主要区域，存储对象
+            Java栈：线程私有，存储 线程自己的局部变量
+            PC寄存器：线程私有的内存空间，程序的指令指针
+            本地方法栈：
+            
+        Java 2 SE：提供JDK 
+        Java 2 EE：
+            JDK + Servlet, JSP, EJB, JMS, JMX, JavaMail, ...
+            
+            商业实现：
+                BEA（oracle）：WebLogic
+                IBM：WebSphere
+                Oracle: oc4j
+                ...
+        
+    ♦ Java 2 SE：安装JDK
+        当前的java环境：
+            java  -version
+             
+        1. OpenJDK 
+            java-VERSION-openjdk：运行环境
+            java-VERSION-openjdk-headless：除音视频外运行环境
+            java-VERSION-openjdk-devel：开发工具
+        
+            注意：多版本并存时，可使用 alternatives命令设定默认使用的版本
+            
+        2. Oracle JDK
+            安装相应版本的rpm包，如:jdk-1.8.0_25-linux-x64.rpm 
+                
+        注意：安装完成后，要配置JAVA_HOME环境变量，指向java的安装路径
+            OpenJDK：
+                JAVA_HOME=/usr
+            Oracle JDK：
+                JAVA_HOME=/usr/java/jdk_VERSION
+        
+    ♦ Java 2 EE：
+        • Servlet：
+            类库；web app
+            Servlet container, Servlet Engine
+            
+        • JSP：Java Server Page
+            <html>
+                <title>TITLE</title>
+                <body>
+                    <h1>...</h1>
+                    <%
+                        java code
+                    %>
+                </body>
+            </html>
+            
+            JSP执行过程：jsp --> jasper --> servlet(PAGE.jsp --> PAGE_jsp.java) --> javac --> class (PAGE_jsp.class) --> JVM 
+            
+            注意：基于jasper将静态输出的数据转为java代码进行输出
+            
+        • Web Container：
+            Servlet Container
+            
+            Java Web Server：JWS
+            ASF：JServ
+                
+                Tomcat 3.x
+                Tomcat 4.x
+                    Catalina
+                    
+                http://tomcat.apache.org/
+            
+            商业实现：
+                WebSphere, WebLogic, Oc4j, Glassfish, Geronimo, JOnAS, JBoss, ...
+            开源实现：
+                Tomcat, Jetty, Resin, ...
+                
+                Tomcat： Java 2 EE技术体系的不完整实现
+
+
+
+Tomcat：使用java语言编写，需运行在jvm上
+        
+    ♦ Tomcat的核心组件：
+        <Server>
+            <Service>
+                <Connector/>
+                <Connector/>
+                ...
+                <Engine>
+                    <Host>
+                        <Context/>
+                        <Context/>
+                        ...
+                    </Host>
+                    <Host>
+                        ...
+                    </Host>
+                    ...
+                </Engine>
+            </Service>
+        </Server>
+
+        每一个组件都由一个Java类实现，这些组件大体可分为以下几个类型：
+            顶级组件：Server
+            服务类组件：Service
+            连接器组件：http, https, ajp
+            容器类：Engine, Host, Context
+            被嵌套类：valve, logger, realm, loader, manager, ...
+            集群类组件：listener, cluster, ...
+            
+    ♦ 安装Tomcat：
+        • rpm包：base repo提供
+            tomcat, tomcat-lib, tomcat-admin-webapps, tomcat-webapps, tomcat-docs-webapp
+            
+        • 二进制包：
+            tar xf apache-tomcat-VERSION.tar.gz  -C /usr/local/
+            cd /usr/local
+            ln -sv apache-tomcat-VERSION  tomcat
+            
+            vim /etc/profile.d/tomcat.sh 
+                export CATALINA_BASE=/usr/local/tomcat
+                export PATH=$CATALINA_BASE/bin:$PATH    
+
+        • 监听端口：
+            8005/tcp：进程端口
+            8009/tcp：ajp协议
+            8080/tcp：http协议
+
+    ♦ Tomcat程序环境：
+        • tomcat的目录结构：(二进制包为例)
+            bin/：脚本，及启动时用到的类
+            conf/：配置文件
+            lib/：库文件
+            logs/：日志文件目录
+            temp/：临时文件目录
+            webapps/：webapp的默认目录
+            work/：工作目录
+            
+        • rpm包安装的程序环境：
+            配置文件：/etc/tomcat
+            webapps存放位置：/var/lib/tomcat/webapps/
+
+                二进制包默认应用：
+                    examples
+                    manager
+                    host-manager
+                    docs
+                
+        • 配置文件：
+            ۰ server.xml：主配置文件
+            ۰ web.xml：每个webapp只有"部署"后才能被访问，它的部署方式通常由web.xml进行定义，其存放位置为WEB-INF/目录中，此文件为所有的webapps提供默认配置
+            ۰ context.xml：每个web都可以专用的配置文件，它通常由专用的配置文件context.xml来定义，其存放位置为WEB-INF/目录中，此文件为所有的webapps提供默认配置
+            ۰ tomcat-users.xml：用户认证的账号和密码文件
+            ۰ catalina.policy：当使用-security选项启动tomcat时，用于为tomcat设置安全策略 
+            ۰ catalina.properties：Java属性的定义文件，用于设定类加载器路径，以及一些与JVM调优相关参数
+            ۰ logging.properties：日志系统相关的配置         
+        
+        • 二进制包主程序：catalina.sh    
+            debug             Start Catalina in a debugger
+            debug -security   Debug Catalina with a security manager
+            jpda start        Start Catalina under JPDA debugger
+            run               Start Catalina in the current window
+            run -security     Start in the current window with security manager
+            start             Start Catalina in a separate window
+            start -security   Start in a separate window with security manager
+            stop              Stop Catalina, waiting up to 5 seconds for the process to end
+            stop n            Stop Catalina, waiting up to n seconds for the process to end
+            stop -force       Stop Catalina, wait up to 5 seconds and then use kill -KILL if still running
+            stop n -force     Stop Catalina, wait up to n seconds and then use kill -KILL if still running
+            configtest        Run a basic syntax check on server.xml - check exit code for result
+            version           What version of tomcat are you running?   
+            
+        • JSP WebAPP的目录结构：
+            webapps/：根目录
+                ROOT/：默认域名访问时，访问此目录下的index.jsp。如 tc.liu.com:8080 
+                test/：一个项目目录
+                    index.jsp：主页
+                    WEB-INF/：当前webapp的私有资源路径，通常用于存储当前webapp的web.xml和context.xml配置文件
+                    META-INF/：类似于WEB-INF/
+                    classes/：类文件，当前webapp所提供的类
+                    lib/：类文件，当前webapp所提供的类，被打包为jar格式
+                
+        • webapp归档格式：
+            .war：webapp
+            .jar：EJB的类打包文件
+            .rar：资源适配器类打包文件
+            .ear：企业级webapp
+            
+    ♦ 部署(deploy)webapp的相关操作：
+        deploy：将webapp的源文件放置于目标目录，配置tomcat服务器能够基于web.xml和context.xml文件中定义的路径来访问此webapp；将其特有的类和依赖的类通过class loader装载至JVM
+            ۰ 自动部署：
+            ۰ 手动部署：
+                冷部署：把webapp复制到指定的位置，而后才启动tomcat
+                热部署：在不停止tomcat的前提下进行部署
+                    部署工具：manager、ant脚本、tcd(tomcat client deployer)等    
+
+        undeploy：反部署，停止webapp，并从tomcat实例上卸载webapp
+        start：启动处于停止状态的webapp
+        stop：停止webapp，不再向用户提供服务，其类依然在jvm上
+        redeploy：重新部署
+        
+        如：手动提供一测试类应用，并冷部署(二进制包为例)
+
+            mkidr  -pv  /usr/local/tomcat/webapps/test/{classes,lib,WEB-INF}
+            vim /usr/local/tomcat/webapps/test/index.jsp 
+                
+                <%@ page language="java" %>
+                <%@ page import="java.util.*" %>
+                <html>
+                    <head>
+                        <title>Test Page</title>
+                    </head>
+                    <body>
+                        <% out.println("hello world");
+                        %>
+                    </body>
+                </html>     
+
+    ♦ tomcat的两个管理应用：由tomcat-admin-webapps提供，二进制包安装则自带
+        1. manager
+        2. host-manager
+
+        通过http://HOST:8080/manager/访问，首次使用需修改tomcat-users.xml，添加用户及密码
+            
+            <role rolename="manager-gui"/>
+            <user username="tomcat" password="tomcat" roles="manager-gui,admin-gui"/>
+
+
+    ♦ Tomcat的常用组件配置：server.xml中配置，注意组件名首字母大写
+        
+        • Server组件：代表tomcat实例，即表现出的一个jvm进程，监听在8005端口，只接收"SHUTDOWN"。各server监听的端口不能相同，因此，在同一物理主机启动多个实例时，需要修改其监听端口为不同的端口
+            
+            关闭进程：
+                telnet 12.0.0.1 8005
+                SHUTDOWN
+
+        • Service组件：用于实现将一个或多个connector组件关联至一个engine组件
+        
+        • Connector组件：
+            进入tomcat的请求可分为两类：
+                (1) standalone：请求来自于客户端浏览器
+                (2) 由其它的web server反代：来自前端的反代服务器
+                    nginx --> http connector --> tomcat 
+                    httpd --> http connector --> tomcat
+                    httpd --> ajp connector --> tomcat 
+                    
+            属性：
+                port="8080" 
+                protocol="HTTP/1.1"
+                connectionTimeout="20000"
+                
+                address=: 监听的IP地址，默认为本机所有可用地址
+                maxThreads=: 最大并发连接数，默认为150
+                enableLookups=: 是否启用DNS查询功能
+                acceptCount=: 等待队列的最大长度
+                secure=: 
+                sslProtocol=: 
+                
+        • Engine组件：Servlet实例，即servlet引擎，其内部可以一个或多个host组件来定义站点， 通常需要通过defaultHost来定义默认的虚拟主机
+        
+            属性：
+                name=
+                defaultHost="localhost"
+                jvmRoute=
+                
+        • Host组件：位于engine内部用于接收请求并进行相应处理的主机或虚拟主机，
+            默认示例：
+                <Host name="localhost"  appBase="webapps"
+                    unpackWARs="true" autoDeploy="true">
+                </Host>
+            
+            常用属性说明：
+                (1) appBase：此Host的webapps的默认存放目录，指存放非归档的web应用程序的目录或归档的WAR文件目录路径，可以使用基于$CATALINA_BASE变量所定义的路径的相对路径
+                (2) autoDeploy：在Tomcat处于运行状态时，将某webapp放置于appBase所定义的目录中时，是否自动将其部署至tomcat；
+                
+                示例：
+                    <Host name="tc1.liu2lin.com" appBase="/appdata/webapps" unpackWARs="true" autoDeploy="true">
+                    </Host>
+                
+                    mkdir -pv /appdata/webapps
+                    mkdir -pv /appdata/webapps/ROOT/{lib,classes,WEB-INF}
+                    提供一个测试页即可
+                
+        • Context组件：相当于别名
+            示例：放 <Host> 中
+                <Context path="/PATH" docBase="/PATH/TO/SOMEDIR" reloadable=""/>
+                
+        • Valve组件：阀门过滤
+            <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+                prefix="localhost_access_log" suffix=".txt"
+                pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+                
+            Valve存在多种类型：
+                定义访问日志：org.apache.catalina.valves.AccessLogValve
+                定义访问控制：org.apache.catalina.valves.RemoteAddrValve 
+                    <Valve className="org.apache.catalina.valves.RemoteAddrValve" deny="172\.16\.100\.67"/>
+                 
+    ♦ LNMT：Linux Nginx MySQL Tomcat 
+        Client (http) --> nginx (reverse proxy)(http) --> tomcat  (http connector)
+        
+        全部代理：
+            location / {
+                proxy_pass http://tc1.liu2lin.com:8080;
+            }
+            
+        动静分离：
+            location ~* \.(jsp|do)$ {
+                proxy_pass http://tc1.liu2lin.com:8080;
+            }
+
+            注：此模式下访问url需要完整路径，取 x.x.x.jsp
+        
+    ♦ LAMT：Linux Apache(httpd) MySQL Tomcat 
+        httpd的代理模块：httpd -M 查看
+            proxy_module：核心代理模块
+            proxy_http_module：适配http协议客户端
+            proxy_ajp_module：适配ajp协议客户端
+            
+        • Client (http) --> httpd (proxy_http_module)(http) --> tomcat  (http connector)
+        • Client (http) --> httpd (proxy_ajp_module)(ajp) --> tomcat  (ajp connector)
+        • Client (http) --> httpd (mod_jk)(ajp) --> tomcat  (ajp connector) 
+        
+        ✦ proxy_http_module代理配置示例：
+            <VirtualHost *:80>
+                ServerName      tc1.liu2lin.com
+                ProxyRequests   Off         # 关闭正向代理
+                ProxyVia        On          # 添加代理首部
+                ProxyPreserveHost On        # 反代支持虚拟主机，保留请求主机名
+                <Proxy *>
+                    Require all granted
+                </Proxy>
+                ProxyPass / http://tc1.liu2lin.com:8080/ 
+                ProxyPassReverse / http://tc1.liu2lin.com:8080/ 
+                <Location />
+                    Require all granted
+                </Location>
+            </VirtualHost>
+            
+        ✦ proxy_ajp_module代理配置示例：
+            <VirtualHost *:80>
+                ServerName      tc1.liu2lin.com
+                ProxyRequests   Off
+                ProxyVia        On
+                ProxyPreserveHost On
+                <Proxy *>
+                    Require all granted
+                </Proxy>
+                ProxyPass / ajp://tc1.liu2lin.com:8009/ 
+                ProxyPassReverse / ajp://tc1.liu2lin.com:8009/ 
+                <Location />
+                    Require all granted
+                </Location>
+            </VirtualHost>
+            
+
+Tomcat集群：
+
+    ♦ tomcat会话保持方式：
+        1. session sticky
+            nginx, cookie, lvs, httpd
+        2. session cluster
+            tomcat delta manager, tomcat session cluster
+        3. session server
+            memcached
+            
+    ♦ 基于apache的tomcat集群：
+        1. apache:
+                mod_proxy
+                mod_proxy_http
+                mod_proxy_balancer          
+            tomcat:
+                http connector
+        2. apache:
+                mod_proxy
+                mod_proxy_ajp
+                mod_proxy_balancer
+            tomcat:
+                ajp connector
+        3. apache:
+                mod_jk
+            tomcat:
+                ajp connector
+            
+        • 第一种方法：mod_proxy_http
+            @@以下配置以httpd2.4版本配置为例@@
+            
+            ۰ 简单httpd配置：无会话绑定
+                # balancer服务器组，有点类似nginx中的upstream
+                <proxy balancer://tcsrvs>
+                    BalancerMember http://172.16.60.67:8080
+                    BalancerMember http://172.16.60.68:8080
+                    ProxySet lbmethod=byrequests        # 代理设定，还包括bybusyness, bytraffic
+                </Proxy>
+
+                <VirtualHost *:80>
+                    ServerName lb.liu2lin.com
+                    ProxyVia On                 # 添加代理首部信息
+                    ProxyRequests Off           # 关闭正向代理
+                    ProxyPreserveHost On        # 代理后端主机使用虚拟机访问时开启
+                    <Proxy *>
+                        Require all granted
+                    </Proxy>
+                    ProxyPass / balancer://tcsrvs/
+                    ProxyPassReverse / balancer://tcsrvs/
+                    <Location />
+                        Require all granted
+                    </Location>
+                </VirtualHost>      
+        
+            ۰ 会话粘性的实现方法：
+                Header add Set-Cookie "ROUTEID=.%{BALANCER_WORKER_ROUTE}e; path=/" env=BALANCER_ROUTE_CHANGED
+
+                <proxy balancer://tcsrvs>
+                    BalancerMember http://172.18.100.67:8080 route=TomcatA loadfactor=1
+                    BalancerMember http://172.18.100.68:8080 route=TomcatB loadfactor=2
+                    ProxySet lbmethod=byrequests
+                    ProxySet stickysession=ROUTEID
+                </Proxy>
+
+                <VirtualHost *:80>
+                    ServerName lb.liu2lin.com
+                    ProxyVia On
+                    ProxyRequests Off
+                    ProxyPreserveHost On
+                    <Proxy *>
+                        Require all granted
+                    </Proxy>
+                    ProxyPass / balancer://tcsrvs/
+                    ProxyPassReverse / balancer://tcsrvs/
+                    <Location />
+                        Require all granted
+                    </Location>
+
+                    # 启用管理接口
+                    <Location /balancer-manager>
+                        SetHandler balancer-manager
+                        ProxyPass !         # 此路径不代理
+                        Require ip 127.0.0.1
+                    </Location>
+                </VirtualHost>  
+                
+
+                示例程序：
+                    1. 演示效果，在TomcatA上某context中（如/test），提供如下页面
+                        <%@ page language="java" %>
+                        <html>
+                            <head><title>TomcatA</title></head>
+                            <body>
+                                <h1><font color="red">TomcatA.liu2lin.com</font></h1>
+                                <table align="centre" border="1">
+                                    <tr>
+                                        <td>Session ID</td>
+                                    <% session.setAttribute("liu2lin.com","liu2lin.com"); %>
+                                        <td><%= session.getId() %></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Created on</td>
+                                        <td><%= session.getCreationTime() %></td>
+                                    </tr>
+                                </table>
+                            </body>
+                        </html>
+
+
+                    2. 演示效果，在TomcatB上某context中（如/test），提供如下页面
+                        <%@ page language="java" %>
+                        <html>
+                            <head><title>TomcatB</title></head>
+                                <body>
+                                <h1><font color="blue">TomcatB.liu2lin.com</font></h1>
+                                <table align="centre" border="1">
+                                    <tr>
+                                        <td>Session ID</td>
+                                    <% session.setAttribute("liu2lin.com","liu2lin.com"); %>
+                                        <td><%= session.getId() %></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Created on</td>
+                                        <td><%= session.getCreationTime() %></td>
+                                    </tr>
+                                </table>
+                                </body>
+                        </html>         
+                
+        • 第二种方法：mod_proxy_ajp
+            <proxy balancer://tcsrvs>
+                BalancerMember ajp://172.18.100.67:8009 route=TomcatA loadfactor=1
+                BalancerMember ajp://172.18.100.68:8009 route=TomcatB loadfactor=1
+                ProxySet lbmethod=byrequests
+            </Proxy>
+
+            <VirtualHost *:80>
+                ServerName lb.liu2lin.com
+                ProxyVia On
+                ProxyRequests Off
+                ProxyPreserveHost On
+                <Proxy *>
+                    Require all granted
+                </Proxy>
+                ProxyPass / balancer://tcsrvs/
+                ProxyPassReverse / balancer://tcsrvs/
+                <Location />
+                    Require all granted
+                </Location>
+                <Location /balancer-manager>
+                    SetHandler balancer-manager
+                    ProxyPass !
+                    Require all granted
+                </Location>
+            </VirtualHost>
+            
+        • 第三种方式：mod_jk模块
+            编译mod_jd模块：
+                yum install httpd-devel     # 提供apxs
+                tar xf tomcat-connectors-VERSION.tar.gz
+                cd tomcat-connectors-VERSION/native
+                ./configure  --with-apxs=/usr/bin/apxs
+                
+            1. 基于mod_jk进行反向代理
+            
+                模块配置文件：/etc/httpd/conf.d/mod_jk.conf    # 添加如下
+                    LoadModule jk_module modules/mod_jk.so
+
+                    JkWorkersFile /etc/httpd/conf.d/workers.properties
+                    JkLogFile logs/mod_jk.log
+                    JkLogLevel notice
+                    JkMount /* TomcatA                   ：指明代理
+                    JkMount /jk_status StatA                    
+                
+                workers配置文件：/etc/httpd/conf.d/workers.properties
+                    worker.list=TomcatA,StatA
+                    worker.TomcatA.host=172.18.100.67
+                    worker.TomcatA.port=8009
+                    worker.Tomcat.type=ajp13
+                    worker.StatA.type=status                    
+                
+            2. 基于mod_jk进行负载均衡
+                模块配置文件：/etc/httpd/conf.d/mod_jk.conf 添加如下
+                    LoadModule jk_module modules/mod_jk.so
+
+                    JkWorkersFile /etc/httpd/conf.d/workers.properties
+                    JkLogFile logs/mod_jk.log
+                    JkLogLevel debug
+                    JkMount /* tcsrvs                            ：
+                    JkMount /jk_status StatA    
+                    
+                workers配置文件：/etc/httpd/conf.d/workers.properties
+                    worker.list=tcsrvs,StatA
+                    worker.TomcatA.host=172.18.100.67
+                    worker.TomcatA.port=8009
+                    worker.TomcatA.type=ajp13
+                    worker.TomcatA.lbfactor=1
+                    worker.TomcatB.host=172.18.100.68
+                    worker.TomcatB.port=8009
+                    worker.TomcatB.type=ajp13
+                    worker.TomcatB.lbfactor=2
+                    worker.tcsrvs.type=lb
+                    worker.tcsrvs.balance_workers=TomcatA,TomcatB
+                    worker.tcsrvs.sticky_session=1
+                    worker.StatA.type=status
+                    
+                注：如果要做会话绑定，此处的配置文件使用worker的名称，要与后端tomcat的Engine属性中的jvmRoute的值保持一致
+                
+    ♦ Tomcat集群会话复制：
+        (1) 配置启用集群；
+            <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"
+                    channelSendOptions="8">
+
+                <Manager className="org.apache.catalina.ha.session.DeltaManager"
+                    expireSessionsOnShutdown="false"
+                    notifyListenersOnReplication="true"/>
+
+                <Channel className="org.apache.catalina.tribes.group.GroupChannel">
+                <Membership className="org.apache.catalina.tribes.membership.McastService"
+                        address="228.0.0.4"
+                        port="45564"
+                        frequency="500"
+                        dropTime="3000"/>
+                <Receiver className="org.apache.catalina.tribes.transport.nio.NioReceiver"
+                    address="auto"
+                    port="4000"
+                    autoBind="100"
+                    selectorTimeout="5000"
+                    maxThreads="6"/>
+
+                <Sender className="org.apache.catalina.tribes.transport.ReplicationTransmitter">
+                <Transport className="org.apache.catalina.tribes.transport.nio.PooledParallelSender"/>
+                </Sender>
+                <Interceptor className="org.apache.catalina.tribes.group.interceptors.TcpFailureDetector"/>
+                <Interceptor className="org.apache.catalina.tribes.group.interceptors.MessageDispatch15Interceptor"/>
+                </Channel>
+
+                <Valve className="org.apache.catalina.ha.tcp.ReplicationValve"
+                    filter=""/>
+                <Valve className="org.apache.catalina.ha.session.JvmRouteBinderValve"/>
+
+                <Deployer className="org.apache.catalina.ha.deploy.FarmWarDeployer"
+                    tempDir="/tmp/war-temp/"
+                    deployDir="/tmp/war-deploy/"
+                    watchDir="/tmp/war-listen/"
+                    watchEnabled="false"/>
+
+                <ClusterListener className="org.apache.catalina.ha.session.JvmRouteSessionIDBinderListener"/>
+                <ClusterListener className="org.apache.catalina.ha.session.ClusterSessionListener"/>
+                </Cluster>  
+        
+            注：确保Engine的jvmRoute属性配置正确
+        
+        (2) 配置webapps
+            编辑WEB-INF/web.xml，添加<distributable/>
+            

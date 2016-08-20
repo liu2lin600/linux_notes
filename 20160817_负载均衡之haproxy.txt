@@ -1,0 +1,640 @@
+
+
+HAPorxy：
+    
+    负载均衡解决方案：
+        硬件：
+            F5: BIG IP
+            Citrix: NetScaler
+            A10: A10
+            RedWare
+        软件：
+            4 layer：
+                lvs
+                haproxy
+            7 layer(http)：
+                httpd (tomcat)
+                nginx
+                haproxy (http)
+                缓存：varnish, squid
+                ats(apache traffic server)
+
+        lvs: 400W
+        haproxy: 3W
+
+        网站构建问题：
+            当用户请求超出流量时：
+                cdn
+                运营商的流量清洗
+                降级服务
+
+            后端存储超出怎么办?：
+                数据做切片
+                做分布式
+                共享存储
+                HAproxy提供高可用（后端服务器）
+
+    haproxy安装：
+        centos6.4后已被收录至base源中，可直接yum安装
+
+    haproxy程序环境：
+        /usr/sbin/haproxy           # 主程序
+        /etc/haproxy/haproxy.cfg    # 配置文件
+        /usr/lib/systemd/system/haproxy.service
+
+    haproxy的配置：
+        ▫ global settings：全局配置段
+            1. 进程及安全配置相关的参数
+            2. 性能调整相关参数
+            3. Debug参数
+
+        ▫ proxies：代理配置段
+            1. defaults: 定义默认配置
+            2. frontend: 定义面向客户的监听的地址和端口，以及关联到的后端服务器组，相当于虚拟主机
+            3. backend: 定义后端服务器组，相当于nginx, upstream
+            4. listen: 组合方式直接定义frontend及相关的backend的一种机制
+
+            简单的配置示例：
+                frontend web
+                    bind *:80
+                    default_backend     websrvs
+            
+                backend websrvs
+                    balance roundrobin
+                    server srv1 172.16.100.6:80 check
+                    server srv2 172.16.100.7:80 check
+
+        配置中时间单位：默认为毫秒ms
+            • us: 微秒(microseconds)
+            • ms: 毫秒(milliseconds)，默认
+            • s : 秒(seconds)
+            • m : 分钟(minutes)
+            • h : 小时(hours)
+            • d : 天(days)
+
+            一、global配置参数：
+
+                # 进程及安全管理相关
+                • chroot DIR：禁锢进程运行在指定目录下，沙箱机制
+                • daemon：守护进程方式运行
+                • uid, user, gid, group：指定身份运行
+                • log <addr> <facility> [max level [min level]]：定义全局的syslog服务器，最多可以定义两个
+                • log-send-hostname [STR]：在syslog信息的首部添加当前主机名，默认使用当前主机名
+                • nbproc NUM：守护进程模式下启动的进程数，默认只启动一个进程
+                • pidfile FILE：pid文件路径
+                • ulimit-n NUM：设定每进程所能够打开的最大文件描述符数目，会自动进行计算不推荐修改此选项
+                • stats：用户访问统计数据的接口
+                • node NAME：定义当前节点的名称，用于HA场景中多haproxy进程共享同一个IP地址时
+                • description TEXT：当前实例的描述信息
+
+                # 性能调整相关
+                maxconn NUM：设定每个haproxy进程所能接受的最大并发连接数
+                maxconnrate NUM：最大连接建立速率
+                maxsessrate NUM：
+                spread-checks <0..50, in percent>：健康状态检测时间动态调整
+
+                # Debug相关
+                debug：debug调试
+                quit：静默模式
+
+            二、代理配置段：defaults, frontend, backend, listen
+
+                • bind：用于定义一个或几个监听的套接字
+                    语法：bind [<addr>]:<port_range> [, …]
+                    示例：       
+                        listen http_proxy
+                            bind :80,:443
+                            bind 10.0.0.1:10080,10.0.0.1:10443
+                            bind /var/run/ssl-frontend.sock user root mode 600 accept-proxy
+                
+                • balance：后端服务器组内的服务器调度算法
+                    语法：balance <algorithm> [ <arguments> ]
+                          balance url_param <param> [check_post]
+
+                    算法：
+                        - roundrobin：加权轮询，支持慢启动；支持4095个后端主机
+                        - static-rr：静态算法，不支持权重的运行时调整及慢启动，后端主机数量无上限
+                        - leastconn：推荐使用在具有较长会话的场景中，例如MySQL、LDAP等
+                        - first：根据服务器在列表自上而下调度，前服务器的连接数达到上限，才会分配给下一台服务
+                        - source：源地址hash
+                            * 除权取余法: hash/weight%ip
+                            * 一致性哈希
+                                
+                        - uri：对URI的左半部分做hash计算，并由服务器总权重相除以后派发至某挑出的服务器，用于缓存服务器
+                            <scheme>://<user>:<password>@<host>:<port>/<path>;<params>?<query>#<frag>
+                                左半部分：/<path>;<params>
+                                整个uri：/<path>;<params>?<query>#<frag>
+                                        
+                        - url_param：对用户请求的uri听<params>部分中的参数的值作hash计算，并由服务器总权重相除以后派发至某挑出的服务器；通常用于追踪用户，以确保来自同一个用户的请求始终发往同一个后端
+                            
+                        - hdr(<name>)：对于http请求，指定首部进行hash计算，并由服务器总权重相除以后派发至某挑出的服务器，没有有效值的会被轮询调度 
+                            如：hdr(Cookie)，hdr(User-Agent)                    
+                            
+                    示例：
+                        balance roundrobin
+                        balance url_param session_id check_post 64
+                        balance hdr(User-Agent)
+
+                • hash-type <method> <function> <modifier>：哈希算法
+                    <method>
+                        map-based：除权取余法，不支持动态调整，哈希数据结构是静态的数组
+                        consistent：一致性哈希，树状哈希数据结构
+                    <function>: 哈希函数
+                        sdbm, djb2, wt6
+
+                • log global：引用全局日志
+                  log <addr> [len <len>] <facility> [<level> [<minlevel>]]：定义日志
+
+                    注：每个实例最多有log参数，如果使用了"log global"且"global"段已经定了两个log参数时，多余了log参数将被忽略
+
+                • capture cookie <name> len <length>：捕获并记录指定cookie
+                  capture request header <name> len <length>：捕获并记录请求首部
+                  capture response header <name> len <length>：捕获并记录响应首部
+
+                    示例：
+                        capture cookie ASPSESSION len 32
+                        capture request header X-Forwarded-For len 15
+                        capture response header Content-length len 9
+
+                • compression algo <algorithm> ...：启用http协议的压缩机制，指明压缩算法gzip, deflate
+                  compression type <mime type> ...：指明压缩的MIME类型
+                
+                • mode tcp|http|health：定义haproxy的工作模式
+                    tcp：基于layer4实现代理；可代理mysql, pgsql, ssh, ssl等协议；
+                    http：仅当代理的协议为http时使用
+                    health：工作为健康状态检查的响应模式，当连接请求到达时回应"OK"后即断开连接
+                    
+                    示例：
+                        listen ssh
+                            bind :22022
+                            balance leastconn
+                            mode tcp
+                            server sshsrv1 172.16.100.6:22 check
+                            server sshsrv2 172.16.100.7:22 check
+
+                • maxconn <conns>：为指定的frontend定义其最大并发连接数，默认为2000        
+                
+                • default_backend <backend>：设定默认的backend，用于frontend中
+                • use_backend <backend> [{if|unless} <cond>]：当符合条件时使用特定的backend
+                    示例：
+                        frontend
+                            use_backend     static   if  url_css
+                            default_backend dynamic
+
+                • default-server [param*]：为backend中的各server设定默认选项
+                    如：default-server inter 1000 weight 13 maxconn 3000
+
+                • server <name> <addr>[:[port]] [param*]：定义后端主机的各服务器及其选项
+                    <name>   : 服务器在haproxy上的内部名称；出现在日志及警告信息
+                    <addr>   : 服务器地址，支持使用主机名
+                    [:[port]]: 端口映射，省略时，表示同bind中绑定的端口
+                    [param*] : 参数
+                        maxconn <maxconn>：当前server的最大并发连接数
+                        backlog <backlog>：当前server的连接数达到上限后的后援队列长度
+                        backup：设定当前server为备用服务器
+                        check：对当前server做健康状态检测
+                            addr ADDR：检测时使用的IP地址，默认为定义的主机
+                            port PORT：针对此端口进行检测
+                            inter <delay>：连续两次检测之间的时间间隔，默认为2000ms
+                            rise <count>：连续多少次检测结果为"成功"才标记服务器为可用，默认为2
+                            fall <count>：连续多少次检测结果为"失败"才标记服务器为不可用，默认为3
+                            httpchk，"smtpchk", "mysql-check", "pgsql-check" and "ssl-hello-chk"：用于定义应用层检测方法
+                                
+                        cookie <value>：为当前server指定其cookie值，用于实现基于cookie的会话黏性
+                        disabled：标记为不可用
+                        maxqueue <maxqueue>：队列
+                        redir <prefix>：将发往此server的所有GET和HEAD类的请求重定向至指定的URL
+                        weight <weight>：权重，默认为1
+                        
+                    示例：
+                        server first  10.1.1.1:1080 cookie first  check inter 1000
+                        server second 10.1.1.2:1080 cookie second check inter 1000
+                        server backup 10.1.1.3:1080 backup
+
+                • cookie <name> [rewrite|insert|prefix] [indirect] [nocache] ...：
+                    <name>  : 定义响应给客户端设定的cookie名称
+                    rewirte : 重写
+                    insert  : 插入
+                    prefix  : 在前插入
+                    nocache : 使用insert时建议使用
+                    indirect: 重定向
+
+                    示例：基于cookie会话绑定
+                        backend websrvs
+                            cookie WEBSRV insert nocache indirect
+                            server srv1 172.16.60.6:80 weight 2 check rise 1 fall 2 maxconn 3000 cookie srv1
+                            server srv2 172.16.60.7:80 weight 1 check rise 1 fall 2 maxconn 3000 cookie srv2               
+
+                • option httpchk：定义基于http协议的7层健康状态检测机制
+                  option httpchk <uri>：
+                  option httpchk <method> <uri>：
+                  option httpchk <method> <uri> <version>： 
+                    
+                    示例：
+                        backend https_relay
+                            mode tcp
+                            option httpchk OPTIONS * HTTP/1.1\r\nHost:\ www
+                            server apache1 192.168.1.1:443 check port 80
+
+                • option forwardfor [except <network>] [header <name>] [if-none]：向后端主机添加客户端真实ip，X-Forwarded-For
+                    [ except <network> ]：请求报请来自此处指定的网络时不予添加此首部
+                    [ header <name> ]：使用自定义的首部名称，而非默认"X-Forwarded-For"，不建议修改
+
+                    示例：
+                        frontend www
+                            mode http
+                            option forwardfor except 127.0.0.1 header X-Client
+                                        
+                • stats：统计页面设置
+                    stats enable：启用统计页，基于默认的参数启用stats page，默认如下
+                        stats uri  : /haproxy?stats
+                        stats realm: "HAProxy Statistics"
+                        stats auth : no authentication
+                        stats scope: no restriction
+            
+                    stats auth <user>:<passwd>：认证时的账号和密码，可使用多次
+                    stats realm <realm>：认证时提示信息
+                    stats uri <prefix>：自定义状态页uri
+                    stats refresh <delay>：设定自动刷新时间间隔
+                    stats admin { if | unless } <cond>：启用stats page中的管理功能
+
+                    示例：
+                        listen stats
+                            bind :9099
+                            stats enable
+                            stats realm HAPorxy\ Stats\ Page
+                            stats uri /admin?stats
+                            stats auth admin:admin
+                            stats admin if TRUE
+                
+                • errorfile <code> <file>：自定义响应页面从指定文件中读取
+                  errorloc <code> <url>：重定向新url上
+                  errorloc302 <code> <url>：
+                    可定义的响应码有200, 400, 403, 408, 500, 502, 503, and 504
+
+                    示例：
+                        listen apps
+                            ......
+                            errorfile 400 /etc/haproxy/errorfiles/400badreq.http
+                            errorloc 403 http://www.liu2lin.com/error/403.html
+                
+                • reqadd  <STR> [{if|unless} <cond>]：请求报文追加指定首部
+                  rspadd <STR> [{if|unless} <cond>]：响应报文中追加
+                  reqdel  <search> [{if | unless} <cond>]：删除指定请求首部
+                  reqidel <search> [{if | unless} <cond>]：不区分大小写删除
+                  rspdel  <search> [{if | unless} <cond>]：删除指定响应首部
+                  rspidel <search> [{if | unless} <cond>]：
+
+                    注：<search>为正则表达式匹配
+                    示例：
+                        rspadd X-Via:\ HAPorxy
+                        rspidel  ^Server.*
+                    
+                • timeout client <timeout>：客户端非活动状态的超时时长
+                  timeout server <timeout>：客户端与服务器端建立连接后，等待服务器端的超时时长
+                  timeout http-keep-alive <timeout>：定义保持连接的超时时长
+                  timeout http-request <timeout>：
+                  timeout connect <timeout>：
+                  timeout client-fin <timeout>：与客户端半关闭连接的超时时长
+                  timeout server-fin <timeout>：
+                
+                    示例：
+                        defaults http
+                            option http-server-close
+                            timeout connect 5s
+                            timeout client 30s
+                            timeout client-fin 30s
+                            timeout server 30s
+
+                • block { if | unless } <condition>：基于7层的阻断请求，建议使用http-request代替
+                    示例：                    
+                        acl invalid_src src 172.16.200.2
+                        block if invalid_src
+                        errorfile 403 /etc/fstab    
+                        
+                • http-request allow|deny [{if|unless} <condition>]：7层访问控制
+                    示例：
+                        acl nagios src 192.168.129.3
+                        http-request allow if nagios
+
+                • tcp-request connection accept|reject [{if|unless} <condition>]：4层访问控制
+                    示例：
+                        listen ssh
+                            bind :22022
+                            balance leastconn
+                            acl invalid_src src 172.16.200.2
+                            tcp-request connection reject if invalid_src
+                            mode tcp
+                            server sshsrv1 172.16.100.6:22 check
+                            server sshsrv2 172.16.100.7:22 check backup         
+                
+                • acl：访问控制
+                    语法：acl <aclname> <criterion> [flags] [operator] [<value>] ...
+                
+                        aclname：定义规则名，由数字,字母大小写,'.','_','-',':'组成
+
+                        多条件间关系：and(&&), or(||), !取反
+                            [!]acl1 [!]acl2 ... [!]acln  { or [!]acl1 [!]acl2 ... [!]acln } ...
+
+                        flags：
+                            -i : 不区分大小写
+                            -m : 使用特定模式
+                            -n : 禁dns解析
+                            -u : acl名称不能相同
+                            -- : 转义
+
+                        operator：可用操作符
+                            匹配整数值：eq、ge、gt、le、lt
+                            匹配字符串：
+                                -m str: 精确匹配
+                                -m sub: 子串匹配
+                                -m beg: 前缀匹配
+                                -m end: 后缀匹配
+                                -m dir: 路径匹配
+                                -m dom: 域名匹配
+
+                        value：值的类型有
+                            布尔值: TRUE, FALSE
+                            数值及范围: 如1024:65535表示从1024至65535
+                            ip地址及网络
+                            字符串
+                            正则表达式
+                            十进制数据块
+
+                        criterion：测试标准
+                            dst : 源IP
+                            src : 目标IP
+                            dst_port : 源端口
+                            src_port : 目标端口
+                            
+                                如：acl invalid_src  src  172.16.200.2
+                                
+                            path : 匹配路径，从"/"开始，到'?'前，包含参数
+                                path     : 精确字符匹配
+                                path_beg : prefix match
+                                path_dir : subdir match
+                                path_dom : domain match
+                                path_end : suffix match
+                                path_len : length match
+                                path_reg : regex match
+                                path_sub : substring match  
+                                
+                            url : 匹配整个url
+                                url     : exact string match
+                                url_beg : prefix match
+                                url_dir : subdir match
+                                url_dom : domain match
+                                url_end : suffix match
+                                url_len : length match
+                                url_reg : regex match
+                                url_sub : substring match
+                                
+                            req.hdr([<name>[,<occ>]]) : 匹配请求报文首部
+                                hdr([<name>[,<occ>]])     : exact string match
+                                hdr_beg([<name>[,<occ>]]) : prefix match
+                                hdr_dir([<name>[,<occ>]]) : subdir match
+                                hdr_dom([<name>[,<occ>]]) : domain match
+                                hdr_end([<name>[,<occ>]]) : suffix match
+                                hdr_len([<name>[,<occ>]]) : length match
+                                hdr_reg([<name>[,<occ>]]) : regex match
+                                hdr_sub([<name>[,<occ>]]) : substring match                 
+                                
+                            status : 状态响应码匹配
+                            
+                    示例：
+                        acl bad_curl hdr_sub(User-Agent) -i curl
+                        block if bad_curl                   
+                        acl url_static path_beg -i /static /images /javascript /stylesheets
+                        acl url_static path_end -i .jpg .gif .png .css .js .html
+
+                    内置acl：
+                        FALSE           
+                        TRUE            
+                        HTTP            req_proto_http  match if protocol is valid HTTP
+                        HTTP_1.0        req_ver 1.0 match HTTP version 1.0
+                        HTTP_1.1        req_ver 1.1   match HTTP version 1.1
+                        HTTP_CONTENT    hdr_val(content-length) gt 0    match an existing content-length
+                        HTTP_URL_ABS    url_reg ^[^/:]*://  match absolute URL with scheme
+                        HTTP_URL_SLASH  url_beg /   match URL beginning with "/"
+                        HTTP_URL_STAR   url *   match URL equal to "*"
+                        LOCALHOST       src 127.0.0.1/8 match connection from local host
+                        METH_CONNECT    method CONNECT  match HTTP CONNECT method
+                        METH_GET        method GET HEAD match HTTP GET or HEAD method
+                        METH_HEAD       method HEAD match HTTP HEAD method
+                        METH_OPTIONS    method OPTIONS  match HTTP OPTIONS method
+                        METH_POST       method POST match HTTP POST method
+                        METH_TRACE      method TRACE    match HTTP TRACE method
+                        RDP_COOKIE      req_rdp_cookie_cnt gt 0 match presence of an RDP cookie
+                        REQ_CONTENT     req_len gt 0    match data in the request buffer
+                        WAIT_END        wait_end    wait for end of content analysis
+                                
+
+配置实例：
+
+    前端调度器IP：192.168.1.210
+    后端应用服务器IP：192.168.1.111 和 192.168.1.112
+
+0. 定义独立日志文件
+
+    vim /etc/rsyslog.conf       # 为其添加日志功能
+        $ModLoad imudp          # 加载udp模块
+        $UDPServerRun 514       # 启动udp，启动端口后将作为服务器工作
+        $ModLoad imtcp          # 加载tcp模块，与udp二选一即可
+        $InputTCPServerRun 514  # 启动tcp监听端口
+        local2.* /var/log/haproxy.log   # 定义日志路径
+
+
+1. 简单的http服务的配置
+    global
+        log 127.0.0.1 local2
+        chroot /var/lib/haproxy
+        pidfile /var/run/haproxy.pid
+        maxconn 4000
+        user haproxy
+        group haproxy
+        daemon
+        stats socket /var/lib/haproxy/stats
+    
+    defaults
+        mode http
+        log global
+        option httplog
+        option dontlognull
+        option http-server-close
+        option forwardfor except 127.0.0.0/8
+        option redispatch
+        retries 3
+        timeout http-request 10s
+        timeout queue 1m
+        timeout connect 10s
+        timeout client 1m
+        timeout server 1m
+        timeout http-keep-alive 10s
+        timeout check 10s
+        maxconn 3000
+    
+    frontend webser
+        option forwardfor
+        bind *:80
+        default_backend app
+    
+    backend app
+        balance roundrobin
+        server app1 192.168.1.111:80 check
+        server app2 192.168.1.112:80 check
+
+
+2. haproxy统计页面的输出机制
+
+    frontend webser
+        log 127.0.0.1 local3
+        option forwardfor
+        bind *:80
+        default_backend app
+    backend app
+        cookie node insert nocache
+        balance roundrobin
+        server app1 192.168.1.111:80 check cookie node1 intval 2 rise 1 fall 2
+        server app2 192.168.1.112:80 check cookie node2 intval 2 rise 1 fall 2
+        server backup 127.0.0.1:8010 check backup
+    listen statistics
+        bind *:8009             # 自定义监听端口
+        stats enable            # 启用基于程序编译时默认设置的统计报告
+        stats auth admin:admin  # 统计页面用户名和密码设置
+        stats uri /admin?stats  # 自定义统计页面的URL，默认为/haproxy?stats
+        stats hide-version      # 隐藏统计页面上HAProxy的版本信息
+        stats refresh 30s       # 统计页面自动刷新时间
+        stats admin if TRUE     # 如果认证通过就做管理功能，可以管理后端的服务器
+        stats realm Hapadmin    # 统计页面密码框上提示文本，默认为Haproxy\ Statistics
+ 
+
+3. 动静分离示例
+
+    frontend webservs
+        bind *:80
+        acl url_static path_beg -i /static /images /javascript /stylesheets
+        acl url_static path_end -i .jpg .gif .png .css .js .html
+        acl url_php path_end -i .php
+        acl host_static hdr_beg(host) -i img. imgs. video. videos. ftp. image. download.
+        use_backend static if url_static or host_static
+        use_backend dynamic if url_php
+        default_backend dynamic
+    
+    backend static
+        balance roundrobin
+        server node1 192.168.1.111:80 check maxconn 3000
+    
+    backend dynamic
+        balance roundrobin
+        server node2 192.168.1.112:80 check maxconn 1000
+
+
+4. http服务器配置完整示例
+
+    global
+        log 127.0.0.1 local2
+        chroot /var/lib/haproxy
+        pidfile /var/run/haproxy.pid
+        maxconn 4000
+        user haproxy
+        group haproxy
+        daemon
+    
+    defaults
+        mode http
+        log global
+        option httplog
+        option dontlognull
+        option http-server-close
+        option forwardfor except 127.0.0.0/8
+        option redispatch
+        retries 3
+        timeout http-request 10s
+        timeout queue 1m
+        timeout connect 10s
+        timeout client 1m
+        timeout server 1m
+        timeout http-keep-alive 10s
+        timeout check 10s
+        maxconn 30000
+        
+    listen stats
+        mode http
+        bind 0.0.0.0:1080
+        stats enable
+        stats hide-version
+        stats uri /haproxyadmin?stats
+        stats realm Haproxy\ Statistics
+        stats auth admin:admin
+        stats admin if TRUE
+    
+    frontend http-in
+        bind *:80
+        mode http
+        log global
+        option httpclose
+        option logasap          # 不等待响应结束就记录日志，表示提前记录日志但不记录响应时长
+        option dontlognull      # 不记录空信息
+        capture request header Host len 20      #记录请求首部的前20个字符
+        capture request header Referer len 60   #referer跳转引用，就是上一级
+        default_backend servers
+    
+    frontend healthcheck
+        bind :1099          # 定义外部检测机制
+        mode http
+        option httpclose
+        option forwardfor
+        default_backend servers
+    
+    backend servers
+        balance roundrobin
+        server websrv1 192.168.1.111:80 check maxconn 2000
+        server websrv2 192.168.1.112:80 check maxconn 2000
+     
+
+5. 负载均衡MySQL服务的配置示例
+
+    global
+        log 127.0.0.1 local2
+        chroot /var/lib/haproxy
+        pidfile /var/run/haproxy.pid
+        maxconn 4000
+        user haproxy
+        group haproxy
+        daemon
+    
+    defaults
+        mode tcp
+        log global
+        option httplog
+        option dontlognull
+        retries 3
+        timeout http-request 10s
+        timeout queue 1m
+        timeout connect 10s
+        timeout client 1m
+        timeout server 1m
+        timeout http-keep-alive 10s
+        timeout check 10s
+        maxconn 600
+        
+    listen stats
+        mode http
+        bind 0.0.0.0:1080
+        stats enable
+        stats hide-version
+        stats uri /haproxyadmin?stats
+        stats realm Haproxy\ Statistics
+        stats auth admin:admin
+        stats admin if TRUE
+    
+    frontend mysql
+        bind *:3306
+        mode tcp
+        log global
+        default_backend mysqlservers
+    
+    backend mysqlservers
+        balance leastconn
+        server dbsrv1 192.168.1.111:3306 check port 3306 intval 2 rise 1 fall 2 maxconn 300
+        server dbsrv2 192.168.1.112:3306 check port 3306 intval 2 rise 1 fall 2 maxconn 300

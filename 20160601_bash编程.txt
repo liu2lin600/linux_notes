@@ -1,0 +1,1548 @@
+# edit by liu2lin600
+
+bash编程：
+
+############## 未整理 ##############
+
+bash环境：
+    
+    编译器：
+    解释器：
+        解释：
+            词法分析
+            语法分析
+            语义分析
+
+        条件判断：选择分支
+        循环
+
+    过程式编程语言：
+        顺序执行
+        选择执行
+        循环执行
+
+    解释器：提供了编程环境
+
+    脚本：使用bash提供控制机制，将期望执行的命令罗列于文本文件中；
+        bash没有库，整个程序几乎都要依赖于系统命令来完成；
+
+    编译型：
+        源程序（文本文件）--> 预处理 --> 编译 --> 汇编 --> 链接 
+
+        静态语言
+
+    解释型:
+        源程序（文本文件）--> 解析器去读取并执行
+
+        动态语言
+
+    bash的重要特性：变量
+
+        bash变量类别：
+            本地变量：只对当前shell进程有效的变量；对其它shell进程无效，包当前shell进程的子进程；
+                VAR_NAME=VALUE
+                变量赋值：向变量的存储空间保存数据
+                变量引用：${VAR_NAME}
+                    "":弱引用，里面的变量会被替换；
+                    '':强引用，里面的所有字符都是字面量，直接输出；
+
+            环境变量：对当前shell进程及其子shell有效，对其它的shell进程无效；
+                定义：export VAR_NAME=VALUE
+                导出：export VAR_NAME
+
+                用户可自义环境变量
+                bash有许多内置的环境变量
+
+                撤消变量：unset VAR_NAME
+                只读变量：readonly VAR_NAME
+
+            局部变量:
+                对shell脚本中某代码片断有效；通常用于函数本地；
+                local VAR_NAME=VALUE
+
+            位置变量：
+                $1, $2, ..., ${10}
+
+            特殊变量：
+                $?
+
+    查看当前shell进程中的所有变量：set
+    查看当前shell进程中的所有环境变量：export, printenv, env
+
+    变量命名：
+        1、不能使用程序中的关键字（保留字）;
+            if, case, for
+        2、只能使用数字、字母和下划线，且不能以数字开头；
+        3、要见名知义
+            userName
+
+    变量类型：
+        name=Jerry
+            1、存储机制
+            2、存储空间
+            3、参与的运算方式
+
+        变量类型：
+            数值型：
+                精确数值：整数
+                近似数值：浮点型
+                    单精度浮点
+                    双精度浮点
+            字符型：
+                char
+                string
+            布尔型：
+                true, false
+
+        类型转换：
+            显式转换
+            隐式转换
+
+        bash是弱类型的语言：一切皆字符
+
+
+bash编程：
+    bash进程：解释器
+        type
+
+    shell脚本：
+    第一行，顶格：
+        shebang
+        #!/bin/bash
+        #!/usr/bin/python
+
+        其它的以#开头的行均为注释，会被解释器忽略；
+
+    练习：
+        创建一个组newgroup，id号8008;
+        创建一个用户，名字为mageedu, id号为3306，附加组为newgroup
+        创建目录/tmp/hellobash
+        复制/etc/rc.d/init.d/functions至/tmp/hellobash目录中
+
+    过程式编程语言：
+        顺序执行
+        选择执行：测试条件，可能会多个测试条件，某条件满足时，则执行对应的分支
+        循环执行：将同一段代码反复执行多次；因此，循环必须有退出条件；否则，则陷入死循环；
+
+    bash 
+        -n: 语法测试
+        -x: 模拟单步执行
+
+    变量类别：
+        本地变量
+        环境变量
+            export：导出
+        局部变量
+        位置变量
+            $1, ..., $n, ${10}
+                练习：写一个脚本，能接受一个参数作为用户名，此脚本可创建此用户，并且其密码同用户名；
+                shift [n]
+        特殊变量：
+            $?
+            $#: 传递给脚本参数的个数
+            $*
+            $@：引用传递给脚本的所有参数
+
+    bash的循环语句：
+        for：遍历有限的元素列表，
+        while：
+        until：
+
+        for语句的格式：
+            for VAR_NAME in LIST
+            do
+                循环体
+            done
+
+            LIST：列表，中间包括一个或多个元素
+
+            退出条件：遍历结束
+
+            练习：创建10个用户，user301, user310
+                列表：user301, user310
+                列表：301, 310
+
+                生成数值列表：
+                    {start..end}
+                        例如：{1..100}
+                    seq
+                        命令引用 
+
+                for userNo in {301..310}
+                for userNo in $(seq 301 310); do
+                    useradd user${userNo}
+                done
+
+            练习：创建目录/tmp/dir-当前日期时间；例如/tmp/dir-20140707-155503
+                在此目录中创建10个空文件，分别为file1-file10；
+
+            练习：写一个脚本
+            1、创建用户tuser1-tuser9; 
+            2、创建目录/tmp/dir-当前日期时间；
+            3、在/tmp/dir-当前日期时间 目录中创建9个空文件file101-file109
+            4、将file101的属主改为tuser1，依次类推，一直将file109的属主改为tuser9;
+
+
+
+            练习：写一个脚本
+            1、脚本可以接受一个以上的文件路径作为参数；
+            2、显示每个文件所拥的行数；
+
+            3、显示本次共对多少个文件执行了行数统计；
+            !/bin/bash
+            #
+            for file in $*; do
+                lines=`wc -l $file | cut -d' ' -f1`
+                echo "$file has $lines lines."
+            done
+
+            echo "$# files."
+
+
+
+            练习：写一个脚本
+            1、显示/etc/passwd文件中位于文件的第偶数行的用户名；并显示共有多少个这样的用户；
+                #!/bin/bash
+                #
+                totalUsers=`wc -l /etc/passwd | cut -d' ' -f1`
+
+                for i in `seq 2 2 $totalUsers`; do
+                    userName=`head -n $i /etc/passwd | tail -1 | cut -d: -f1`
+                    echo $userName >> /tmp/passwd.tmp
+                    echo $userName
+                done
+
+                users=`wc -l /tmp/passwd.tmp | cut -d' ' -f1`
+                echo "Total users: $users."             
+
+
+
+        生成列表的方式：
+            1、手动给个列表：
+                for i in 1 2 3 4 5;
+            2、数值列表：
+                {start..end}
+                `seq [start [increment]] end`
+            3、$*, $@
+            4、命令生成列表
+
+    bash如何实现算术运算：
+        变量：弱类型
+
+        如何定义整型变量：
+            let VAR_NAME=INTEGER_VALUE
+                例如：let a=3
+
+            declare -i VAR_NAME=INTEGER_VALUE
+                例如：declare -i a=3
+
+        注意：即使没有定义为整型变量，字符型的数字依然可以参与算术运算；bash会执行变量类型的隐式类型转换；
+
+        实现算术运算的方式：
+            let VAR_NAME=ARITHMATIC_EXPRESSION
+            VAR_NAME=$[ARITHMATIC_EXRESSION]
+            VAR_NAME=$((EXPRESSION))
+            VAR_NAME=$(expr $num1 + $num2)
+
+        算术运算符：
+            +
+            -
+            *
+            /
+            %：取模，取余数
+                5%2=1, 
+            **: 2**2
+
+        练习：计算100以内所有正整数之和
+            #!/bin/bash
+            #
+            declare -i sum=0
+
+            for i in {1..100}; do
+              sum=$[$sum+$i]
+            done
+
+            echo $sum
+
+        练习：分别计算100以内所有偶数之和和奇数之和；
+            #!/bin/bash
+            #
+            declare -i evensum=0
+            declare -i oddsum=0
+
+            for i in `seq 1 2 100`; do
+              oddsum=$[$oddsum+$i]
+            done
+
+            for j in `seq 2 2 100`; do
+              evensum=$[$evensum+$j]
+            done
+
+            echo "evensum: $evensum, oddsum: $oddsum."
+
+
+        练习：计算当前系统上所有用户的ID之和;
+
+            declare -i idsum=0
+
+            for i in `cut -d: -f3 /etc/passwd`; do
+                let idsum+=$i
+            done
+
+            echo $idsum
+
+        练习：写一个脚本
+            1、脚本可以接受一个以上的文件路径作为参数；
+            2、显示每个文件所拥有的行数；
+            3、显示本次共对多少个文件执行了行数统计；
+            4、显示所有文件的总行数；
+
+                #!/bin/bash
+                #
+                declare -i totalLines=0
+                declare -i noFiles=0
+
+                for file in $*; do
+                    curFileLines=`wc -l $file | cut -d' ' -f1`
+                    echo "$file has $curFileLines."
+                    let noFiles++
+                    let totalLines+=$curFileLines
+                done
+
+                echo "Total Files: $noFiles."
+                echo "Total Lines: $totalLines."
+
+
+        练习：新建10个用户tuser401-tuser410，并求他们的ID之和；
+            #!/bin/bash
+            #
+            declare -i idsum=0
+
+            for i in {401..410}; do
+                useradd tuser$i
+                userID=`id -u tuser$i`
+                let idsum+=$userID
+            done
+
+            echo "ID sum: $idsum."          
+
+        练习：写一个脚本
+            1、创建用户tuser501-tuser510; 
+            2、创建目录/tmp/dir-当前日期时间；
+            3、在/tmp/dir-当前日期时间 目录中创建9个空文件file101-file110
+            4、将file101的属主改为tuser501，依次类推，一直将file110的属主改为tuser510;   
+
+
+        练习：写一个脚本
+            分别统计/etc/rc.d/rc.sysinit、/etc/rc.d/init.d/functions和/etc/inittab文件中以#开头的行的行数和空白行数；
+            
+                #!/bin/bash
+
+                for file in /etc/rc.d/rc.sysinit /etc/rc.d/init.d/functions /etc/inittab; do
+                    echo "The lines contain #  in $file is `grep -E "^#" $file | wc -l`." 
+                    echo "The space lines in $file is `grep -E "^[[:space:]]*$" $file | wc -l`." 
+                done
+
+
+        练习：写一个脚本
+            显示当前系统上所有默认shell为bash的用户的用户名、UID及其所有此类用户的UID之和；
+                #!/bin/bash
+                #
+                grep "/bin/bash$" /etc/passwd | cut -d: -f1,3
+
+                declare -i sum=0
+                for userID in `grep "/bin/bash$" /etc/passwd | cut -d: -f3`; do
+                    let sum+=$userID
+                done
+
+                echo "$sum"
+
+
+    bash弱类型：
+        变量=值
+            任何无需事先声明，可直接使用
+            值默认都是字符型
+            a=abc, b=3
+            a=3
+            赋值：
+                a=4
+            增强型赋值：
+                +=, -=, *=, /=, %=
+                a=$[$a+1] 相当于 let a+=1
+
+                自加：var++, var--, ++var, --var
+            export PATH=$PATH:/usr/local/apache/bin
+
+            unset: 撤消 
+
+        算术运算：bash会对数字执行隐式的类型转换
+            let VAR_NAME=Integer_Value
+            declare -i Var_Name=Integer_Value
+
+            操作符：
+                +, -, *, /, %, **
+
+                双目运算符：需要至少两个操作数
+
+        bash的算术运算的方式：
+            let Var_Name=EXPRESSION
+            $[EXPRESSION]
+            $((EXPRESSION))
+            命令：expr ARG1 OP ARG2
+
+        for循环：
+            新建10个用户：tuser601-tuser610
+                useradd $userName
+
+            for Var in LIST; do
+
+            for userName in tuser601 tuser602 tuser603; do
+                useradd $userName
+            done
+
+            for i in {601..610}; do
+                useradd tuser$i
+            done
+
+            遍历LIST元素，遍历结束，循环退出；
+
+        bash中的字串连接：
+            变量引用后方跟直接字串时，变量名要加{}
+
+            求100以内所有正整数的和：
+                declare -i sum=0
+
+                sum+=1, 0+1
+                sum+=2, 0+1+2
+                sum+=3
+                sum+=4
+                ...
+                sum+=100
+
+            declare -i sum=0
+            for i in {1..100}; do
+                let sum+=$i
+            done
+
+            echo $sum
+
+    练习：写一个脚本，显示当前系统上有附加组的用户的用户名；并统计共有多少个此类用户；
+    for userName in `cut -d: -f1 /etc/passwd`; do
+        id $userName | 
+
+        # egrep '[^:]$' /etc/group | cut -d: -f4 | sort -u | egrep -o '[[:alnum:]]*' | sort -u
+
+    写一个脚本，创建十个用户tuser401, tuser410
+
+实现某种操作：总是 测试 前提是否满足
+
+    /tmp/test
+        10
+
+    逻辑运算：
+        布尔运算：真，假
+
+        与、或、非、异或
+
+        与运算：
+            真，假：
+                真 && 真 = 真
+                真 && 假 = 假
+                假 && 真 = 假
+                假 && 假 = 假
+
+        或运算：
+            真，假
+                真 || 真 = 真
+                真 || 假 = 真
+                假 || 真 = 真
+                假 || 假 = 假
+
+        非运算：
+            真，假
+
+        异或运算：
+
+    命令都有其状态返回值：
+        成功：0，真
+        失败：1-255, 假
+
+    bash条件测试：
+        命令执行成功与否即为条件测试
+            test EXPR
+            [ EXPR ]
+            [[ EXPR ]]
+
+        比较运算：
+            >, <, >=, <=, ==, !=
+
+        测试类型：根据比较时的操作数的类型
+            整型测试：整数比较
+            字符测试：字符串比较
+            文件测试：判断文件的存在性及属性等
+
+            注意：比较运算通常只在同一种类型间进行
+
+            整型测试：
+                -gt: 例如 [ $num1 -gt $num2 ]
+                -lt: 
+                -ge: 
+                -le:
+                -eq:
+                -ne:
+
+            字符串测试：
+                双目
+                    >: [[ "$str1" > "$str2" ]]
+                    <:
+                    >=
+                    <=
+                    ==
+                    !=
+
+                单目：
+                    -n String: 是否不空，不空则为真，空则为假
+                    -z String: 是否为空，空则为真，不空则假
+
+    过程式编程：
+        顺序
+        选择
+        循环：for
+
+    选择：if和case
+
+    if: 三种使用格式
+        单分支的if语句：
+            if 测试条件; then
+                 选择分支
+            fi
+                表示条件测试状态返回值为值，则执行选择分支；
+
+                if ! id $username &> /dev/null; then
+                    useradd $username
+                fi
+
+            练习：写一个脚本，接受一个参数，这个参数是用户名；如果此用户存在，则显示其ID号；
+
+        双分支的if语句：
+            if 测试条件; then
+                选择分支1
+            else
+                选择分支2
+            fi
+
+            两个分支仅执行其中之一。
+
+            练习：通过命令行传递两个整数参数给脚本，脚本可以返回其大者。
+
+            练习：通过命令行传递任意个整数给脚本，脚本可以返回其大者。
+
+            练习：通过命令行给定一个文件路径，而后判断：
+                如果此文件中存在空白行，则显示其空白行的总数；
+                否则，则显示无空白行；
+
+                if grep "^[[:space]]*$" $1 &> /dev/null; then
+                    echo "$1 has $(grep "^[[:space]]*$" $1 | wc -l) blank lines."
+                else
+                    echo "No blank lines"
+                fi
+
+                注意：如果把命令执行成功与否当作条件，则if语句后必须只跟命令本身，而不能引用。
+
+                if [ $(grep "^[[:space:]]*$" $1 | wc -l) -lt 1 ]
+
+        多分支的if语句：
+            if 条件1; then
+                分支1
+            elif 条件2; then
+                分支2
+            elif 条件3; then
+                分支3
+            ...
+            else
+                分支n
+            fi
+
+            练习：传递一个参数给脚本：   
+                如果参数为quit，则显示说你要退出；
+                如果参数为yes，则显示说你要继续
+                其它任意参数，则说无法识别；
+
+            练习：传递一个用户名给脚本：
+                如果此用户的id号为0，则显示说这是管理员
+                如果此用户的id号大于等于500，则显示说这是普通用户
+                否则，则说这是系统用户；
+
+                #!/bin/bash
+                #
+                if [ $# -lt 1 ]; then
+                    echo "Usage: `basename $0` username"
+                    exit 1
+                fi
+
+                if ! id -u $1 &> /dev/null; then
+                    echo "Usage: `basename $0` username"
+                    echo "No this user $1."
+                    exit 2
+                fi
+
+                if [ $(id -u $1) -eq 0 ]; then
+                    echo "Admin"
+                elif [ $(id -u $1) -ge 500 ]; then
+                    echo "Common user."
+                else
+                    echo "System user."
+                fi
+
+        if 测试条件; then
+            测试条件：在bash中是命令 (test EXPR, [ EXPR ] ) 或由 [[ EXPR ]]
+            if 命令;
+                在bash运行至if时，其后的命令会被执行，其状态结果则作为判断标准：
+                    0：表示真
+                    1-255：表示假
+
+                如果条件包含比较之意，则必须使用
+
+
+自定义shell进程的状态返回值：
+    exit [n]
+
+例如：如果当前主机的主机名为空，或者为"localhost"，则将其修改为www.magedu.com
+            #!/bin/bash
+            #
+            hostName=`hostname`
+
+            if [ -z "$hostName" -o "$hostName" == 'localhost' ]; then
+                hostname www.magedu.com
+            fi
+
+        如果某用户存在，则显示id号：
+            if id $userName &> /dev/null; then
+                id -u $userName
+            fi
+
+        例如：如果某用户存在，且answer变量的值为“yes"，则显示用户的ID号；否则，说用户选择了退出；
+            id $userName
+            retVal=$?
+
+            if [ $retval -eq 0 -a "$answer" == 'yes' ]; then
+
+            上述方式改为：
+
+            if id $userName &> /dev/null && [ "$answer" =='yes' ]; then
+
+        例如：如果answer不为"quit"，也不为"q"，则说用户选择了继续；
+
+        例如：如果answer不为quit或q，则说明用户选择了继续；
+
+        德 摩根定律：
+            
+    练习：给定一个用户，如果其shell为/bin/bash且其ID号大于等于500，则说这是一个可登录普通用户；否则，则显示其为非登录用户或管理员。
+
+        #!/bin/bash
+        #
+        if ! id $1 &> /dev/null; then
+            echo "No this user."
+            exit 3
+        fi
+
+        userShell=$(grep "^$1\>" /etc/passwd | cut -d: -f7)
+        userID=$(id -u $1)
+
+        if [ "$userShell" == '/bin/bash' -a $userID -ge 500 ]; then
+            echo "Login user."
+        else
+            echo "not login user."
+        fi      
+
+    练习：写一个脚本
+        如果某用户不存在，就添加之；
+            #!/bin/bash
+            #
+            if ! id $1 &> /dev/null; then
+                useradd $1
+            fi      
+
+    练习：写一脚本
+        1、添加10个用户：tuser501-tuser510
+            如果用户不存在，才添加；如果存在，则显示已经有此用户
+        2、显示一共添加了多少个用户；
+            #!/bin/bash
+            #
+            declare -i count=0
+
+            for i in {501..510}; do
+                if id tuser$i &> /dev/null; then
+                    echo "tuser$i exists."
+                else
+                    useradd tuser$i
+                    let count++
+                fi
+            done
+
+            echo "Total add $count users."
+
+
+    练习：写一脚本
+        1、添加10个用户：tuser601-tuser610
+            如果用户不存在，才添加，并以绿色显示添加成功；如果存在，则以红色显示已经有此用户；
+        2、显示一共添加了多少个用户；
+            #!/bin/bash
+            #
+            declare -i count=0
+
+            for i in {501..510}; do
+                if id tuser$i &> /dev/null; then
+                    echo -e "\033[31mtuser$i\033[0m exists."
+                else
+                    useradd tuser$i
+                    echo -e "add user \033[32mtuser$i\033[0m successfully."
+                    let count++
+                fi
+            done
+
+            echo "Total add $count users."      
+
+    练习：写一个脚本
+        传递用户名给脚本
+        1、判断此用户的shell是否为/bin/bash，如果是，则显示此用户为basher
+        2、否则，则显示此用户为非basher
+
+            #!/bin/bash
+            #
+            userShell=`grep "^$1\>" /etc/passwd | cut -d: -f7`
+
+            if [ "$userShell" == '/bin/bash' ]; then
+                echo "basher"
+            else
+                echo "not basher"
+            fi  
+
+bash条件测试之文件测试：
+
+       -a file
+              True if file exists.
+       -b file
+              True if file exists and is a block special file.
+       -c file
+              True if file exists and is a character special file.
+       -d file
+              True if file exists and is a directory.
+       -e file
+              True if file exists.
+       -f file
+              True if file exists and is a regular file.
+       -g file
+              True if file exists and is set-group-id.
+       -h file
+              True if file exists and is a symbolic link.
+       -k file
+              True if file exists and its ''sticky'' bit is set.
+       -p file
+              True if file exists and is a named pipe (FIFO).
+       -r file
+              True if file exists and is readable.
+       -s file
+              True if file exists and has a size greater than zero.
+       -t fd  True if file descriptor fd is open and refers to a terminal.
+       -u file
+              True if file exists and its set-user-id bit is set.
+       -w file
+              True if file exists and is writable.
+       -x file
+              True if file exists and is executable.
+       -O file
+              True if file exists and is owned by the effective user id.
+       -G file
+              True if file exists and is owned by the effective group id.
+
+       -L file
+              True if file exists and is a symbolic link.
+       -S file
+              True if file exists and is a socket.
+       -N file
+              True if file exists and has been modified since it was last read.
+       file1 -nt file2
+              True if file1 is newer (according to modification date) than file2, or if file1 exists and file2 does not.
+       file1 -ot file2
+              True if file1 is older than file2, or if file2 exists and file1 does not.
+       file1 -ef file2
+              True if file1 and file2 refer to the same device and inode numbers.
+       -o optname
+              True  if  shell  option  optname  is  enabled.  See the list of options under the description of the -o option to the set builtin
+              below.
+
+
+          -a FILE
+          -e FILE: 存在则为真；否则则为假；
+
+          -f FILE: 存在并且为普通文件，则为真；否则为假；
+          -d FILE: 存在并且为目录文件，则为真；否则为假；
+          -L/-h FILE: 存在并且为符号链接文件，则为真；否则为假；
+          -b: 块设备
+          -c: 字符设备
+          -S: 套接字文件
+          -p: 命名管道
+
+          -s FILE: 存在并且为非空文件则为值，否则为假；
+
+          -r FILE
+          -w FILE
+          -x FILE
+
+          file1 -nt file2: file1的mtime新于file2则为真，否则为假；
+          file1 -ot file2：file1的mtime旧于file2则为真，否则为假；
+
+    例如：如果wget命令对应的可执行文件存在且可执行，则使用它下载http://172.16.0.1/centos6.5.repo至当前目录中；
+
+        #!/bin/bash
+        #
+        downURL='http://172.16.0.1/centos6.5.repo'
+        downloader=`which wget`
+
+        if [ -x $downloader ]; then
+            $downloader $downURL
+        fi
+
+    练习：给定一个文件路径
+        1、判断此文件是否存在；不存在，则说明文件不存，并直接结束脚本；
+        2、如果文件是否普通文件，则显示为“regular file”；
+           如果文件是目录，则显示为“directory”；
+           如果文件是链接文件，则显示为“Symbolic file";
+           否则，则显示为“unknown type.”
+
+            #!/bin/bash
+            #
+            if [ ! -e $1 ]; then
+                echo "file not exist."
+                exit 8
+            fi
+
+            if [ -L $1 ]; then
+                echo "Symbolic file"
+            elif [ -d $1 ]; then
+                echo "Directory"
+            elif [ -f $1 ]; then
+                echo "regular file."
+            else
+                echo "unknown."
+            fi
+
+    练习：写一个脚本，完成如下任务：
+        1、分别复制/var/log下的文件至/tmp/logs/目录中；
+        2、复制目录时，才使用cp -r
+        3、复制文件时，使用cp
+        4、复制链接文件，使用cp -d
+        5、余下的类型，使用cp -a
+
+
+
+    写一个脚本，完成如下任务，其使用形式如下所示：
+        script.sh {start|stop|restart|status}
+    其中：
+        如果参数为空，则显示帮助信息，并退出脚本；
+        如果参数为start，则创建空文件/var/lock/subsys/script，并显示“starting script successfully.”
+        如果参数为stop，则删除文件/var/lock/subsys/script，并显示“Stop script successfully.”
+        如果参数为restart，则删除文件/var/locksubsys/script并重新创建，而后显示“Restarting script successfully.”
+        如果参数为status，那么：
+            如果文件/var/lock/subsys/script存在，则显示“Script is running...”，否则，则显示“Script is stopped.”
+
+        说明：script.sh是脚本文件名，在创建时，其名称可以自己随意定义，但如果其名称发生变量，上/var/lock/sussys/下的文件名也要随之而变；
+
+
+
+bash编程之交互编程
+
+    read 
+        -p "prompt"
+        -t timeout
+
+    例如：输入用户名，可返回其shell
+        #!/bin/bash
+        #
+        read -p "Plz input a username: " userName
+
+        if id $userName &> /dev/null; then
+            echo "The shell of $userName is `grep "^$userName\>" /etc/passwd | cut -d: -f7`."
+        else
+            echo "No such user. stupid."
+        fi
+
+    例子：显示一个如下菜单给用户：
+        cpu) show cpu infomation
+        mem) show memory infomation
+        *) quit
+
+        1、如果用户选择了cpu，则显示/proc/cpuinfo文件的内容；
+        2、如果用户选择了mem，则显示/proc/meminfo文件的内容；
+        3、退出
+
+            #!/bin/bash
+            #
+            echo "---------menu----------"
+            echo "cpu) show cpu infomation"
+            echo "mem) show memory infomation"
+            echo "*) quit"
+            echo "-------menu------------"
+
+            read -p "Plz give your choice: " choice
+
+            if [ "$choice" == 'cpu' ]; then
+                cat /proc/cpuinfo
+            elif [ "$choice" == 'mem' ]; then
+                cat /proc/meminfo
+            else
+                echo "Quit"
+                exit 3
+            fi
+
+
+
+            #!/bin/bash
+            #
+            cat << EOF
+            -------menu------------
+            cpu) show cpu infomation
+            mem) show memory infomation
+            *) quit
+            -------menu------------
+            EOF
+
+            read -p "Plz give your choice: " choice
+
+            if [ "$choice" == 'cpu' ]; then
+                cat /proc/cpuinfo
+            elif [ "$choice" == 'mem' ]; then
+                cat /proc/meminfo
+            else
+                echo "Quit"
+                exit 3
+            fi
+
+
+字串测试中的模式匹配
+    [[ "$var" =~ PATTERN ]]
+
+    例如：让用户给定一个用户名，判断其是否拥有可登录shell；
+        /bin/sh, /bin/bash, /bin/zsh, /bin/tcsh, /sbin/nologin, /sbin/shutdown
+
+
+        #!/bin/bash
+        #
+        read -p "Plz input a username: " userName
+        userInfo=`grep "^$userName\>" /etc/passwd`
+
+        if [[ "$userInfo" =~ /bin/.*sh$ ]]; then
+            echo "can login"
+        else
+            echo "cannot login"
+        fi
+
+bash编程之循环：
+    顺序
+    选择：if
+    循环：for
+
+    另一种循环：while 和 until
+        for i in {1..100}; do
+
+        done
+
+        while适用于循环次数未知，或不便用for直接生成较大的列表时；
+
+        while 测试条件; do
+            循环体
+        done
+
+        如测试结果为“真”，则进入循环；退出条件为，测试条件为假；
+
+            declare -i count=1
+            while $count <= 1000; do
+                循环体
+                let count++
+            done
+
+        until 测试条件; do
+            循环体
+        done
+
+        如果测试结果为“假”，则进入循环；退出条件为，测试条件为真；
+
+        练习：求100以内所有正整数之和
+
+            #!/bin/bash
+            #
+            declare -i count=1
+            declare -i sum=0
+
+            until [ $count -gt 100 ]; do
+                let sum+=$count
+                let count++
+            done
+
+            echo $sum
+
+
+            #!/bin/bash
+            #
+            declare -i count=1
+            declare -i sum=0
+
+            while [ $count -le 100 ]; do
+                let sum+=$count
+                let count++
+            done
+
+            echo $sum
+
+        练习：求100以内所有偶数之和；要求使用取模方法；
+
+            #!/bin/bash
+            #
+            declare -i counter=1
+            declare -i sum=0
+
+            while [ $counter -le 100 ]; do
+                if [ $[$counter%2] -eq 0 ]; then
+                    let sum+=$counter
+                fi
+                let counter++
+            done
+
+            echo $sum
+
+            #!/bin/bash
+            #
+            declare -i counter=1
+            declare -i sum=0
+
+            while [ $counter -le 100 ]; do
+                [ $[$counter%2] -eq 0 ] && let sum+=$counter
+                let counter++
+            done
+
+            echo $sum
+
+            请用until实现上述过程；
+
+        练习：提示用户输入一个用户名，如果用户存在，就显示用户的ID号和shell；否则显示用户不存在；
+              显示完成之后不退出，再次重复前面的操作，直到用户输入q或quit为止；
+
+              read -p "Plz enter a username: " userName
+
+              while [ "$userName" != 'q' -a "$userName" != 'quit' ]; do
+                  if id $userName &> /dev/null; then
+                      grep "^$userName\>" /etc/passwd | cut -d: -f3,7
+                  else
+                      echo "No such user."
+                  fi
+
+                  read -p "Plz enter a username again: " userName
+              done
+
+bash编程函数：
+    
+    模块化，代码重用
+
+    代码块，名
+
+    语法：
+
+    function F_NAME {
+        函数体
+    }
+
+    F_NAME() {
+        函数体
+    }
+
+    可调用：使用函数名
+        函数名出现的地方，会被自动替换为函数；
+
+    脚本：
+
+    函数的返回值：
+        函数的执行结果返回值：代码的输出
+            函数中的打印语句：echo, print
+            函数中调用的系统命令执行后返回的结果
+        执行状态返回值：
+            函数体中最后一次执行的命令状态结果
+            自定函数执行状态的返回值：return #
+
+    函数可以接受参数：
+        在函数体中调用函数参数的方式同脚本中调用脚本参数的方式：位置参数
+            $1, $2, ...
+            $#, $*, $@
+
+
+    示例：服务脚本示例
+
+        #!/bin/bash
+        #
+        # chkconfig: 2345 67 34
+        #
+        srvName=$(basename $0)
+
+        lockFile=/var/lock/subsys/$srvName
+
+        start() {
+            if [ -f $lockFile ];then
+            echo "$srvName is already running."
+            return 1
+            else
+            touch $lockFile
+            [ $? -eq 0 ] && echo "Starting $srvName OK."
+            return 0
+             fi
+        }
+
+        stop() {
+            if [ -f $lockFile ];then
+            rm -f $lockFile &> /dev/null
+            [ $? -eq 0 ] && echo "Stop $srvName OK" && return 0 
+            else
+            echo "$srvName is not started."
+            return 1
+            fi
+        }   
+
+        status() {
+            if [ -f $lockFile ]; then
+            echo "$srvName is running."
+            else
+            echo "$srvName is stopped."
+            fi
+            return 0
+        }
+
+        usage() {
+             echo "Usage: $srvName {start|stop|restart|status}"
+             return 0
+        }
+
+        case $1 in
+        start)
+            start
+            ;;
+        stop)
+            stop ;;
+        restart)
+            stop
+            start ;;
+        status)
+            status ;;
+        *)
+            usage
+            exit 1 ;;
+        esac
+
+
+
+
+
+练习：写一个脚本，完成如下功能(使用函数)：
+1、提示用户输入一个可执行命令；
+2、获取这个命令所依赖的所有库文件(使用ldd命令)；
+3、复制命令至/mnt/sysroot/对应的目录中
+    解释：假设，如果复制的是cat命令，其可执行程序的路径是/bin/cat，那么就要将/bin/cat复制到/mnt/sysroot/bin/目录中，如果复制的是useradd命令，而useradd的可执行文件路径为/usr/sbin/useradd，那么就要将其复制到/mnt/sysroot/usr/sbin/目录中；
+4、复制各库文件至/mnt/sysroot/对应的目录中；
+
+
+#!/bin/bash
+#
+target=/mnt/sysroot/
+
+[ -d $target ] || mkdir $target
+
+preCommand() {
+    if which $1 &> /dev/null; then
+    commandPath=`which --skip-alias $1`
+    return 0
+    else
+    echo "No such command."
+    return 1
+    fi
+}
+
+commandCopy() {
+    commandDir=`dirname $1`
+    [ -d ${target}${commandDir} ] || mkdir -p ${target}${commandDir}
+    [ -f ${target}${commandPath} ] || cp $1 ${target}${commandDir}
+}
+
+libCopy() {
+    for lib in `ldd $1 | egrep -o "/[^[:space:]]+"`; do
+    libDir=`dirname $lib`
+    [ -d ${target}${libDir} ] || mkdir -p ${target}${libDir}
+    [ -f ${target}${lib} ] || cp $lib ${target}${libDir}
+    done
+} 
+
+read -p "Plz enter a command: " command
+
+until [ "$command" == 'quit' ]; do
+
+  if preCommand $command &> /dev/null; then
+    commandCopy $commandPath
+    libCopy $commandPath
+  fi
+
+  read -p "Plz enter a command: " command
+done
+
+
+
+
+练习：
+    写一个脚本，判定192.168.0.0网络内有哪些主机在线，在线的用绿色显示；不在线的用红色显示；（使用函数）
+    写一个脚本，判定172.16.0.0网络内有哪些主机在线，在线的用绿色显示；不在线的用红色显示；（使用函数）
+
+
+
+
+
+
+
+
+
+
+
+练习：写一个脚本，完成如下功能(使用函数)：
+1、脚本使用格式：
+mkscript.sh [-D|--description "script description"] [-A|--author "script author"] /path/to/somefile
+2、如果文件事先不存在，则创建；且前几行内容如下所示：
+#!/bin/bash
+# Description: script description
+# Author: script author
+#
+3、如果事先存在，但不空，且第一行不是“#!/bin/bash”，则提示错误并退出；如果第一行是“#!/bin/bash”，则使用vim打开脚本；把光标直接定位至最后一行
+4、打开脚本后关闭时判断脚本是否有语法错误
+    如果有，提示输入y继续编辑，输入n放弃并退出；
+    如果没有，则给此文件以执行权限；
+
+
+
+练习：提示用户输入一个用户名，判断用户是否登录了当前系统; 
+    如果没有登录，则停止5秒钟之后，再次判断；直到用户登录系统，显示“用户来了”，而后退出；
+
+
+
+练习：写一个脚本，
+    1、提示用户输入一个磁盘设备的设备文件，如果设备文件不存在，就提示用户重新输入，直到用户输入正确为止；
+    2、用户可以输入quit退出；
+
+练习：扩展前一题
+    当用户给出正确的块设备后：
+    1、显示用户输入块设备，并提示用户，后续的操作会损坏设备上的所有文件，让用户选择是否继续
+    2、如果用户输入y，则继续后面的操作；
+    3、如果用户输入n，则显示用户选择了中止，并退出脚本；
+    4、输入任何其它字符，则让用户重新选择；
+
+练习：扩展上一题
+    1、如果用户选择了y, 则抹除指定块设备上的所有分区；
+
+练习：再扩展
+    1、在上面的磁盘创建两个主分区：
+        (1) 50M
+        (2) 512M
+    2、均格式化为ext4文件系统；
+    3、分别挂载至/mnt/boot和/mnt/sysroot
+
+练习：继续扩展
+    1、在此设备上安装grub；
+    2、在/mnt/sysroot目录下创建根文件系统所需要各目录；
+
+练习：扩展
+    1、移植多个应用程序，至少包含bash、ifconfig等；
+
+
+脚本：写一个脚本，能够ping探测指定网络内的所有主机是否在线？
+
+        #!/bin/bash
+        #
+        quitScript() {
+            echo "Quit..."
+        }    
+
+        trap 'quitScript; exit 5' SIGINT
+
+        cnetPing() {
+            for i in {1..254}; do
+            if ping -c 1 -W 1 $1.$i &> /dev/null; then
+                 echo "$1.$i is up."
+            else
+                 echo "$1.$i is down."
+            fi
+             done
+        }
+
+        bnetPing() {
+            for j in {0..255}; do
+                cnetPing $1.$j 
+            done
+        }
+
+        anetPing() {
+            for m in {0..255}; do
+                bnetPing $1.$m
+            done
+        }
+
+        netType=`echo $1 | cut -d"." -f1`
+
+        if [ $netType -ge 1 -a $netType -le 126 ]; then
+            anetPing $netType
+        elif [ $netType -ge 128 -a $netType -le 191 ]; then
+            bnetPing $(echo $1 | cut -d'.' -f1,2)
+        elif [ $netType -ge 192 -a $netType -le 223 ]; then
+            cnetPing $(echo $1 | cut -d'.' -f1-3)
+        else
+            echo "Wrong"
+            exit 2
+        fi
+
+
+bash编程：
+    
+    信号捕捉：trap 'COMMAND;COMMAND' 
+
+    循环控制：
+        continue: 提前进入下一轮循环
+            用于条件语句中，仅在某些个特殊场景提前进入；
+        break [n]：跳出当前循环
+            用于条件语句中，
+
+        例如：查看用户登录
+
+            #!/bin/bash
+            #
+            read -p "Plz enter a username: " userName
+
+            while true; do
+                if who | grep "\<$userName\>" &> /dev/null; then
+                    break
+                fi
+                echo "not here."
+                sleep 5
+            done
+
+            echo "$userName is logged on."
+
+
+            #!/bin/bash
+            #
+            read -p "Plz enter a username: " userName
+
+            until who | grep "\<$userName\>" &> /dev/null; do
+              sleep 5
+              echo "not here"
+            done
+
+            echo "here"
+
+
+写一个脚本：生成10个随机数，排序之；
+    
+    数组：
+        数组名+索引
+            数组元素
+
+        索引的表示方式：
+            数字索引：a[index]
+                a[0], a[1]
+
+            bash 4.0的关联数组
+                a[hello], a[hi]
+
+            declare -a 
+                    -A
+
+        支持稀疏格式：
+        仅一维数组
+
+    数组的赋值：
+        一次对一个元素赋值：
+            a[0]=$RANDOM
+            ...
+
+        一次对全部元素赋值：
+            a=(red blue yellow green)
+
+        按索引进行赋值：
+            a=([0]=green [3]=red [2]=blue [6]=yellow)
+
+        命令替换：
+
+        用户输入：
+            read -a ARRAY
+
+
+    数组的访问：
+
+        用索引访问：
+            ARRAY[index]
+
+    数组的长度：
+        ${#ARRAY[*]}
+        ${#ARRAY[@]}
+
+        练习：写一个脚本，生成10个随机数，保存至数组中；而后显示数组下标为偶数的元素；
+
+        for i in {0..9}; do
+            num[$i]=$RANDOM
+        done
+
+    从数组中挑选某元素:
+        ${ARRAY[@]:offset:number}
+            切片：
+                offset: 偏移的元素个数
+                number: 取出的元素的个数
+
+        ${ARRAY[@]:offset}：取出偏移量后的所有元素
+
+        ${ARRAY[@]}: 取出所有元素
+
+
+    数组复制：
+        要使用${ARRAY[@]}
+
+        $@: 每个参数是一个独立的串
+        $*: 所有参数是一个串
+
+
+    向数组追加元素：
+
+        示例：复制一个数组中下标为偶数的元素至一个新数组中
+            #!/bin/bash
+            declare -a mylogs
+            logs=(/var/log/ *.log)
+
+            echo ${logs[@]}
+
+            for i in `seq 0 ${#logs[@]}`; do
+                if [ $[$i%2] -eq 0 ];then
+                   index=${#mylogs[@]}
+                   mylogs[$index]=${logs[$i]}
+                fi
+            done
+
+            echo ${mylogs[@]}
+
+
+    从数组中删除元素：
+
+        unset ARRAY[index]
+
+    练习1：生成10个随机数，升序排序
+
+        #!/bin/bash
+        for((i=0;i<10;i++))
+        do
+            rnd[$i]=$RANDOM
+        done
+
+        echo -e "total=${#rnd[@]}\n${rnd[@]}\nBegin to sort"
+
+        for((i=9;i>=1;i--))
+        do
+            for((j=0;j<i;j++))
+            do
+                if [ ${rnd[$j]} -gt ${rnd[$[$j+1]]} ] ;then
+                    swapValue=${rnd[$j]}
+                    rnd[$j]=${rnd[$[$j+1]]}
+                    rnd[$[$j+1]]=$swapValue     
+                fi
+            done
+        done
+
+        echo ${rnd[@]}  
+
+    练习2：打印九九乘法表
+
+        #!/bin/bash
+        for((i=1;i<=9;i++))
+        do 
+            strLine=""
+            for((j=1;i<=9;j++))
+            do
+                strLine=$strLine"$i*$j="$[$i*$j]"\t"
+                [ $i -eq $j ] && echo -e $strLine && break
+            done
+        done
+
+
+
+字符串操作：
+
+    字符串切片：
+        ${string:offset:length}
+
+    取尾部的指定个数的字符：
+        ${string: -length}
+
+    取子串：基于模式
+        ${variable#*word}：在variable中存储字串上，自左而右，查找第一次出现word，删除字符开始至此word处的所有内容；
+        ${variable##*word}：在variable中存储字串上，自左而右，查找最后一次出现word，删除字符开始至此word处的所有内容； 
+            file='/var/log/messages'
+                ${file#*/}: 返回的结果是var/log/messages
+                ${file##*/}: 返回messages
+
+        ${variable%word*}: 在variable中存储字串上，自右而左，查找第一次出现word，删除此word处至字串尾部的所有内容；
+        ${variable%%world*}：在variable中存储字串上，自右而左，查找最后一次出现word，删除此word处至字串尾部的所有内容；
+            file='/var/log/messages'
+                ${file%*/}: 返回的结果是/var/log
+                ${file%%*/}: 返回结果为空
+
+            phonenumber='010-110-8'
+                ${phonenumber%%-*}
+                ${phonenumber##*-}
+
+            url="http://www.magedu.com:80"
+
+    查找替换：
+        ${variable/pattern/substi}: 替换第一次出现
+        ${variable//pattern/substi}：替换所有的出现
+
+        ${variable/#pattern/substi}：替换行首被pattern匹配到的内容
+        ${variable/%pattern/substi}：    行尾
+
+        pattern可以使用globbing中的元字符：
+            *
+            ?
+
+    查找删除：
+        ${variable/pattern}
+        ${variable//pattern}
+        ${variable/#pattern}
+        ${variable/%pattern}
+
+    大小写转换：
+        小-->大：${variable^^}
+        大-->小：${variable,,}
+
+
+变量赋值操作：
+
+        ${parameter:-word}
+              Use  Default  Values.  If parameter is unset or null, the expansion of word is substituted.  Otherwise, the value of parameter is
+              substituted.
+        ${parameter:=word}
+              Assign Default Values.  If parameter is unset or null, the expansion of word is assigned to parameter.  The value of parameter is
+              then substituted.  Positional parameters and special parameters may not be assigned to in this way.
+        ${parameter:?word}
+              Display Error if Null or Unset.  If parameter is null or unset, the expansion of word (or a message to that effect if word is not
+              present) is written to the standard error and the shell, if it is not interactive, exits.  Otherwise, the value of  parameter  is
+              substituted.
+        ${parameter:+word}
+              Use Alternate Value.  If parameter is null or unset, nothing is substituted, otherwise the expansion of word is substituted.
+
+
+        ${variable:-string}
+            variable为空或未设定，那么返回string，否则，返回variable变量的值；
+
+        ${variable:=string}
+            variable为空或未设定，则返回string，且将string赋值给变量variable，否则，返回variable的值；
+
+
+    为脚本使用配置文件，并确保某变量有可用值的方式
+        variable=${variable:-default vaule}
