@@ -335,7 +335,7 @@ varnish：
                 }
                     
             示例：对于公开的图片等，取消其私有标识，并强行设定其可以由varnish缓存的时长 
-                vcl_backend_respon {
+                sub vcl_backend_respon {
                     if (beresp.http.cache-control !~ "s-maxage") {
                         if (bereq.url ~ "(?i)\.(jpg|jpeg|png|gif|css|js)$") {
                             unset beresp.http.Set-Cookie;
@@ -450,7 +450,7 @@ varnish：
                 
             健康状态检测的2种配置方式：
                 1. 定义probe，在backend中引用  
-                    probe PB_NAME = { ... }
+                    probe PB_NAME { ... }
                     backend NAME = {
                         .probe = PB_NAME;
                         ...

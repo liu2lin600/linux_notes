@@ -471,8 +471,8 @@ Tomcat集群：
                 Header add Set-Cookie "ROUTEID=.%{BALANCER_WORKER_ROUTE}e; path=/" env=BALANCER_ROUTE_CHANGED
 
                 <proxy balancer://tcsrvs>
-                    BalancerMember http://172.18.100.67:8080 route=TomcatA loadfactor=1
-                    BalancerMember http://172.18.100.68:8080 route=TomcatB loadfactor=2
+                    BalancerMember http://172.16.60.67:8080 route=TomcatA loadfactor=1
+                    BalancerMember http://172.16.60.68:8080 route=TomcatB loadfactor=2
                     ProxySet lbmethod=byrequests
                     ProxySet stickysession=ROUTEID
                 </Proxy>
@@ -544,8 +544,8 @@ Tomcat集群：
                 
         • 第二种方法：mod_proxy_ajp
             <proxy balancer://tcsrvs>
-                BalancerMember ajp://172.18.100.67:8009 route=TomcatA loadfactor=1
-                BalancerMember ajp://172.18.100.68:8009 route=TomcatB loadfactor=1
+                BalancerMember ajp://172.16.60.67:8009 route=TomcatA loadfactor=1
+                BalancerMember ajp://172.16.60.68:8009 route=TomcatB loadfactor=1
                 ProxySet lbmethod=byrequests
             </Proxy>
 
@@ -589,7 +589,7 @@ Tomcat集群：
                 
                 workers配置文件：/etc/httpd/conf.d/workers.properties
                     worker.list=TomcatA,StatA
-                    worker.TomcatA.host=172.18.100.67
+                    worker.TomcatA.host=172.16.60.67
                     worker.TomcatA.port=8009
                     worker.Tomcat.type=ajp13
                     worker.StatA.type=status                    
@@ -606,23 +606,28 @@ Tomcat集群：
                     
                 workers配置文件：/etc/httpd/conf.d/workers.properties
                     worker.list=tcsrvs,StatA
-                    worker.TomcatA.host=172.18.100.67
+                    worker.TomcatA.host=172.16.60.67
                     worker.TomcatA.port=8009
                     worker.TomcatA.type=ajp13
                     worker.TomcatA.lbfactor=1
-                    worker.TomcatB.host=172.18.100.68
+                    worker.TomcatB.host=172.16.60.68
                     worker.TomcatB.port=8009
                     worker.TomcatB.type=ajp13
                     worker.TomcatB.lbfactor=2
                     worker.tcsrvs.type=lb
                     worker.tcsrvs.balance_workers=TomcatA,TomcatB
-                    worker.tcsrvs.sticky_session=1
+                    worker.tcsrvs.sticky_session=1      # 会话绑定
                     worker.StatA.type=status
                     
                 注：如果要做会话绑定，此处的配置文件使用worker的名称，要与后端tomcat的Engine属性中的jvmRoute的值保持一致
+
+                    A主机：<Engine name="Catalina" jvmRoute="TomcatA">
+                    B主机：<Engine name="Catalina" jvmRoute="TomcatB">
                 
     ♦ Tomcat集群会话复制：
-        (1) 配置启用集群；
+        帮助：http://tomcat.apache.org/tomcat-7.0-doc/cluster-howto.html
+
+        (1) 配置启用集群；添加到Enginx或Host中
             <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"
                     channelSendOptions="8">
 
@@ -631,13 +636,17 @@ Tomcat集群：
                     notifyListenersOnReplication="true"/>
 
                 <Channel className="org.apache.catalina.tribes.group.GroupChannel">
+
+                # 心跳检测(多波)，必要时修改地址
                 <Membership className="org.apache.catalina.tribes.membership.McastService"
                         address="228.0.0.4"
                         port="45564"
                         frequency="500"
                         dropTime="3000"/>
+
+                # 接收请求，修改为本机地址
                 <Receiver className="org.apache.catalina.tribes.transport.nio.NioReceiver"
-                    address="auto"
+                    address="172.16.60.67"
                     port="4000"
                     autoBind="100"
                     selectorTimeout="5000"
@@ -660,12 +669,15 @@ Tomcat集群：
                     watchDir="/tmp/war-listen/"
                     watchEnabled="false"/>
 
+                # 7.0此处文档没有结束，标签注意修改
                 <ClusterListener className="org.apache.catalina.ha.session.JvmRouteSessionIDBinderListener"/>
                 <ClusterListener className="org.apache.catalina.ha.session.ClusterSessionListener"/>
-                </Cluster>  
+            </Cluster>  
         
             注：确保Engine的jvmRoute属性配置正确
-        
+                <Engine name="Catalina" jvmRoute="TomcatA">
+
         (2) 配置webapps
-            编辑WEB-INF/web.xml，添加<distributable/>
+            1. 复制/etc/tomcat/web.xml到项目WEB-INF目录下
+            2. 编辑WEB-INF/web.xml，在<servlet>前添加<distributable/>
             
