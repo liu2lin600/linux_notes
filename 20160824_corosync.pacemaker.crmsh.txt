@@ -289,11 +289,13 @@ CentOS 7：corosync v2 + pacemaker (standalone deamon) + crmsh/pcs
                 -d：Delimiter between fields.
                 -e：Don't escape unprintable characters in group name
                 -n：Display only all existing group names.
+                
             · corosync-cfgtool：管理工具
-                -a：指定节点信息
+                -a：查看指定节点IP
                 -s：显示当前节点ring相关的信息
                 -R：控制所有节点重载配置文件
-                -H：
+                -H：在当前节点上关闭corosync
+
             · corosync-cmapctl：
                 corosync-cmapctl  | grep members
             
