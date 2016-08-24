@@ -190,7 +190,7 @@ HA Cluster：高可用集群
 CentOS 7：corosync v2 + pacemaker (standalone deamon) + crmsh/pcs 
     
     安装配置：
-        HA前提：时间同步、基于主机名互相通信、ssh的互信通信
+        HA前提：时间同步(ntp, chrony)、基于主机名互相通信、ssh的互信通信
             node1.liu2lin.com node1
             node2.liu2lin.com node2
         
@@ -281,7 +281,8 @@ CentOS 7：corosync v2 + pacemaker (standalone deamon) + crmsh/pcs
             4. 各节点上启动服务
                 systemctl start corosync
 
-            5. 查看状态 corosync-cfgtool
+            5. 各节点上查看状态
+                corosync-cfgtool -s
     
         • 相关程序：
             · corosync-cpgtool：组管理
@@ -304,11 +305,14 @@ CentOS 7：corosync v2 + pacemaker (standalone deamon) + crmsh/pcs
             
             动态查看集群信息：crm_mon
             
-    ♦ crmsh：配置接口
-        • 安装：可只安装在某个节点上
+    ♦ crmsh：pacemaker配置接口
+
+        • 安装：(centos7)可只安装在某个节点上 
             cd /etc/yum.repos.d/
             wget http://download.opensuse.org/repositories/network:ha-clustering:Stable/CentOS_CentOS-7/network:ha-clustering:Stable.repo
             yum install crmsh
+
+            其它系统安装参考：http://software.opensuse.org/package/crmsh
 
         • 运行方式：
             1. 交互式方式：直接运行crm
