@@ -1,0 +1,548 @@
+2016-08-24
+# edit by liu2lin600
+
+corosync+pacemaker+crmsh：
+
+
+
+HA Cluster：高可用集群
+
+    A=MTBF/(MTBF+MTTR)
+        MTBF: Mean  Time Between Failure 平均无故障时间
+        MTTR: Mean Time to Repair 平均修复时间
+        
+        冗余：
+            Failover, Failback 
+            
+        1>A>0：百分比 
+            95%, 99%, 99.5%, 99.9%, 99.99%, 99.999%
+                
+    故障场景：
+        硬件：
+            人为故障
+            wear out 
+            设计缺陷
+            ...
+        软件：
+            人为故障
+            bug
+            设计缺陷
+            ...
+                
+    HA解决方案：
+        vrrp协议：keepalived
+        SA Forum：AIS，OpenAIS(开放式应用接口标准)
+            Hearbeat
+            CMAN：Cluster MANager (RHCS)
+            Corosync 
+                group communication
+                
+        OpenAIS：
+            1. Messaging Layer (Infrastructure Layer)：
+                ha-aware
+            2. CRM：(Cluster Resource Manager)
+                （非ha-aware）
+                管理接口：
+                    CLI：命令行接口
+                    GUI：图形用户界面 
+                        WebGUI
+                        GUI 
+                LRM：Local Resource Manager
+            3. RA：(Resource Agent)
+                start|stop|restart|status 必备属性
+                    status: 
+                        running
+                        stopped
+                        
+            常见实现：
+                Messaging Layer：
+                    heartbeat 
+                        v1, v2, v3
+                    cman 
+                    corosync
+                CRM：
+                    heartbeat v1：haresources
+                        配置接口：haresources配置文件；
+                    heartbeat v2：crm
+                        运行方式：在集群听每个节点上运行一个crmd守护进程(5560/tcp)，提供API；
+                        配置接口：crmsh, hb_gui；
+                    heartbeat v3：pacemaker
+                        配置接口：crmsh, pcs；
+                        GUI：hawk(suse), LCMC, pacemaker-gui 
+                    cman：rgmanager
+                        配置接口：cluster.conf, system-config-cluster, conga(ricci/luci), cman_tool, ccs_tool, clustat, ...
+                    corosync：pacemaker
+                                        
+                组合方式：
+                    heartbeat v1
+                    heartbeat v2
+                    heartbeat v3 + cluster-glue + pacemaker
+                    corosync + pacemaker
+                        corosync v1 + pacemaker (plugin) 
+                        corosync v2 (quromsystem) + pacemaker (standalone deamon)
+                    cman + rgmanager (RHCS)
+                    cman + corosync + pacemaker 
+                    
+                RHCS（Cluster Suite）：
+                    RHEL5：cman + rgmanager + conga(ricci/luci)
+                    RHEL6:
+                        cman + rgmanager + conga(ricci/luci)
+                        corosync v1 + pacemaker + crmsh/pcs
+                        cman + corosync v1 + pacemaker
+                    RHEL7：
+                        corosync v2 + pacemaker + pcs
+    
+        Quorum：法定票数
+            
+            failover：即资源所在的active node出现故障时，将其转移至其它可用节点的过程
+            failback：恢复 
+            
+            network partition: brain-split 网络分区 == 脑裂
+            
+            quorum：
+                投票系统：
+                    node: vote
+                    
+                • with quorum: votes > total/2 拥有法定票数
+                • without quorum: votes <= total/2 不拥有
+                    no_quorum_policy：不拥有法定票数时策略
+                        1. stop 默认方式
+                        2. ignore 忽略
+                        3. suicide 自杀
+                        4. freeze 不再接收新请求
+                        
+                    fencing：隔离机制
+                        1. node level： 节点级别 STONITH( shooting the other node in the head)
+                            stonith device：切断电源
+                                hardware: 电源交换机
+                                software: 
+                                meatware: 手动断电
+                        2. resource level：资源级别
+                            fc switch                               
+                
+                特殊场景：two nodes cluster  两节点集群
+                    1. no_quorum_policy
+                        ignore
+                    2. quorum device 仲裁设备
+                        (a) ping node
+                        (b) quorum disk
+                        ...
+                        
+            集群事务信息及心跳信息传递方式：
+                1. unicast 单播
+                2. broadcast 广播
+                3. multicast 组播(多播)
+                
+                Messaging Layer
+                
+            ▪ Resource Allocation Layer：资源管理
+                DC： Designated Coordinator 
+                
+                Component：组件
+                    DC：
+                        CRM, CIB, PE, LRM 
+                    非DC：
+                        CRM，CIB， LRM 
+                        
+                    CIB：Cluster Information Base 
+                        DC负责接收新配置，并传播给其它节点
+                        
+                • 资源类型：
+                    1. primitive：基本资源，主资源
+                        仅能运行一份，仅能运行于单个节点
+                    2. group：组
+                        将resouce组合成一个service
+                        功用：组合、次序（对称）
+                    3. clone：克隆
+                        同一资源在集群可出现多个副本；可以运行于多个节点
+                    4. multi-state（master/slave）：
+                        是克隆类型资源的一特殊表现，存在多个副本，副本间存在主从关系；drbd
+                        
+                • 集群的架构模型：Active/Passive, Active/Active
+                    N个节点：
+                        N-M：N个节点，运行M个服务，M<N, 备用节点（N-M）
+                        N-N：N个节点，运行N个服务
+                        
+                • 资源倾向性：资源的约束关系
+                    score (-oo, +oo) 分数范围负无穷到正无穷
+                    
+                    1. location：位置约束，资源对节点倾向性
+                    2. colocation：排列约束，资源与资源在一起的倾向性
+                    3. order：顺序约束，定义资源间的依赖关系
+                    
+            ▪ RA：resource agent 资源代理 
+                类别：
+                    1. LSB：/etc/rc.d/init.d/*
+                        支持start|stop|restart|status|reload|force-reload；
+                        ✽ 注意：一定不能开机自启动；
+                    2. OCF：Open Cluster Framework
+                        /usr/lib/ocf/resource.d/provider/目录下，类似于LSB的脚本，但支持start, stop, status, monitor, meta-data等；
+                    3. systemd：unit file，/usr/lib/systemd/system/
+                        ✽ 注意：一定要enable
+                    4. STONITH：调用stonith设备的专用RA
+                    5. service：
+                    
+            ▪ 资源的黏性：
+                资源留在当前节点的倾向性
+                    
+    
+
+CentOS 7：corosync v2 + pacemaker (standalone deamon) + crmsh/pcs 
+    
+    安装配置：
+        HA前提：时间同步、基于主机名互相通信、ssh的互信通信
+            node1.liu2lin.com node1
+            node2.liu2lin.com node2
+        
+        各节点安装相关的程序包：corosync, pacemaker
+            yum -y install corosync pacemaker
+        
+    ♦ corosync：
+        • 程序环境：
+            配置文件：/etc/corosync/corosync.conf
+            密钥文件：/etc/corosync/authkey
+            Unit File：corosync.service 
+            程序文件：
+                /usr/sbin/corosync-cfgtool
+                /usr/sbin/corosync-cmapctl
+                /usr/sbin/corosync-cpgtool
+                /usr/sbin/corosync-keygen
+                /usr/sbin/corosync-notifyd
+                /usr/sbin/corosync-quorumtool
+            
+        • 配置文件格式：
+            totem { }：
+                This top level directive contains configuration options for the totem protocol.
+                
+                totem协议：即节点间的通信协议，主要定义通信方式、通信协议版本、加密算法...
+                interface {}：定义集群心跳信息及事务信息传递的接口，可以有多组
+
+            logging { }：日志系统 
+                This top level directive contains configuration options for logging.
+
+            quorum { }：投票系统
+                This top level directive contains configuration options for quorum.
+
+            nodelist { }：节点列表
+                This top level directive contains configuration options for nodes in cluster.
+
+            qb { }： 
+                This top level directive contains configuration options related to libqb.   
+                
+        • 配置启动：
+            
+            1. 各节点上配置示例
+                totem {
+                    version: 2
+                    crypto_cipher: aes128           # 加密方式
+                    crypto_hash: md5                # 
+                    interface {
+                        ringnumber: 0               # 接口数，一组为0，两组为1...
+                        bindnetaddr: 172.16.0.0     # 
+                        mcastaddr: 239.255.101.11   # 多播地址
+                        mcastport: 5405             # 多播端口
+                        ttl: 1
+                    }
+                }
+                logging {
+                    fileline: off
+                    to_stderr: no
+                    to_logfile: yes
+                    logfile: /var/log/cluster/corosync.log
+                    to_syslog: no
+                    debug: off
+                    timestamp: on
+                    logger_subsys {
+                        subsys: QUORUM
+                        debug: off
+                    }
+                }
+                quorum {
+                    provider: corosync_votequorum   # 开启投票系统
+                }
+                nodelist {
+                    node {
+                        ring0_addr: node1.liu2lin.com
+                        nodeid: 1
+                    }
+                    node {
+                        ring0_addr: node1.liu2lin.com
+                        nodeid: 2
+                    }
+                }  
+
+            2. 生成密钥文件
+                corosync-keygen [-l]
+                    -l: 从/dev/urandom获取随机数(不安全，当随机数不够时)
+
+            3. 复制密钥文件到其它节点，并保持默认权限400
+                scp -p /etc/corosync/authkey  node2:/etc/corosync     
+
+            4. 各节点上启动服务
+                systemctl start corosync
+
+            5. 查看状态 corosync-cfgtool
+    
+        • 相关程序：
+            · corosync-cpgtool：组管理
+                -d：Delimiter between fields.
+                -e：Don't escape unprintable characters in group name
+                -n：Display only all existing group names.
+            · corosync-cfgtool：管理工具
+                -a：指定节点信息
+                -s：显示当前节点ring相关的信息
+                -R：控制所有节点重载配置文件
+                -H：
+            · corosync-cmapctl：
+                corosync-cmapctl  | grep members
+            
+    ♦ pacemaker：默认配置即可
+        启动服务：systemctl  start pacemaker.service
+            默认日志：/var/log/pacemaker.log    
+            Unit File： pacemaker.service 
+            环境配置文件：/etc/sysconfig/pacemaker 
+            
+            动态查看集群信息：crm_mon
+            
+    ♦ crmsh：配置接口
+        • 安装：可只安装在某个节点上
+            cd /etc/yum.repos.d/
+            wget http://download.opensuse.org/repositories/network:ha-clustering:Stable/CentOS_CentOS-7/network:ha-clustering:Stable.repo
+            yum install crmsh
+
+        • 运行方式：
+            1. 交互式方式：直接运行crm
+                crm(live)#
+                
+                获取帮助：ls, help [KEYWORD]
+                查看集群状态信息：status 
+                设定和管理集群：cluster
+            
+            2. 命令方式：
+                crm status
+                crm node standby == crm(live)# node standby == crm(live)node# standby   下线当前节点
+                crm node online
+
+            3. 命令切换：
+                crm(live)# node ==> crm(live)node#
+                crm(live)node# cd .. ==> crm(live)#
+    
+        • 配置CIB：crm(live)configure#
+            Commands:
+                acl_target     Define target access rights
+                cd             Navigate the level structure
+                _test          Help for command _test
+                clone          Define a clone  √
+                colocation     Colocate resources
+                commit         Commit the changes to the CIB
+                default-timeouts Set timeouts for operations to minimums from the meta-data
+                delete         Delete CIB objects
+                edit           Edit CIB objects
+                erase          Erase the CIB
+                fencing_topology Node fencing order
+                filter         Filter CIB objects
+                graph          Generate a directed graph
+                group          Define a group  √
+                help           Show help (help topics for list of topics)
+                load           Import the CIB from a file
+                location       A location preference
+                ls             List levels and commands
+                modgroup       Modify group
+                monitor        Add monitor operation to a primitive
+                ms             Define a master-slave resource
+                node           Define a cluster node  √
+                op_defaults    Set resource operations defaults
+                order          Order resources  √
+                primitive      Define a resource  √
+                property       Set a cluster property
+                ptest          Show cluster actions if changes were committed
+                quit           Exit the interactive shell
+                refresh        Refresh from CIB
+                _regtest       Help for command _regtest
+                rename         Rename a CIB object
+                role           Define role access rights
+                rsc_defaults   Set resource defaults
+                rsc_template   Define a resource template
+                rsc_ticket     Resources ticket dependency
+                rsctest        Test resources as currently configured
+                save           Save the CIB to a file
+                schema         Set or display current CIB RNG schema
+                show           Display CIB objects
+                _objects       Help for command _objects
+                tag            Define resource tags
+                up             Go back to previous level
+                upgrade        Upgrade the CIB to version 1.0
+                user           Define user access rights
+                verify         Verify the CIB with crm_verify
+                xml            Raw xml
+                cib            CIB shadow management
+                cibstatus      CIB status management and editing
+                template       Edit and import a configuration from a template              
+        
+        • 资源管理：crm(live)resource#
+            Commands:
+                cd             Navigate the level structure
+                cleanup        Cleanup resource status
+                demote         Demote a master-slave resource
+                failcount      Manage failcounts
+                help           Show help (help topics for list of topics)
+                ls             List levels and commands
+                maintenance    Enable/disable per-resource maintenance mode
+                manage         Put a resource into managed mode
+                meta           Manage a meta attribute
+                migrate        Migrate a resource to another node
+                param          Manage a parameter of a resource
+                promote        Promote a master-slave resource
+                quit           Exit the interactive shell
+                refresh        Refresh CIB from the LRM status
+                reprobe        Probe for resources not started by the CRM
+                restart        Restart a resource
+                scores         Display resource scores
+                secret         Manage sensitive parameters
+                start          Start a resource
+                status         Show status of resources
+                stop           Stop a resource
+                trace          Start RA tracing
+                unmanage       Put a resource into unmanaged mode
+                unmigrate      Unmigrate a resource to another node
+                untrace        Stop RA tracing
+                up             Go back to previous level
+                utilization    Manage a utilization attribute                   
+        
+        • 节点管理：crm(live)node#
+            Commands:
+                attribute      Manage attributes
+                cd             Navigate the level structure
+                clearstate     Clear node state
+                delete         Delete node
+                fence          Fence node
+                help           Show help (help topics for list of topics)
+                ls             List levels and commands
+                maintenance    Put node into maintenance mode
+                online         Set node online
+                quit           Exit the interactive shell
+                ready          Put node into ready mode
+                show           Show node
+                standby        Put node into standby
+                status         Show nodes' status as XML
+                status-attr    Manage status attributes
+                up             Go back to previous level
+                utilization    Manage utilization attributes                
+
+
+集群配置：
+
+    ♦ 查看资源代理相关属性：crm(live)ra#
+        list  CLASSES  [PROVIDER]：获取指定类别的资源代理列表(classes为类别列表)
+        info  [<class>:[<provider>:]]<type> ：
+
+        示例：
+            crm(live)# ra list lsb
+            crm(live)# ra list ocf heartbeat
+            crm(live)# ra info ocf:heartbeat:IPaddr
+        
+        注意：lsb及systemd类别一般没有属性
+        
+    ♦ 全局属性配置：crm(live)configure# property            # 连敲2次回车查看所有
+        stonith-enabled={true|false}                    # 禁止检查stonith设备
+        no-quorum-policy={stop|suicide|freeze|ignore}   # 
+        default-resource-stickiness=                    # 默认资源对节点的黏性值 
+
+            修改完成后需要提交：crm(live)configure# commit
+                
+    
+    ♦ 定义一个资源：crm(live)configure#
+        1. primitive：
+            primitive <rsc> [<class>:[<provider>:]]<type>   [params   <attr>=<val> [<attr>=<val>...]]
+                <rsc>：资源的ID，字符串数据
+                [<class>:[<provider>:]]<type>：资源代理
+                    class：RA类别
+                    provdier：提供者
+                    type：资源代理
+
+        2. group：定义一个组，即组中的资源同进同退
+            group <name> <rsc> [<rsc>...]
+
+
+        示例：
+            # 定义vip
+            crm(live)configure# primitive webip ocf:heartbeat:IPaddr params ip=172.16.60.99
+            # 定义httpd资源
+            crm(live)configure# primitive websrv systemd:httpd op monitor timeout=15s interval=10s
+            # 定义nfs共享存储
+            crm(live)configure# primitive webstore ocf:heartbeat:Filesystem params device="172.16.60.3:/webdata" directory="/var/www/html" fstype="nfs"
+            # 定义组
+            crm(live)configure# group webservice webstore webip websrv
+            crm(live)configure# verify  # 校验
+            crm(live)configure# show    # 显示
+            crm(live)configure# commit  # 提交，如果没有stonith设备会报错，可忽略
+
+            注：systemd资源必须enable才行
+                如：systemctl enable httpd
+
+    ♦ 删除资源：crm(live)configure#
+        删除资源时，要先停止资源，删除一个组资源中，不会删除组中的资源
+            
+        示例：
+            crm(live)resource# stop webservice
+            crm(live)configure# delete webservice
+            
+    ♦ 资源管理：crm(live)resource#
+        list: 显示
+        start: 启动
+        stop: 关闭
+        migrate: 手动迁移
+        cleanup: 清空
+        reflush: 刷新
+        promote: 升级为master
+
+        示例：
+            crm(live)resource# stop webservice
+            crm(live)resource# migrate webservice node2.liu2lin.com
+        
+    ♦ 定义约束：倾向性，默认黏性值为0
+        • 位置约束：
+            location <id> rsc  <score>: <node>
+
+                score：数值，inf为无穷大，-inf为负无穷
+        
+        • 排列约束：定义2个资源同进退，前跟后
+            colocation <id> <score>: <rsc>[:<role>] <with-rsc>[:<role>]
+            
+        • 顺序约束：先后启动
+            order <id> [{kind|<score>}:] first then [symmetrical=<bool>]
+                kind :: Mandatory(正无穷) | Optional | Serialize
+            
+        示例：
+            crm(live)configure# location webip_node webip inf: node2.liu2lin.com
+            crm(live)configure# colocation webip_websrv inf: webip websrv
+            crm(live)configure# order webstart mandatory: webip websrv
+
+    ♦ 资源监控：监控资源健康状态
+        方式1：资源定义后
+            crm(live)configure# monitor websrv 10s:20s
+
+        方式2：定义资源时
+            crm(live)configure# primitive ... op monitor interval= timeout= [op start= ...]
+
+        查看可用参数：ra info 帮助信息末尾
+            crm(live)# ra info ocf:heartbeat:IPaddr
+
+    ♦ 手动编辑配置：
+        crm(live)configure# edit        # 调用vi来编辑，一般情况不建议使用
+    
+        配置后显示示例：
+            node 1: node1.liu2lin.com \    
+                attributes standby=off   
+            node 2: node2.liu2lin.com
+            primitive webip IPaddr \
+                params ip=172.16.60.99
+            primitive webserver systemd:httpd
+                op monitor timeout=15s interval=10s
+            primitive webstore Filesystem \
+                params device="172.16.60.3:/webdata" directory="/var/www/html" fstype=nfs
+            group webservice webstore webip websrv 
+            ...  
+        
+
+    corosync高可用ipvs Director的解决方案：corosync + ldirectord；
