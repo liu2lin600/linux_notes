@@ -65,7 +65,7 @@ HA Cluster：高可用集群
                         配置接口：haresources配置文件；
                     heartbeat v2：crm
                         运行方式：在集群听每个节点上运行一个crmd守护进程(5560/tcp)，提供API；
-                        配置接口：crmsh, hb_gui；
+                        配置接口：crmsh, hb_gui
                     heartbeat v3：pacemaker
                         配置接口：crmsh, pcs；
                         GUI：hawk(suse), LCMC, pacemaker-gui 
@@ -174,9 +174,9 @@ HA Cluster：高可用集群
                 类别：
                     1. LSB：/etc/rc.d/init.d/*
                         支持start|stop|restart|status|reload|force-reload；
-                        ✽ 注意：一定不能开机自启动；
+                        ✽ 注意：一定不能开机自启动
                     2. OCF：Open Cluster Framework
-                        /usr/lib/ocf/resource.d/provider/目录下，类似于LSB的脚本，但支持start, stop, status, monitor, meta-data等；
+                        /usr/lib/ocf/resource.d/provider/目录下，类似于LSB的脚本，但支持start, stop, status, monitor, meta-data等
                     3. systemd：unit file，/usr/lib/systemd/system/
                         ✽ 注意：一定要enable
                     4. STONITH：调用stonith设备的专用RA
@@ -317,7 +317,7 @@ CentOS 7：corosync v2 + pacemaker (standalone deamon) + crmsh/pcs
             其它系统安装参考：http://software.opensuse.org/package/crmsh
 
         • 运行方式：
-            1. 交互式方式：直接运行crm
+            1. 交互式方式：命令行运行crm
                 crm(live)#
                 
                 获取帮助：ls, help [KEYWORD]
@@ -449,12 +449,14 @@ CentOS 7：corosync v2 + pacemaker (standalone deamon) + crmsh/pcs
         
         注意：lsb及systemd类别一般没有属性
         
-    ♦ 全局属性配置：crm(live)configure# property            # 连敲2次回车查看所有
+    ♦ 全局属性配置：crm(live)configure# property        # 连敲2次回车查看所有
         stonith-enabled={true|false}                    # 禁止检查stonith设备
         no-quorum-policy={stop|suicide|freeze|ignore}   # 
         default-resource-stickiness=                    # 默认资源对节点的黏性值 
 
-            修改完成后需要提交：crm(live)configure# commit
+        注：修改完成后需要手动校验再提交，如果不在configure命令下修改则自动校验并提交
+            crm(live)configure# verify
+            crm(live)configure# commit
                 
     
     ♦ 定义一个资源：crm(live)configure#
@@ -497,7 +499,7 @@ CentOS 7：corosync v2 + pacemaker (standalone deamon) + crmsh/pcs
         list: 显示
         start: 启动
         stop: 关闭
-        migrate: 手动迁移
+        migrate: 手动迁移资源到其它节点
         cleanup: 清空
         reflush: 刷新
         promote: 升级为master
@@ -548,7 +550,14 @@ CentOS 7：corosync v2 + pacemaker (standalone deamon) + crmsh/pcs
             primitive webstore Filesystem \
                 params device="172.16.60.3:/webdata" directory="/var/www/html" fstype=nfs
             group webservice webstore webip websrv 
-            ...  
+            property cib-bootstrap-options: \
+                have-watchdog=false \
+                dc-version=1.1.13-10.el7_2.4-44eb2dd \
+                cluster-infrastructure=corosync \
+                stonith-enabled=false \
+                default-resource-stickiness=100 \
+                no-quorum-policy=ignore
+            
         
 
     corosync高可用ipvs Director的解决方案：corosync + ldirectord；

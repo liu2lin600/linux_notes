@@ -112,14 +112,14 @@ DMBS：DataBase Management System 数据库管理系统
 
 MySQL安装配置：
     yum安装：yum -y install mysql-server|mariadb-server
-    初始化库：mysql_install_db
+    初始化库：mysql_install_db               # 二进制或源码包才有
     添加密码：mysql_secure_installation      # 初次安装后运行一次
 
     配置文件：/etc/my.cnf和/etc/my.cnf.d/*.cnf
         初次安装建议添加如下：
         [mysqld]
         innodb_file_per_table = On
-        skip-name-resolve          # 关闭主机ip反解，5.5以上需要在命令行参数添加
+        skip-name-resolve = ON         # 关闭主机ip反解，5.5以上需要在命令行参数添加
 
 
 MySQL操作：MySQL提示下命令

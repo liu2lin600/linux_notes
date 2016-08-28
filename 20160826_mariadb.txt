@@ -1,0 +1,885 @@
+2016-08-26
+# edit by liu2lin600
+
+
+MariaDB or MySQL：
+   
+    ♦ 版本：
+        MySQL：5.1 --> 5.5 --> 5.6 --> 5.7
+        MariaDB：5.5.x --> 10.x
+
+    ♦ 核心组件：
+        连接池：认证、线程重用、连接数限制、内存检查、缓存
+        SQL接口：DDL, DML, 关系型数据库的基本抽象
+        分析器：查询转换、对象权限检查
+        优化器：访问路径，性能相关的统计数据
+        caches和buffers：与存储引擎自身相关的I/O性能提升工具
+        存储引擎：
+            MyISAM、InnoDB(变种XtraDB)、Memory、Merge、Federated、CSV、Archive、Blackholl、Aria、SphinxSE、TokuDB
+        
+    ♦ 特性：
+        插件式存储引擎
+        单进程多线程
+            
+    ♦ 安装方式：
+        OS Vendor：系统发行版自带
+        MySQL：
+            1. source code：源码
+                cmake工具
+            2. binary package：二进制包
+                i686, x86_64; 注间依赖glibc VERSION版本
+            3. prepackage：预编译
+                rpm, deb，注意os, arch区分 
+        
+    ♦ 配置文件：
+        启动时会读取多处的多个配置文件，而且会以指定的次序的进行，不同的配置文件中出现同一参数且拥有不同值时，后读取将为最终生效值
+            
+        my_print_defaults命令：查看加载顺序
+            默认顺序：/etc/mysql/my.cnf  /etc/my.cnf ~/.my.cnf 
+                
+        mysqld_safe命令：服务端启动
+            --defaults-file=file_name   # 可修改默认读取的配置文件
+            --defaults-extra-file=path  # 于读取的默认配置文件之外再加载一个文件     
+                                    
+        配置文件格式：
+            ini风格的配置文件，能够为mysql的各种应用程序提供配置信息
+            [mysqld]
+            [mysqld_safe]
+            [mysqld_multi]
+            [server]
+            [mysql]
+            [mysqldump]
+            [client]
+            ...
+            
+                PARAMETER：不同版本参数方式有可能不同
+                    innodb_file_per_table
+                    innodb-file-per-table 
+                  
+    ♦ 安装后启动前建议：
+        1. 安全初始化命令，包括清除匿名登录，添加root密码及远程登录
+            mysql_secure_installation
+                
+        2. 运行前常修改的配置参数
+            [mysqld]
+            innodb_file_per_table=ON
+            skip_name_resolve=ON
+            ...
+                
+    ♦ 程序文件：
+        服务端程序：mysqld_safe, mysqld_multi
+        客户端程序：mysql, mysqldump, mysqladmin
+        工具程序：myisampack, ...
+        
+        命令：
+            客户端命令：于客户端执行
+            服务端命令：SQL语句，需要一次性完整地发往服务端，语句必须有结束符      
+             
+        • mysql：客户端交互式CLI工具，mysql --> mysql protocol --> mysqld
+                
+            · 语法：mysql [options] db_name
+                    mysql [options] [DATABASE] < /PATH/FROM/SOME_SQL_SCRIPT
+                    
+            · 常用选项：
+                -h host_name：服务端地址，空格可省
+                -u user_name：用户名，空格可省
+                -p[password]：用户密码，安全起见不要在命令行直接输入密码
+                -P port_num：服务端端口 
+                --protocol={TCP|SOCKET|PIPE|MEMORY}：
+                    本地通信：基于本地回环地址进行请求，将基于本地通信协议
+                        Linux：SOCKET
+                        Windows：PIPE，MEMORY
+                    非本地通信：使用非本地回环地址进行的请求 TCP协议
+                -S path：本机通讯socket文件路径
+                --database=db_name, -D db_name：
+                -C：数据压缩传输，双方都支持才行
+                -e 语句：非交互模式执行SQL语句
+                -E：查询结果纵向显示
+                     
+            · mysql命令帮助：
+                man mysql
+                mysql --help --verbose   
+
+                MariaDB [(none)]> ：登录后可用客户端命令
+                    ?         (\?) 帮助
+                    clear     (\c) 中止语句执行，前不能有';'
+                    connect   (\r) 重连
+                    delimiter (\d) 修改结束符
+                    exit|quit (\q) 退出
+                    go        (\g) 发送语句
+                    help      (\h) 显示帮助
+                    source    (\.) 执行sql脚本
+                    status    (\s) 获取服务器状态
+                    system    (\!) 执行系统命令
+                    use       (\u) 使用指定数据库
+                    charset   (\C) 设定字符集
+
+        • mysqld服务器程序：工作特性的定义方式
+            1. 命令行选项
+            2. 配置文件参数
+                
+            ◆ 变量/参数：
+                · 显示：
+                    mysql> SHOW [GLOBAL|SESSION] VARIABLES [LIKE ..];       # 服务器参数/变量，设定MySQL的运行特性
+                    mysql> SHOW [GLOBAL|SESSION] STATUS [LIKE ..];          # 状态参数/变量，保存运行中的统计数据或状态
+                    mysql> SELECT @@[global.|session.]system_var_name       # 显示单个变量设定值的方法
+
+                · 通配符：
+                    % ：任意长度任意字符
+                    _ ：任意间个字符
+
+                · 变量/参数级别：
+                    1. 全局(GLOBAL)：为所有会话设定默认
+                    2. 会话(SESSION)：跟单个会话相关，会话建立会从全局继承
+                    
+                · 服务器变量的调整方式：
+                    1. 运行时修改，并非所有参数都能修改
+                    2. 启动前通过配置文件修改
+                    
+                · 运行时修改操作方法：
+                    mysql> SET [GLOBAL|SESSION] system_var_name = expr
+                    mysql> SET [@@global.|@@session. | @@]system_var_name = expr
+
+                示例：
+                    mysql> SHOW GLOBAL STATUS LIKE '%select%';
+                    mysql> SHOW GLOBAL VARIABLES LIKE '%commit%';
+                    mysql> SELECT @@global.autocommit;
+                    mysql> SET @@session.autocommit=OFF;
+                    
+    ♦ SQL标准：
+        ANSI SQL 
+            SQL-86, SQL-89, SQL-92, SQL-99, SQL-03, ...
+            
+    ♦ 数据类型：
+        字符型、数值型、日期时间型、内建类型
+        
+        数据类型的功用：
+            1、存储的值类型
+            2、占据的最大存储空间
+            3、定长、变长
+            4、如何被索引和排序
+            5、是否能够被索引
+
+        数据字典：系统编目（system catalog）
+            保存了数据库服务器上的元数据
+
+            元数据：
+                关系的名称
+                每个关系中各字段的名称
+                各字段的类型和长度
+                约束
+                每个关系上的视图的名字及视图的定义
+
+                授权的用户名字
+                用户的授权和帐户信息
+
+                统计类数据
+                    每个关系中字段数
+                    每个关系中行数
+                    每个关系的存储方法
+
+            元数据也通过数据库保存：
+                infomation_schema
+                mysql
+                performance_schema
+
+        查看类型：mysql> HELP DATA TYPE
+            
+        • 字符型：
+            CHAR(#)， BINARY：定长型；CHAR不区分字符大小写，而BINARY区分
+            VARCHAR(#)， VARBINARY：变长型
+            TEXT：TINYTEXT，TEXT，MEDIUMTEXT，LONGTEXT
+            BLOB：TINYBLOB，BLOB，MEDIUMBLOB， LONGBLOB
+        • 数值型：
+            浮点型：近似
+                FLOAT
+                DOUBLE
+                REAL
+                BIT
+            整型：精确
+                INTEGER：TINYINT，SMALLINT，MEDIUMINT，INT，BIGINT
+                DECIMAL
+        • 日期时间型：
+            日期：DATE
+            时间：TIME
+            日期时间：DATETIME
+            时间戳：TIMESTAMP
+            年份：YEAR(2), YEAR(4)
+        • 内建：
+            ENUM：枚举
+                ENUM('Sun','Mon','Tue','Wed')
+            SET：集合
+                
+        • 类型修饰符：
+            字符型：NOT NULL，NULL，DEFALUT ‘STRING’，CHARACET SET ‘CHARSET’，COLLATION ‘collocation'
+            整型：NOT NULL， NULL， DEFALUT value, AUTO_INCREMENT, UNSIGNED
+            日期时间型：NOT NULL， NULL， DEFAULT 
+        
+    ♦ SQL MODE：
+        定义mysqld对约束等违反时的响应行为等设定
+        
+        常用的MODE：
+            TRADITIONAL: 常规
+            STRICT_TRANS_TABLES: 非事务表严格限定
+            STRICT_ALL_TABLES: 所有表严格限定
+            
+        修改方式：
+            mysql> SET GLOBAL sql_mode='TRADITIONAL';
+            mysql> SET @@global.sql_mode='STRICT_ALL_TABLES';
+             
+    ♦ SQL操作：
+        DDL，DML
+
+        • DDL：
+            查看：mysql> HELP Data Definition
+            
+                CREATE, ALTER, DROP
+                    DATABASE, TABLE
+                    INDEX, VIEW, USER
+                    FUNCTION, FUNCTION UDF, PROCEDURE, TABLESPACE, TRIGGER, SERVER 
+                    
+            1. database：数据库
+                CREATE DATABASE [IF NOT EXISTS] db_name CHARACTER SET [=] charset_name  COLLATE [=] collation_name
+                ALTER DATABASE [db_name] CHARACTER SET [=] charset_name  COLLATE [=] collation_name
+                DROP DATABASE [IF EXISTS] db_name
+                
+            2. table：表
+                · CREATE：创建
+                    (1) CREATE [TEMPORARY] TABLE [IF NOT EXISTS] tbl_name
+                        (create_definition,...)
+                        [table_options]
+                        [partition_options]
+                        
+                        table_options：表选项
+                            ENGINE [=] engine_name
+                            AUTO_INCREMENT [=] value
+                            [DEFAULT] CHARCTER SET [=] name
+                            ROW_FORMAT [=] {DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT}
+                            ...
+                            
+                            查看支持的所有存储引擎：
+                                mysql> SHOW ENGINES;
+                            
+                            查看指定表的存储引擎：
+                                mysql> SHOW TABLE STATUS LIKE tb_name;
+                            
+                    (2) CREATE TABLE [IF NOT EXISTS] tbl_name
+                        [(create_definition,...)]
+                        [table_options]
+                        [partition_options]
+                        select_statement
+                    
+                        直接创建表，并将查询语句的结果插入到新创建的表中，如果创建字段与查询字段不一致时，都保留
+            
+                    (3) CREATE TABLE [IF NOT EXISTS] tbl_name LIKE old_tbl_name;
+                        
+                        复制某存在的表的结构来创建新的空表
+
+                    示例：
+
+                    
+                · DROP：删除
+                    DROP [TEMPORARY] TABLE [IF EXISTS] tbl_name [, tbl_name]; 
+                    
+                · ALTER：修改
+                    ALTER  TABLE tbl_name [alter_specification [, alter_specification] ...]
+                        
+                        可修改内容：
+                            (1) table_options
+                            (2) 添加定义: ADD 字段、字段集合、索引、约束
+                            (3) 修改字段:
+                                CHANGE [COLUMN] old_col_name new_col_name column_definition [FIRST|AFTER col_name]
+                                MODIFY [COLUMN] col_name column_definition [FIRST | AFTER col_name]
+                            (4) 删除操作: DROP 字段、索引、约束
+                                
+                    表重命名：
+                        RENAME [TO|AS] new_tbl_name
+
+                    注：修改存储引擎为新建表再复制后再删除原表，所以开销比较大，生产环境少用
+                            
+                · DESC：查看表结构
+                    DESC table_name
+
+                · 其它：
+                    SHOW CREATE TABLE tbl_name;     # 查看表定义
+                    SHOW TABLE STATUS [{FROM | IN} db_name] [LIKE 'pattern' | WHERE expr];  # 查看表属性信息
+                    
+            3. index：索引
+                · 创建：
+                    CREATE [UNIQUE|FULLTEXT|SPATIAL] INDEX index_name [index_type] ON tbl_name (index_col_name,...)
+                    
+                · 查看：
+                    SHOW {INDEX | INDEXES | KEYS} {FROM | IN} tbl_name [{FROM | IN} db_name] [WHERE expr]
+                    
+                · 删除：
+                    DROP  INDEX index_name ON tbl_name
+                    
+                · 索引类型：
+                    聚集索引、非聚集索引：索引是否与数据存在一起；
+                    主键索引、辅助索引：
+                    稠密索引、稀疏索引：是否索引了每一个数据项；
+                    BTREE（B+）、HASH、R Tree、FULLTEXT
+                        BTREE：左前缀
+                            
+                · EXPLAIN：分析查询语句的执行路径
+                
+            4. view：视图，虚表，存储下来的SELECT语句
+                · 创建：
+                    CREATE  VIEW view_name [(column_list)] AS select_statement
+                    
+                · 修改：
+                    ALTER  VIEW view_name [(column_list)] AS select_statement
+                    
+                · 删除：
+                    DROP VIEW [IF EXISTS] view_name [, view_name] ...
+                    
+        • DML：
+            查看：mysql> HELP Data Manipulation
+                
+                INSERT/REPLACE, DELETE, SELECT, UPDATE
+                
+            1. INSERT：添加，包括单行插入和批量插入
+                
+                (1) INSERT INTO tbl_name [(col_name,...)]
+                    {VALUES | VALUE} ({expr | DEFAULT},...),(...),...
+                    col_name=expr[, col_name=expr] ... ]
+
+                (2) INSERT INTO tbl_name
+                    SET col_name={expr | DEFAULT}, ...
+                    col_name=expr[, col_name=expr] ... ]
+
+                (3) INSERT INTO tbl_name [(col_name,...)]
+                    SELECT ... col_name=expr[, col_name=expr] ... ]
+                
+            2. DELETE：删除
+                
+                DELETE  FROM tbl_name [WHERE where_condition] [ORDER BY ...] [LIMIT row_count]      
+                
+                    注意：一定要有限制条件，否则将清空整个表
+
+                TRUNCATE tbl_name;  # 清空表并将自增值重置 
+                         
+            3. UPDATE：修改
+                
+                UPDATE table_reference SET col_name1={expr1|DEFAULT} [, col_name2={expr2|DEFAULT}] ...
+                    [WHERE where_condition]
+                    [ORDER BY ...]
+                    [LIMIT row_count]               
+                        
+                注意：一定要有限制条件，否则将修改整个表中指定字段的数据
+                    sql_safe_updates变量可阻止不带条件更新操作
+                
+            4. SELECT：查询
+            
+                Query Cache：缓存查询的执行结果
+                    key：查询语句的hash值
+                    value：查询语句的执行结果
+            
+                查询执行路径：
+                    请求-->查询缓存
+                    请求-->查询缓存-->解析器-->预处理器-->优化器-->查询执行引擎-->存储引擎-->缓存-->响应
+                
+                SELECT语句的执行流程：
+                    FROM  --> WHERE --> Group By --> Having --> Order BY --> SELECT --> Limit 
+                
+                1. 单表查询：
+                    SELECT [ DISTINCT | DISTINCTROW ]
+                        [SQL_CACHE | SQL_NO_CACHE] [SQL_CALC_FOUND_ROWS]
+                        select_expr [, select_expr ...]
+                        [FROM table_references
+                        [WHERE where_condition]
+                        [GROUP BY {col_name | expr | position}
+                        [ASC | DESC], ... [WITH ROLLUP]]
+                        [HAVING where_condition]
+                        [ORDER BY {col_name | expr | position}
+                        [ASC | DESC], ...]
+                        [LIMIT {[offset,] row_count | row_count OFFSET offset}] 
+                        
+                    用法：
+                        SELECT col1, col2, ... FROM tble_name；
+                        SELECT col1, col2, ... FROM tble_name WHERE clause；
+                        SELECT col1, col2, ... FROM tble_name GROUP BY col_name HAVING clause； 
+                        
+                    DISTINCT：数据去重
+                    SQL_CACHE：显式指定缓存查询语句的结果
+                    SQL_NO_CACHE：显式指定不缓存查询语句的结果
+                    
+                    query_cache_type服务器变量有三个值：
+                        ON：启用
+                            SQL_NO_CACHE：不缓存，默认符合缓存条件都缓存
+                        OFF：关闭
+                        DEMAND：按需缓存
+                            SQL_CACHE：缓存；默认不缓存
+                            
+                    字段可以使用别名 ：
+                        col1 AS alias1, col2 AS alias2, ...
+                        
+                    • WHERE子句：指明过滤条件以实现"选择"功能
+                        过滤条件：布尔型表达式
+                        算术操作符：+, -, *, /, %
+                        比较操作符：=, <>, !=, <=>, >, >=, <, <=
+                        
+                            IS NULL，IS NOT NULL
+                            BETWEEN min AND max：区间
+                            IN：列表
+                            LIKE：模糊比较，%和_
+                            RLIKE或REGEXP
+                            
+                        逻辑操作符：
+                            AND， OR， NOT， XOR
+                                
+                    • GROUP BY：根据指定的字段把查询的结果进行分组，以用于聚合运算
+                        avg(), max(), min(), sum(), count()
+                        
+                    • HAVING：对分组聚合后的结果进行条件过滤
+                        
+                    • ORDER BY：根据指定的字段把查询的结果进行排序
+                        升序：ASC
+                        降序：DESC 
+                        
+                    • LIMIT：对输出结果进行数量限制
+                        LIMIT 3             # 前3条数据
+                        LIMIT 2,3           # 越过2条取3条
+                        LIMIT 3 OFFSET 2    # 同上
+                        
+                    
+                2. 多表查询：
+                    连接操作：
+                        交叉连接：笛卡尔乘积，要避免
+                        内连接：
+                            等值连接: 让表之间的字段以等值的方式建立连接
+                            不等值连接:
+                            自然连接:
+                            自连接:
+                        外连接：
+                            左外连接：
+                                FROM tb1 LEFT JOIN tb2 ON tb1.col = tb2.col 
+                            右外连接：
+                                FROM tb1 RIGHT JOIN tb2 ON tb1.col = tb2.col 
+                                
+                3. 子查询：在查询中嵌套查询
+                    
+                    用于WHERE子句中的子查询：
+                        (1) 用于比较表达式中的子查询：子查询仅能返回单个值 
+                        (2) 用于IN中的子查询：子查询可以返回一个列表值
+                        (3) 用于EXISTS中的子查询：
+
+                    用于FROM子句中的子查询：
+                        SELECT tb_alias.col1, ... FROM (SELECT clause) AS tb_alias WHERE clause; 
+                        
+                4. 联合查询：将多个查询语句的执行结果相合并
+                    SELECT ... UNION SELECT ...;
+
+    ♦ 存储引擎：
+        ▫ 表类型：表级别概念，不建议在同一个库中的表上使用不同的ENGINE
+        
+        ▫ 查看表引擎：
+            mysql> CREATE TABLE ... ENGINE[=]ENGINE_NAME;
+            mysql> SHOW TABLE STATUS; 
+        
+        ▫ 常见的存储引擎：
+            MyISAM, Aria(增加MyISAM), InnoDB, MRG_MYISAM, CSV, BLACKHOLE, MEMORY, PERFORMANCE_SCHEMA, ARCHIVE, FEDERATED
+            
+        • InnoDB：InnoBase公司
+            Percona-XtraDB, Supports transactions, row-level locking, and foreign keys
+                
+            数据存储于"表空间(table space)"中：
+                1. 所有InnoDB表的数据和索引存储于同一个表空间中
+                    表空间文件：datadir定义的目录中，即ibdata1, ibdata2, ...
+
+                2. innodb_file_per_table=ON         # 每表使用单独的表空间文件
+                    数据文件(数据和索引，存储于数据库目录)：tbl_name.ibd 
+                    表结构的定义：在数据库目录，tbl_name.frm 
+                
+            特点：
+                适用场景：适合对事务要求较高的场景中，但较适用于处理大量短期事务
+                数据存储：表空间
+                并发：MVCC(Mutli Version Concurrency Control)，间隙锁(防止幻读)，行级锁
+                索引：聚集索引、辅助索引
+                性能：预读操作、内存数据缓冲、内存索引缓存、自适应Hash索引、插入操作缓存区
+                备份：支持热备
+                    
+        • MyISAM：
+            
+            · 特点：
+                支持全文索引（FULLTEXT index）、压缩、空间函数（GIS）
+                不支持事务
+                锁粒度，表级锁，加锁和并发
+                崩溃无法保证表安全恢复
+                延迟索引更新
+                表压缩
+                手动或自动修复、但可能会丢失数据
+                非聚集索引
+            
+            · 适用场景：只读或读多写少的场景、较小的表（以保证崩溃后恢复的时间较短）
+            
+            · 文件：每个表有三个文件，存储于数据库目录中
+                tbl_name.frm：表格式定义
+                tbl_name.MYD：数据文件 
+                tbl_name.MYI：索引文件
+                
+        • 行格式：
+             DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT
+             
+        • 其它的存储引擎：
+            1. CSV        ：将CSV文件（以逗号分隔字段的文本文件）作为MySQL表文件 
+            2. MRG_MYISAM ：将多个MyISAM表合并成的虚拟表
+            3. BLACKHOLE  ：类似于/dev/null，不真正存储数据
+            4. MEMORY     ：内存存储引擎，支持hash索引，表级锁，常用于临时表
+            5. FEDERATED  ：用于访问其它远程MySQL服务器上表的存储引擎接口
+            
+        • MariaDB额外支持第三方存储引擎：
+            OLTP类：
+                XtraDB: InnoDB的改进版
+                PBXT: 支持ACID和MVCC
+                TokuDB: 支持使用分形树的索引结构，适用存储大数据
+
+            面向列的存储的引擎：按列为单位进行存储，适合压缩等，适用于存储大数据
+                Infobright
+                InfiniDB
+                LucidDB
+
+            社区引擎：
+                Aria: 改进的MyISAM
+                OQGraph: 支持图操作
+                SphinxSE: 为sphinx全文搜索引擎提供了SQL接口
+                Spider: 可以将数据切分成不同的分区，较透明实现分片功能
+
+                搜索引擎：
+                lucene, sphinx 
+                    lucene：Solr, Elasticsearch
+                    
+    ♦ 并发控制：
+        Lock 锁机制
+        
+        • 锁类型：
+            读锁：共享锁，可被多个读操作共享，可能出现写饥饿，需定义好锁策略
+            写锁：排它锁，独占锁
+            
+        • 锁粒度：
+            表锁：在表级别施加锁，并发性较低
+            行锁：在行级别施加锁，并发性较高
+            
+        • 锁策略：在锁粒度及数据安全性之间寻求一种平衡机制
+            存储引擎级别：锁级别以及何时施加或释放锁由存储引擎自行决定
+            MySQL Server：表级别，可自行决定，也允许显式请求 
+                    
+        • 锁类别：
+            显式锁：用户手动请求的锁
+            隐式锁：存储引擎自行根据需要施加的锁
+            
+        • 显式锁的使用：
+            1. mysql> LOCK TABLES  tbl_name  read|write, tbl_name read|write, ...;     # 不同锁可定义不都锁类型
+               mysql> UNLOCK TABLES;   # 释放所有锁
+                
+            2. mysql> FLUSH TABLES tbl_name,... [WITH READ LOCK];   # 将表内存数据写入磁盘并在内存中重新打开，可指定锁
+               mysql> UNLOCK TABLES;
+                
+            3. mysql> SELECT ... [FOR UPDATE | LOCK IN SHARE MODE]  # 查询指定行并施加锁，并立即释放，用于事务中
+                
+    ♦ 事务：
+        ✽ 注意：MyISAM不支持事务
+
+        • 事务：一组原子性的SQL查询、或者是一个或多个SQL语句组成的独立工作单元
+            事务日志：相关参数
+                innodb_log_files_in_group   # 文件数据
+                innodb_log_group_home_dir   # 日志路径
+                innodb_log_file_size        # 每个文件大小
+                innodb_mirrored_log_groups  # 文件组即保存几份，一般分别保存在不同磁盘上
+        
+        • ACID测试：
+            A：Automicity(原子性)，整个事务中的所有操作要么全部成功执行，要么全部失败后回滚
+            C：Consistency(一致性)，数据库总是应该从一个一致性状态转为另一个一致性状态
+            I：Isolation(隔离性)，一个事务所做出的操作在提交之前，是否能为其它事务可见，保证并发操作
+            D：Durability(持久性)，事务一旦提交，其所做出的修改会永久保存
+            
+        • 自动提交：
+            mysql> SELECT @@autocommit;         # 默认为1，即单语句自动提交
+            mysql> SET @@session.autocommit=0;  # 关闭单语句自动提交
+            
+        • 手动控制事务：
+            启动：mysql> START TRANSACTION; 
+            回滚：mysql> ROLLBACK;
+            提交：mysql> COMMIT;
+            
+            事务支持savepoints：保存点
+                mysql> SAVEPOINT identifier;            # 创建保存点
+                mysql> ROLLBACK TO identifier;          # 回滚到指定保存点
+                mysql> RELEASE SAVEPOINT identifier;    # 删除指定保存点
+            
+        • 事务隔离级别：
+            1. READ-UNCOMMITTED : 读未提交 --> 脏读(可看到别人未提交的结果)
+            2. READ-COMMITTED   : 读提交   --> 不可重复读(只能看到别人提交后的结果)
+            3. REPEATABLE-READ  : 可重复读 --> 幻读(只有在自己提交后才能看到别人的提交)
+            4. SERIALIZABLE     : 串行化
+
+                注：级别越高并发性越低，默认为REPEATABLE-READ，一般可调整为READ-COMMITTED
+
+            查看级别：tx_isolation参数
+                mysql> SELECT @@session.tx_isolation;
+                mysql> SET @@session.tx.isolation=READ-COMMITTED;
+
+        • 查看InnoDB存储引擎的状态信息：
+            mysql> SHOW ENGINE innodb STATUS;   # IO、缓存、缓冲、日志...
+            
+    ♦ 权限：
+        类型：库级别、表级别、字段级别、管理类、程序类
+        
+        • 管理类：
+            CREATE USER
+            RELOAD
+            LOCK TABLES
+            REPLICATION CLIENT，REPLICATION SLAVE
+            SHUTDOWN
+            FILE
+            SHOW DATABASES
+            PROCESS 
+            SUPER
+            
+        • 程序类：
+            FUNCTION，PROCEDURE，TRIGGER
+            
+            操作：CREATE，ALTER，DROP，EXECUTE
+            
+        • 库和表级别：
+            CREATE，ALTER，DROP
+            INDEX
+            CREATE VIEW
+            SHOW VIEW
+            GRANT
+            OPTION: 能够把自己获得的权限生成一个副本转赠给其它用户
+            
+        • 数据操作：
+            表：
+                INSERT/DELETE/UPDATE/SELECT 
+                
+            字段：
+                SELECT(col1,col2,...)
+                UPDATE(col1,col2,...)
+                INSERT(col1,col2,...)
+                
+        • 所有权限：ALL，ALL PRIVILEGES
+        
+        • 元数据数据库(数据字典)：mysql，默认生成的库
+            表：db, host, user...
+            字段：tables_priv, column_priv, procs_priv, proxies_priv...
+                
+    ♦ 用户管理：
+        用户形式：
+            'user'@'host';
+                host: IP，主机名，NETWORK
+                    
+        • 创建用户：
+            mysql> CREATE USER 'user'@'host' [IDENTIFIED BY 'PASS'] [,'user'@'host' [IDENTIFIED BY 'PASS']...];
+            
+        • 重命名：
+            mysql> RENAME USER old_user TO new_user[, old_user TO new_user] ...;
+            
+        • 删除用户：
+            mysql> DROP USER 'user'@'host' [, 'user'@'host'] ...;
+            
+        • 修改用户密码：
+            1. mysql> SET PASSWORD [FOR 'user'@'host'] = PASSWORD('passwd_STR');
+            2. mysql> UPDATE mysql.user SET Password=PASSWORD('passwd_STR')  WHERE User='USER' AND Host='HOST';
+            3. mysqladmin -uUSER -hHOST -p  password 'NEW_PASS';   # 需要用户有SUPER权限才行
+            
+            ✽ 生效：mysql> FLUSH PRIVILEGES;
+            
+        • 忘记管理员密码的解决办法：
+            (1) 启动mysqld进程时，使用--skip-grant-tables和--skip-networking选项
+                mysqld_safe --skip-grant-tables --skip-networking
+            (2) 通过UPDATE命令修改管理员密码
+            (3) kill相关进程再以正常方式启动mysqld进程
+
+            备：也可通过修改配置文件后(添加skip-grant-tables)再启动，完成后再将配置文件改回，在新版mysql中密码字段已修改为authentication_string，修改是需注意
+            
+        • 授权：GRANT
+            mysql> GRANT priv_type [(column_list)] [, priv_type [(column_list)]] ...
+                   ON [object_type] priv_level
+                   TO 'user'@'host' [, 'user'@'host'] ...
+                   [REQUIRE {NONE | ssl_option [[AND] ssl_option] ...}]
+                   [WITH with_option ...]
+                · priv_type：
+                    ALL, SELECT, UPDATE, DELETE, INSERT, SUPER, 
+                · [object_type]：
+                    TABLE, FUNCTION, PROCEDURE
+                · priv_level：
+                    *, *.*, db_name.*, db_name.tbl_name, tbl_name, db_name.routine_name
+                · [ssl_option]：
+                    SSL      
+                · [with_option]：
+                    GRANT OPTION                     # 将自己权限赋予其它人
+                    MAX_QUERIES_PER_HOUR count       # 每小时查询次数 
+                    MAX_UPDATES_PER_HOUR count       # 每小时修改次数
+                    MAX_CONNECTIONS_PER_HOUR count   # 每小时最大连接
+                    MAX_USER_CONNECTIONS count       # 单用户并发数
+
+                    备：修改此参数则重新设置为0
+                    
+        • 查看授权：SHOW GRANTS
+            mysql> SHOW GRANTS [FOR 'user'@'host'];
+                    
+        • 取消授权：REVOKE
+            mysql> REVOKE priv_type [(column_list)][, priv_type [(column_list)]] ...
+                   ON [object_type] priv_level
+                   FROM  'user'@'host' [,  'user'@'host'] ...;
+                
+            mysql> REVOKE ALL PRIVILEGES, GRANT OPTION FROM user [, user] ...;
+
+            注：取消时确保授权级别一致
+                
+    ♦ 查询缓存：
+        • 缓存：k/v方式存储 
+            key：查询语句的hash值，(区分大小)所以查询语句风格尽量保持一致
+            value：查询语句的执行结果
+            
+        • 如何判断缓存是否命中：
+            通过查询语句的哈希值判断：哈希值考虑的因素包括
+                查询本身、要查询数据库、客户端使用的协议版本、...
+                
+        • 哪些查询可能不会被缓存：
+            1. 查询语句中包含UDF(用户自定义函数)
+            2. 存储函数
+            3. 用户自定义变量
+            4. 临时表
+            5. 系统表或者是包含列级别权限的查询
+            6. 有着不确定结果值的函数(now()...)
+            
+        • 查询缓存相关的服务器变量：
+            mysql> SHOW GLOBAL VARIABLES LIKE 'query%';
+
+            · query_cache_limit：能够缓存的最大查询结果（单语句结果集大小上限）
+                有着较大结果集的语句，显式使用SQL_NO_CACHE，以避免先缓存再移出 
+            · query_cache_min_res_unit：内存块的最小分配单位，缓存过小的查询结果集会浪费内存空间
+                较小的值会减少空间浪费，但会导致更频繁地内存分配及回收操作
+                较大值的会带来空间浪费
+            · query_cache_size：查询缓存空间的总共可用的大小，单位是字节，必须是1024的整数倍，运行时修改会清空缓存
+            · query_cache_strip_comments：
+            · query_cache_type：缓存功能启用与否
+                ON：启用
+                OFF：禁用
+                DEMAND：按需缓存，仅缓存SELECT语句中带SQL_CACHE的查询结果
+            · query_cache_wlock_invalidate：如果某表被其它连接锁定，是否仍然可以从查询缓存中返回查询结果，默认OFF为可以
+        
+        • 缓存状态变量：
+            mysql> SHOW GLOBAL STATUS LIKE 'Qcache%';
+            
+            · Qcache_free_blocks      ：缓存空闲块
+            · Qcache_free_memory      ：缓存空闲空间大小
+            · Qcache_hits             ：命中次数
+            · Qcache_inserts          ：向查询缓存中插入缓存的次数
+            · Qcache_lowmem_prunes    ：超出可用内存而被清理的次数
+            · Qcache_not_cached       ：未缓存次数
+            · Qcache_queries_in_cache ：缓存中的条目数，小于等于Qcache_inserts 
+            · Qcache_total_blocks     ：缓存总块数
+            
+            命中率：Qcache_hits/Com_select 
+
+    ♦ 索引：
+        • 索引的作用：加速查询操作，如是没索引，每次查询将进行全表扫描
+            表中数据子集：把表中某个或某些字段(WHERE子句中用到的字段)的数据提取出来另存为一个特定数据结构组织的数据
+                
+        • 索引类型：B+ TREE，HASH
+            ✧ B+ TREE：顺序存储，每一个叶子结点到根结点的距离相同，左前缀索引，适合于范围类型的数据查询
+            
+                ► 适用于B+ TREE索引的查询类型：
+                    · 全值匹配：精确匹配某个值
+                    · 匹配最左前缀：只精确起头的部分
+                    · 匹配范围值：BETWEEN..AND..
+                    · 精确匹配某一列，范围匹配另一列：对于组合多字段索引来说
+                    · 只用访问索引的查询：覆盖索引(索引即要查询本身)
+                
+                ► 不适用B+ TREE索引：(组合字段索引)
+                    · 如查条件不是从最左侧列开始，索引无效
+                    · 不能跳过索引中的某列
+                    · 如果查询中的某个列是为范围查询，那么其右侧的列都无法再使用索引优化查询
+
+                √ 例子：在name,age字段上建立组合索引
+                    where name like 'tom%'              # 用上索引
+                    where name like '%tom'              # 用不上索引
+                    where age = 18                      # 用不上索引
+                    where name = 'tom%' and age < 22    # 用上索引
+                
+            ✧ Hash索引：基于哈希表实现，特别适用于值的精确
+            
+                ► 适用场景：只支持等值比较查询，例如=, IN(), <=>
+                ► 不用场景：所有非精确值查询
+
+            ✧ 聚集索引，非聚集索引：
+                聚簇索引：索引和数据一起存放
+                    数据文件：索引顺序文件
+                非聚簇索引：索引和数据分开存放，而数据记录未必顺序存放；但索引数据一般顺序存放
+                    数据文件：堆文件
+                    
+        • 索引优点：
+            · 降低需要扫描的数据量，减少了IO次数
+            · 可以帮助避免排序操作，避免使用临时表
+            · 帮助将随机IO转为顺序IO
+            
+        • 高性能索引策略：
+            1. 在WHERE中独立使用列，尽量其参与运算
+            2. 左前缀索引：索引构建于字段的最左侧的多少个字符，要通过不重复的索引值和数据表的记录总数的比值来评估
+            3. 多列索引：AND边接的多个查询条件更适合使用多列索引，而非多个单键索引
+            4. 选择合适的索引列次序：选择性最高的放左侧
+            
+    ♦ EXPLAIN来分析索引有效性：
+        mysql> EXPLAIN [EXTENDED|PARTITIONS] SELECT select_options
+            
+        输出结果分析：
+                       id: 1
+              select_type: SIMPLE
+                    table: students
+                     type: index_merge
+            possible_keys: Name,Age
+                      key: Name,Age
+                  key_len: 152,1
+                      ref: NULL
+                     rows: 7
+                    Extra: Using sort_union(Name,Age); Using where
+
+            • id：当前查询语句中，每个SELECT语句的编号
+                
+                复杂的查询的类型主要三种：
+                    1. 简单子查询
+                    2. 用于FROM中的子查询
+                    3. 联合查询
+                    
+                注意：联合查询的分析结果会出现一个额外的匿名临时表
+                
+            • select_type：查询类型：
+                · SIMPLE      ：简单查询
+                · SUBQUERY    ：简单子查询
+                · DERIVED     ：用于FROM中的子查询
+                · PRIMARY     ：联合查询中的第一个查询
+                · UNION       ：联合查询中的第一个查询之后的其它查询
+                · UNION RESULT：联合查询生成的临时表
+                    
+            • table：查询针对的表
+            • type：关联类型，或称为访问类型，即MySQL如何去查询表中的行
+                · ALL     ：全表扫描
+                · index   ：根据索引的顺序进行的全表扫描，但同时如果Extra列出现了"Using index"表示使用了覆盖索引
+                · range   ：有范围限制地根据索引实现范围扫描，扫描位置始于索引中的某一项，结束于另一项
+                · ref     ：根据索引返回的表中匹配到某单个精确值的所有行（匹配给定值的行不止一个）
+                · eq_ref  ：根据索引返回的表中匹配到某单个值的单一行，仅返回一个行，但需与某个额外的参考值比较，而不是常数
+                · const   ：与某个常数比较，且只返回一行
+                · system  ：同上
+
+            • possiable_keys：查询中可能会用到的索引
+            • key：查询中使用的索引
+            • key_len：查询中用到的索引长度
+            • ref：在利用key字段所显示的索引完成查询操作时所引用的列或常量值
+            • rows：MySQL估计为找到所有的目标项而需要读取的行数
+            • Extra：额外信息
+                · Using index     ：使用了覆盖索引进行的查询
+                · Using where     ：拿到数据后还要再次进行过滤
+                · Using temporary ：使用了临时表以完成查询
+                · Using filesort  ：对结果使用了一个外部索引排序
+    
+
+    ♦ 
+
+    ♦ 
+
+    ♦ 
+
+    ♦ 
