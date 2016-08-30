@@ -1,0 +1,336 @@
+2016-08-29
+# edit by liu2lin600
+
+Git版本控制：
+
+
+♦ 版本控制工具：
+    1. 本地版本控制系统
+    2. 集中化版本控制系统 --> SVN
+    3. 分布式版本控制系统 --> Git, BitKeeper
+
+♦ Git中3个区域：
+    工作区：Working Space 本地工作目录
+    暂存区：Index(索引区) 记录工作区中的文件对应在版本库的对象的映射关系快照(Tree)，不记录文件内容
+        对于一个新提交，如果某些文件未改变，则指向对象库的对不发生变化，变化的文件在对象库中生成新对象
+    版本库：对象库，包括Tree, Blob, Commit, Tag对象
+
+    ✽ 流程：
+        工作区                 索引               版本库
+          ｜                    ｜                  ｜
+          ｜      git add-->    ｜   git commit-->  ｜ 
+          ｜<--git rm --cached  ｜
+
+♦ Git配置：
+    git强制要求配置用户名及邮箱，才能进行后续提交等操作
+    
+    • 用户全局：~/.gitconfig        --global
+    • 仓库级：REPO/.git/config  
+    • 系统级：/etc/git/gitconfig    --system
+
+        git config -l     # 查看所有配置信息
+        git config --global user.name liu2lin600
+        git config --global user.email 'liu2lin600@gmail.com'
+
+♦ Git对象：
+    hash值，使用40位的十六进行表示
+
+    1. 块(Blob)对象：文件每个版本表现为一个块
+    2. 树(Tree)对象：一个目录代表第一层文件和目录信息，如果是目录则指向另一树对象
+    3. 提交(commit)对象：用于保存版本库一次变化的元数据，包括作者、邮箱、提交日期、日志，每个提交对象都指向一个目录树对象
+    4. 标签(tag)对象：用于给一个特定对象一个易读的名称，一般用于标记commit对象
+
+    • 对象关系图：
+                        /--->Tree --->Blob
+        commit --->Tree --->Blob
+           ^            \--->Blob
+           |
+          Tag
+
+    • 对象库：内容寻址系统
+        打包文件：pack file, git内部会将内容相近的文件内容打包，已实现节约空间
+
+    • 相关底层命令：
+        git ls-files [-s]           # 显示暂存(索引)文件
+        git ls-files -o             # 显示未被追踪文件
+        git ls-files --unmerged     # 冲突时查看未合并前分支
+        git cat-file -p HASH        # 查看对象内容
+        git cat-file -t HASH        # 查看对象类型
+        git hash-object FILENAME    # 计算文件的hash码
+        git write-tree              # 根据当前索引中的内容创建树对象
+
+♦ Git仓库：
+    • 远程：裸仓库，没有工作目录
+    • 本地：包含工作目录，即.git目录
+
+    创建仓库：
+        1. git init [--bare] PROJECT    # 在当前目录初始化，--bare建立远程裸仓库，不会产生.git工作目录
+        2. git clone GIT_ADDR           # 克隆远程仓库
+
+        .git目录结构：
+        ├── COMMIT_EDITMSG
+        ├── config          # 仓库级配置
+        ├── description     # 仓库名信息
+        ├── HEAD            # 当前HEAD指向分支
+        ├── hooks
+        ├── index
+        ├── info
+        │   └── exclude
+        ├── logs
+        │   ├── HEAD
+        │   └── refs
+        │       ├── heads
+        │       │   └── master
+        │       └── remotes
+        │           └── origin
+        │               ├── HEAD
+        │               └── master
+        ├── objects             # 对象信息，前2位作目录，后38位作文件名
+        │   ├── 00
+        │   │   └── 25f4775fffa40a65b3ac1618088fc055347097
+        │   ├── ff
+        │   │   └── e9287a77b48c49126ec6030d1beead9e5e2969
+        │   ├── info
+        │   └── pack            # 包信息
+        │       ├── pack-9b396ec6b80a74f957c9c938a48031cd6c291cfa.idx
+        │       └── pack-9b396ec6b80a74f957c9c938a48031cd6c291cfa.pack
+        ├── packed-refs
+        └── refs                # 定义符号引用
+            ├── heads           # 本地特性分支
+            │   └── master      
+            ├── remotes         # 远程跟踪分支
+            │   └── origin
+            │       ├── HEAD
+            │       └── master
+            └── tags            # 标签分支
+
+♦ Git文件：
+    • 分类：
+        1. 已追踪(tracked)：已添加到版本库是的文件，或已添加到索引中的文件
+        2. 被忽略(ignore)：在版本库中通过'.gitignore'文件中声明被忽略文件
+        3. 未追踪(untracked)：上述2类之外的文件
+
+        .gitignore文件：一般情况下在创建时先定义，可用形式如下
+            1.txt
+            dir/
+            *.jpg
+            !.a
+
+    • status：显示状态
+        git status [-s]
+
+    • add/rm/mv：
+        · git add：将工作目录中的文件添加到暂存区
+            git add FILE    # 添加指定文件
+            git add .       # 添加所有文件
+
+        · git rm：删除暂存区中的映射及工作区中文件
+            实现以下2步：
+                rm 1.txt                # 删除工作区中文件
+                git rm --cached 1.txt   # 删除暂存区中文件
+
+        · git mv：重命名或移动暂存区映射及工作目录中文件名
+
+♦ Git提交：
+    git commit -m 'MES'
+
+    • 提交标识：
+        1. 引用：ID, reference, SHA1, 绝对提交名
+        2. 符号引用：symbolic reference(symref) 间接引用
+            1) 本地特性分支名称 --> refs/heads/REF
+            2) 远程跟踪分支名称 --> refs/remotes/REF
+            3) 标签名
+
+        ✫ 自动维护几个特定目的的特殊符号引用：
+            1. HEAD：始终指向当前分支的最近提交，或检出到其它分支时，目标分支的最近分支
+            2. ORIG_HEAD：合并分支时，当前分支当前提交的上一个提交
+            3. FETCHED_HEAD：
+            4. MERGE_HEAD：合并分支时，其它分支的上一次提交
+
+            示意图：
+                <-- XX <-- ORIG_HEAD <-- HEAD
+                     \                   /
+                      B1 <-- B2 <--MERGE_HEAD
+
+        ✫ 相对提交名：
+            ^：HEAD^1  12e42d^2
+            ~：
+                ^1 == ~1 == ^ 
+                ^^ == ~2
+
+    • 提交差异比较：git diff [--color]
+        git diff FILE1 FILE2        # 比较2个文件差异
+        git diff commit1 commit2    # 比较2次提交差异
+
+        示意图：
+            工作区                     索引                   版本库
+              │     <--git diff-->      │ <--git diff --cached-->│ 
+              │             <----git diff HEAD---->              │
+
+♦ Git回退：
+    • git reset [--soft|--mixed|--head] COMMIT_ID
+        --soft ：将HEAD引用指向指定提交，但不影响索引及工作目录
+        --mixed：将HEAD引用指向指定提交，并将索引内容改变为指定提交的快照，但不改变工作目录
+        --head ：将HEAD引用指向指定提交，并将索引内容改变为指定提交的快照，同时改变工作目录
+
+    • git checkout <file> == git reset HEAD <file>
+        将添加的暂存区的指定文件索引
+
+♦ Git分支：
+    • 命令法则：
+        1. 可以使用"/"，但不能以"/"结尾
+        2. 不能以"-"开头
+        3. 位于"/"后不能以"."开头
+        4. 不能使用连续"."
+        5. 不能使用空白字符
+        6. 不能使用"^","~","?","*","[" 等
+        7. 同一版本库中分支名唯一
+
+    • 相关操作：branch, checkout, merge
+        git branch <-a>                 # 查看分支
+        git show-branch [--more=NUM]    # 显示更详细分支信息
+        git branch <branchname>         # 创建分支
+        git checkout <branchname>       # 切换分支
+        git checkout -b <branchname>    # 创建+切换分支
+        git merge <branchname>          # 以fast forward方式合并分支，看不出来曾经做过合并
+        git merge --no-ff -m '说明' <name>[ <name2> ..]   # 合并后能看出来曾经做过合并
+        git branch -d <name>            # 删除分支
+        git branch -D <name>            # 强行删除
+        git push origin --delete <name> # 删除远程分支
+
+    • 分支合并概念：
+        合并的基础：要合并的分支的最近一次的共同提交
+        我们的版本：当前分支的最近一次提交
+        他们的版本：要合并进来的分支的最近一次提交
+
+    • 合并冲突：
+        1. 新建分支feature1 并在其中修改
+        2. 切回master分支，在相同文件中做了不同的修改
+        3. 这时想要合并feature1时会出现冲突
+        4. 找到冲突文件打开在冲突的地方修改后，再commit，此时再合并冲突解决
+        5. 使用 git log --graph 查看分支的合并情况
+
+        ✽ 放弃合并：git reset --hard ORIG_HEAD
+
+    • 变基操作：rebase
+        git checkout hotfix
+        git rebase master
+        git checkout master
+        git merger -m 'MES' hotfix
+
+    • 保存现场：stash
+        在dev分支上开发还未完成，临时需要在master上改个小bug，又不想直接提交dev中的修改
+
+        1. 在dev分区使用 git stash 将工作现场储存起来
+        2. 切到master分支新建bug01分支，修复bug并合并到master
+        3. 切回dev分支，使用 git stash list 查看刚才储存的工作现场
+        4. 使用 git stash pop 还原工作现场（同时自动删除储存状态）
+
+♦ Git远程：
+    克隆远程分支时，一般只会克隆远程的master分支
+
+    • 服务器协议：local(本地), ssh, http/https, git
+        1. local
+            /path/to/repo.git   (目录)
+            file:///path/to/repo.git
+
+                如：git clone file:///root/test /tmp/
+
+        2. git
+            由git-daemon程序提供，监听在9418/tcp，仅支持读操作且无任何认证措施
+
+            git://host/path/to/repo.git
+            git://host/~USER/path/to/repo.git
+
+        3. ssh
+            ssh://[USER@]host[:port]/path/to/repo.git
+            ssh://[USER@]host[:port]/~USER/path/to/repo.git
+
+            [USER@]host/~USER/path/to/repo.git
+
+        4. http/https
+            v1.6.5-：哑http协议
+            v1.6.6+：智能http协议，支持读、写、认证
+
+    • 引用远程版本库：
+        1. url
+        2. refspecs, 定义一个版本库与其它库的名称空间映射关系
+            格式：+<src>:<dst>
+
+        示例：
+            [remote "origin"]
+                url = git@github.com:liu2lin600/helloworld.git
+                fetch = +refs/heads/*:refs/remotes/origin/*                                 ：
+
+    • 推拉示意图：
+        远程：A <-- B <-- C <-- D(master) <---------- Z
+                    |                                 ^
+                 [fetch]                            [push]
+        本地：A <-- B <-- C <-- D(origin/master)      │
+                    │                   \[merge]      │
+                    └─X <--Y(master) <-- Z(master)--->│
+
+        常用命令：从远程克隆后
+            git checkout -b <name> origin/<name>            # 在本地创建和远程分支对应的分支，名称最好一致
+            git branch --set-upstream <name> origin/<name>  # 建立本地分支和远程分支的关联
+            git pull  ==  git fetch + git merge             # 尽量使用fetch后再merge操作
+            git push origin master
+
+    • 管理远程命令：remote
+        git remote [-v]
+        git remote add linux-nfs git://linux-nfs.org/pub/linux/nfs-2.6.git
+        git remote rename linux-nfs linux-nfs-new
+        git remote remove linux-nfs-new
+        git branch -r
+
+♦ Git日志：
+    git log --graph            # 分支图显示日志
+    git log --oneline          # 单行显示日志
+    git log --stat             # 显示变更概要
+    git log --abbrev-commit    # 显示变更概要
+    git log --until=**         # 按时间条件显示   [since|after|before|]
+    git log --author           # 作者  [--committer]提交者
+    git log --pretty           # 使用其他格式显示历史提交信息
+                    =raw       # 提交提交原始数据
+                    =fuller    # 同时显示作者和提交者
+                    =format    # 后面跟上定制的格式（具体见备注）
+    git log -5                 # 显示5条记录
+    git log -p                 # 显示具体文件改动
+    git reflog                 # 查看全部历史提交记录
+    git show <tag>[<commit_id>] [--stat]     # 查看分析某一个提交
+
+♦ Git标签：
+    git tag <name> [commit_id]                  # 用于新建一个标签，默认为HEAD，也可以指定一个commit id
+    git tag -a <tagname> -m "MSG" [commit_id]   # 可以指定标签信息
+    git tag -s <tagname> -m "MSG" [commit_id]   # 可以用PGP签名标签，需先安装gpg
+    git tag                                     # 可以查看所有标签
+    git push origin <tagname>                   # 可以推送一个本地标签
+    git push origin --tags                      # 可以推送全部未推送过的本地标签
+    git tag -d <tagname>                        # 可以删除一个本地标签
+    git push origin :refs/tags/<tagname>        # 可以删除一个远程标签
+
+♦ 其它：
+    1. 忽略某些文件时，需要编写.gitignore,文件本身要放到版本库里，并且可以对.gitignore做版本管理,如果需忽略的文件已在工作流中 使用 
+        git update-index --assume-unchanged index.php（忽略index.php文件）
+    2. 取别名  git config --global alias.co checkout  配置文件放在用户主目录下的一个隐藏文件.gitconfig中
+
+        牛逼的别名： git config --global alias.lg "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+
+
+备注：可用宏
+
+    %H  提交对象（commit）的完整哈希字串
+    %h  提交对象的简短哈希字串
+    %T  树对象（tree）的完整哈希字串
+    %t  树对象的简短哈希字串
+    %P  父对象（parent）的完整哈希字串
+    %p  父对象的简短哈希字串
+    %an 作者（author）的名字
+    %ae 作者的电子邮件地址
+    %ad 作者修订日期（可以用 -date= 选项定制格式）
+    %ar 作者修订日期，按多久以前的方式显示
+    %cn 提交者(committer)的名字
+    %ce 提交者的电子邮件地址
+    %cd 提交日期
+    %cr 提交日期，按多久以前的方式显示
+    %s  提交说明
