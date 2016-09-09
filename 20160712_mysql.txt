@@ -136,7 +136,8 @@ MySQL操作：MySQL提示下命令
             CREATE TABLE students (
                 ID INT UNSIGNED NOT NULL UNIQUE KEY AUTO_INCREMENT, 
                 Name CHAR(10) NOT NULL, Age TINYINT, 
-                Gender ENUM('f','m') NOT NULL, Class VARCHAR(50)
+                Gender ENUM('f','m') NOT NULL, 
+                Class VARCHAR(50)
             );
 
         2. DESC TB_NAME;           # 查看表定义

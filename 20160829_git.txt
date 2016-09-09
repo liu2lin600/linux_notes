@@ -316,6 +316,10 @@ Git版本控制：
 
         牛逼的别名： git config --global alias.lg "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
 
+♦ 获取帮助：
+    git reset ==> man git-reset   # 其它类似
+
+
 
 备注：可用宏
 

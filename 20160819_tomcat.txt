@@ -261,7 +261,7 @@ Tomcat：使用java语言编写，需运行在jvm上
         
         如：手动提供一测试类应用，并冷部署(二进制包为例)
 
-            mkidr  -pv  /usr/local/tomcat/webapps/test/{classes,lib,WEB-INF}
+            mkdir -pv /usr/local/tomcat/webapps/test/{classes,lib,WEB-INF}
             vim /usr/local/tomcat/webapps/test/index.jsp 
                 
                 <%@ page language="java" %>

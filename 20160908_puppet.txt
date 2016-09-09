@@ -1,0 +1,565 @@
+2016-09-08
+# edit by liu2lin600
+
+运维工具之puppet：
+
+
+♦ 运维工具：
+    1. OS Provision：系统安装
+        bare metal: pxe, cobbler
+        virtual machine: image file template 
+
+    2. Configuration：配置
+        ansible(agentless)
+        puppet(master/agent) (ruby)
+        saltstack (python)
+
+    3. command and control：
+        ansible、fabric、func...
+        
+♦ puppet：
+    • puppet工作模型：
+        1. 单机模型
+        2. master/agent
+
+    • 3层模型：
+        ^ 配置语言层(configure language)             # 通过底层接口编写实现具体功能
+        | 事务层    (transaction layer)
+        | 资源抽象层(resource abstraction layer)     # 将各操作系统对上提供接口
+        
+    • 单机模型：
+        · 流程：
+            maifests(各资源清单)-->compile-->catalog(伪代码)-->apply(先查询再执行)-->完成并报告状态
+
+        · 主程序包：
+            facter
+            puppet
+            puppet-server
+
+        · 命令语法：
+            puppet <subcommand> [options] <action> [options]
+            puppet help <subcommand>    
+            puppet help <subcommand> <action>
+            
+            subcommand：
+                apply      : 本地应用资源清单
+                facts      : 获取保存facts
+                help       : 帮助
+                module     : 创建安装或搜索模块  
+                man        : 手册
+                describe   : 资源类型
+            
+        · puppet apply：本地执行资源清单
+            语法：puppet apply  [-v|--verbose] [-d|--debug] [--noop] [--execute] <manifest_file>
+                --noop：干跑模式，测试使用
+            
+    • puppet资源：
+        · 相关命令：
+            puppet describe [-h|--help] [-s|--short] [-p|--providers] [-l|--list] [-m|--meta]
+
+            puppet describe -l              # 获取puppet支持所有资源类型及其说明
+            puppet describe <type>          # 获取特定类型的参数列表详细信息
+            puppet describe -s <type>       # 获取特定类型的简要参数列表信息
+            puppet describe -s -m <type>    # 获取特定类型的简要元参数列表信息
+        
+        · 资源抽象的纬度（RAL是如何抽象资源的？）：
+            1. 类型，具有类似属性的组件，例如user, group, package等
+            2. 将资源的属性或状态主与其实现方式分离
+            3. 仅描述资源的目标状态，也即期望其实现的结果，而不是具体过程
+            
+            资源抽象层由"类型"(Type)和"提供者"(Provider不同OS上的特定实现)组成
+        
+        · 资源定义的文件叫"清单"，以.pp为后缀，语法如下：
+            type{'title':
+                attribute   =>  value,
+                ...
+            }
+            
+            ✽ 注意：type必须使用小写字符，title是一个字符串，在同一类型必须惟一
+            
+        · 资源的三类特殊属性：
+            1. namevar：名称/名称变量，name，可由title表示
+            2. ensure：定义资源的目标状态，如present, absent...
+            3. metaparameter：元参数
+                依赖关系：before(指定资源前完成), require(依赖于指定资源) 
+                通知关系：notify(前资源中使用通知), subscribe(后资源使用订阅)
+                    
+        · 资源引用：
+            Type['title']       # Type的首字母大写
+
+            次序链：-> 如: Group['liu']  -> User['liu']
+            通知链：~> 如: File['httpd'] ~> Service['httpd']
+
+        · 常用类型：
+            ► notify：显示通知信息
+                message：要发送的通知消息内容
+                name：消息名称
+
+                △ 如：
+                    notify{'hello':
+                        message  => 'hello world'
+                    }
+                
+            ► group：组管理
+                name：组名
+                gid： GID
+                ensure：present(添加)，absent(删除)
+                system：是否为系统组
+                
+                △ 如：创建distros组
+                    group{'distros':
+                        gid     => 2001,
+                        ensure  => present,
+                        system  => false,
+                    }   
+                
+            ► user：用户管理
+                name：用户名
+                uid：UID
+                gid：基本组ID
+                groups：附加组，不能包含基本组
+                comment：注释信息
+                expiry：过期时间
+                home：家目录
+                password：加密后的密码串，接受本机所有支持加密方式
+                password_min_age：密码最短使用期限
+                shell：用户默认的shell
+                system：是否为系统用户 
+                managehome：是否创建或删除家目录
+                ensure：present(添加)，absent(删除)
+
+                △ 如：创建liu2lin用户
+                    user {'liulin':
+                        ensure     => present,
+                        uid        => '601',
+                        shell      => '/bin/bash',
+                        home       => '/home/liu2lin',
+                        managehome => true,
+                        require    => Group['distros']
+                    }
+                
+            ► cron：定时任务管理
+                command：要执行的任务的命令
+                ensure：present(添加), absent(删除)
+                hour：时
+                minute：分
+                monthday：日
+                month：月
+                weekday：星期
+                user：添加至哪个用户
+                name：cron job的名称
+                
+                △ 如：每5分钟向服务器同步时间
+                    cron{'timesync':
+                        command => '/usr/sbin/ntpdate 172.16.0.1 &> /dev/null',
+                        minute  => '*/5'
+                    }               
+                
+            ► package：程序包管理
+                name：包名
+                ensure：installed, present, latest, absent(卸载)
+                source：指定程序文件所在路径
+
+                △ 如：安装nginx
+                    package{'nginx':
+                        ensure => 'nginx'
+                    }
+                
+            ► service：服务管理
+                name：
+                enable：true(开机自启), false, manual
+                ensure：running, true; stopped, false
+                hasrestart：是否支持重启 true, false
+                path：init scripts搜索路径；默认为/etc/rc.d/init.d/
+                restart：用户手动指定的restart操作，通常用于定义reload操作
+
+                △ 如：
+                    service{'nignx':
+                        ensure  => running,
+                        enable  => true,
+                        restart => '/usr/sbin/nginx -s reload'
+                    }
+                    Package['nginx'] ~> Service['nginx']    # 安装后通知启动服务
+
+            ► file：文件管理，包括内容、属主组、权限
+                ensure：present，absent, file, directory, link 
+                    file：文件内容或复制，或直接给出
+                    link：指明链接目标，即target
+                content：直接给定的文件内容
+                path：文件路径；可使用puppet url来实现远程复制
+                source：复制本地文件路径或puppet URI远程路径
+                target：指明链接原文件
+                owner：属主
+                group：属组
+                mode：权限
+
+                △ 如：
+                    file {'httpd.conf':
+                        ensure  => file,
+                        path    => '/etc/httpd/conf/httpd.conf',
+                        source  => '/tmp/httpd.conf',
+                        require => Package['httpd']
+                    }
+                
+            ► exec：执行命令
+                command：namevar，要运行的命令
+                cwd：运行命令的工作目录
+                user：指定用户身份运行
+                group：指定组身份运行
+                onlyif：此处指定的命令运行成功方会运行command指明的命令
+                unless：与onlyif相反
+                path：命令的搜索路
+                refreshonly：仅接收到订阅的资源通知时方才运行
+                timeout：超时时长
+                tries：重试次数
+
+    • puppet变量：
+        · 格式：以'$'开头，'='赋值
+            1. 简短名称 $var
+            2. 完全限定名称 $scope::var
+
+        · 作用域：
+            top scope --> node scope --> class --> child class
+            注：变量引用只能引用外层作用域的变量
+
+        · 数据类型：
+            字符型：引号可有可无，双引号解析变量
+            数值型：默认均识别为字符串，仅在数值上下文才以数值对待
+            数组：[]中以逗号分隔元素列表
+            布尔型：true, false
+            hash：{}中以逗号分隔k/v数据列表，键为字符型，值为任意puppet支持的类型
+            undef：未赋值型 
+            
+        · 正则表达式：
+            /(?<ENABLED OPTION>:<PATTERN>)/
+            /(?-<DISABLED OPTION>:<PATTERN>)/
+            
+            OPTIONS：
+                i：忽略字符大小写
+                m：把'.'当换行符
+                x：忽略<PATTERN>中的空白字符
+
+                ✽ 注：'-'号取反，最常用为'i-mx'，不能赋值给变量，仅能用在接受=~或!~操作符的位置
+
+            △ 如：
+                $pkgname = $operatingsystem ? {
+                   /(?i-mx:ubuntu|debian)/        => 'apache2',
+                   /(?i-mx:centos|fedora|redhat)/ => 'httpd'
+                }
+            
+        · puppet的变量类型：
+            1. facts：由facter提供，top scope，使用facter -p命令查看
+            2. 内建变量：
+                master端变量 
+                agent端变量 
+                parser变量
+            3. 用户自定义变量：
+                
+        · 流程控制语句：
+            ► if语句：
+                if  CONDITION {
+                    ...
+                } else {
+                    ...
+                }
+            
+                CONDITION的给定方式：
+                    (1) 变量
+                    (2) 比较表达式 
+                    (3) 有返回值的函数
+            
+                △ 如：       
+                    if $operatingsystem =~ /(?i-mx:(centos|redhat|fedora))/ {
+                        $pkgname='httpd'
+                    } elsif $operationsystem =~ /(?i-mx:(debian|ubuntu))/ {
+                        $pkgname='apache2'
+                    } else {
+                        $pkgname='httpd'
+                    }
+
+                    package{"$pkgname":
+                        ensure  => installed,
+                    }           
+                
+            ► case语句：
+                case CONTROL_EXPRESSION {
+                    case1: { ... }
+                    case2: { ... }
+                    case3: { ... }
+                    ...
+                    default: { ... }
+                }
+                
+                CONTROL_EXPRESSION：
+                    (1) 变量
+                    (2) 表达式 
+                    (3) 有返回值的函数
+                    
+                各case的给定方式：
+                    (1) 直接字串
+                    (2) 变量 
+                    (3) 有返回值的函数
+                    (4) 正则表达式模式
+                    (5) default 
+
+                △ 如：
+                    case $operationsystem {
+                        'Solaris':           { notify('hello Solaris') }
+                        'RedHat','CentOS':   { notify('hello RedHats') }
+                        /^(Debian|Ubuntu)$/: { notify("hello $1") }
+                        default:             { notify( 'opps' ) }
+                    }
+                    
+            ► selector语句：用于选择赋值
+                CONTROL_VARIABLE ? {
+                    case1   => value1,
+                    case2   => value2,
+                    ...
+                    default => valueN
+                }
+                
+                CONTROL_VARIABLE的给定方法：
+                    (1) 变量
+                    (2) 有返回值的函数
+                    
+                各case的给定方式：单一值
+                    (1) 直接字串
+                    (2) 变量 
+                    (3) 有返回值的函数
+                    (4) 正则表达式模式
+                    (5) default 
+                    
+                    注意：不能使用列表格式，但可以是其它的selecor
+                
+                △ 如：   
+                    $pkgname = $operatingsystem ? {
+                        /(?i-mx:(ubuntu|debian))/         => 'apache2',
+                        /(?i-mx:(redhat|fedora|centos))/  => 'httpd',
+                        default => 'httpd'
+                    }
+
+                    package{"$pkgname":
+                        ensure  => installed
+                    }           
+                
+    • puppet的类：
+        · 类：puppet中命名的代码模块，常用于定义一组通用目标的资源，可全局调用可被继承，也可以包含子类
+            
+        · 语法格式：
+            class NAME {
+                ...puppet code...
+            }
+            
+            class NAME(parameter1, parameter2) {
+                ...puppet code...
+            }
+            
+        · 调用方式：类代码只有声明后才会执行
+            (1) include CLASS_NAME1, CLASS_NAME2, ...
+            (2) class{'CLASS_NAME':
+                    attribute => value,     # 传递参数
+                    ...
+                }
+              
+            △ 示例1：不带参数
+                class apache2 {
+                    $webpkg = $operatingsystem ? {
+                        /(?i-mx:(centos|redhat|fedora))/  => 'httpd',
+                        /(?i-mx:(ubuntu|debian))/         => 'apache2',
+                        default => 'httpd'
+                    }
+
+                    package{"$webpkg":
+                        ensure  => installed
+                    }
+
+                    file{'httpd.conf':
+                        ensure  => file,
+                        path    => '/etc/httpd/conf/httpd.conf',
+                        owner   => root,
+                        group   => root,
+                        source  => '/tmp/httpd.conf',       # 复制源文件
+                        require => Package["$webpkg"],      # 依赖程序先安装
+                        notify  => Service['httpd']         # 通知服务
+                    }
+
+                    service{'httpd':
+                        ensure  => running,
+                        enable  => true
+                    }
+                }
+                include apache2     # 调用
+                
+            △ 示例2：带参数类
+                class apache2($username='daemon',$port='80') {
+                    $webpkg = $operatingsystem ? {
+                        /(?i-mx:(centos|redhat|fedora))/  => 'httpd',
+                        /(?i-mx:(ubuntu|debian))/         => 'apache2',
+                        default => 'httpd'
+                    }
+
+                    package{"$webpkg":
+                        ensure  => installed
+                    }
+
+                    file{'/etc/httpd/conf/httpd.conf':
+                        ensure  => file,
+                        owner   => root,
+                        group   => root,
+                        source  => '/tmp/httpd.conf',
+                        require => Package["$webpkg"],
+                        notify  => Service['httpd']
+                    }
+
+                    service{'httpd':
+                        ensure  => running,
+                        enable  => true,
+                    }
+
+                    notify{'msgs':
+                        message => "username variable value $username, port $port"
+                    }
+                }
+
+                class{'apache2':
+                    username => 'apache',
+                    port     => '8080',
+                }   
+                
+        · 类继承的方式：
+            class PARENT_CLASS::SUB_CLASS inherits PARENT_CLASS {
+                ...puppet code...
+            }
+            
+            △ 示例：
+                class nginx {
+                    package{'nginx':
+                        ensure  => installed,
+                    }
+
+                    service{'nginx':
+                        ensure  => running,
+                        enable  => true,
+                        restart => '/usr/sbin/nginx -s reload'
+                    }
+                }
+
+                class nginx::web inherits nginx {
+                    Service['nginx'] {
+                        subscribe +> File['ngx-web.conf']    # 添加父类中定义的类型属性，修改使用'=>'
+                    }
+
+                    file{'ngx-web.conf':
+                        ensure  => file,
+                        path    => '/etc/nginx/conf.d/ngx-web.conf',
+                        source  => '/root/manifests/ngx-web.conf'       # 准备好复制源
+                    }
+                }
+
+                class nginx::proxy inherits nginx {
+                    Service['nginx'] {
+                        subscribe +> File['ngx-proxy.conf']
+                    }
+
+                    file{'ngx-proxy.conf':
+                        ensure  => file,
+                        path    => '/etc/nginx/conf.d/ngx-proxy.conf',
+                        source  => '/root/manifests/ngx-proxy.conf',
+                    }
+                }
+                include nginx::proxy     # 调用nginx下的proxy了类       
+                
+    • puppet模板：
+        · erb：模板语言，embedded ruby
+        
+        · puppet兼容的erb语法帮助：
+            https://docs.puppet.com/puppet/latest/reference/lang_template_erb.html
+        
+        · 文本文件中内嵌变量替换机制：
+            <%= @VARIABLE_NAME %>
+            
+        · 使用：
+            file{'title':
+                ensure  => file,
+                content => template('/PATH/TO/ERB_FILE')   # 模板文件使用.erb后缀，使用template解析模板
+            }
+        
+    • puppet模块：
+        模块就是一个按约定的、预定义的结构存放了多个文件或子目录的目录，目录里的这些文件或子目录必须遵循一定格式的命名规范，puppet会在配置的路径下查找所需要的模块
+
+        · 相关命令：
+            puppet module <action> [--environment production ] [--modulepath $basemodulepath ]
+
+            puppet module list              # 显示本地模块
+            puppet module search KEYWORD    # 摸索 
+            puppet module install NAME      # 安装
+            puppet module uninstall NAME    # 卸载
+            puppet module upgrade NAME      # 升级
+
+        · 组织结构定义：/etc/puppet/modules目录下
+            MODULES_NAME：      # 模块名以小写字母开头，可包含字母数字下划线，不能为"main"和"settings"
+                manifests/      # 资源清单目录，'.pp'为后缀
+                    init.pp     # 必须一个类定义，类名称必须与模块名称相同
+                files/          # 静态文件目录
+                templates/      # 模板目录，引用时只需写模板名即可，不需带路径，文件以'.erb'后缀
+                lib/            # 插件目录，常用于存储自定义的facts以及自定义类型
+                spec/           # 类似于tests目录，存储lib/目录下插件的使用帮助和范例
+                tests/          # 当前模块的使用帮助或使用范例文件
+
+                注：不同版本有可能不同，manifests, files, templates, lib保持不变
+
+            使用：？？？
+                文件：content => file('MODULE/FILE')
+                模版：content => template('MODULE/xxx.erb')
+
+        · 模块调用：
+            puppet apply -e 'include MODULE_NAME'
+
+        △ init.pp中添加子类：以test模板为例
+            manifests/httpd.pp：
+                class test::httpd inherits test{
+                    package{'httpd':
+                        ensure => installed
+                    }   
+                }
+            
+            manifests/init.pp：
+                class test{
+                    include test::httpd
+                }
+                
+        △ mariadb模块中的清单文件示例：
+            class mariadb($datadir='/var/lib/mysql') {
+                package{'mariadb-server':
+                    ensure  => installed
+                }
+
+                file{"$datadir":
+                    ensure  => directory,
+                    owner   => mysql,
+                    group   => mysql,
+                    require => [ Package['mariadb-server'], Exec['createdir'], ]
+                }
+
+                exec{'createdir':
+                    command => "/usr/bin/mkdir -pv $datadir",
+                    require => Package['mariadb-server']
+                }
+
+                file{'my.cnf':
+                    path    => '/etc/my.cnf',
+                    content => template('mariadb/my.cnf.erb'),
+                    require => Package['mariadb-server'],
+                    notify  => Service['mariadb']
+                }
+
+                service{'mariadb':
+                    ensure  => running,
+                    enable  => true,
+                    require => [ Exec['createdir'], File["$datadir"], ]
+                }
+            }
+
+            命令下调用：
+                puppet apply -e 'include mariadb('/data/mydata')'
+        

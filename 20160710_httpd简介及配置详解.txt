@@ -356,23 +356,39 @@ httpd-2.2配置文件说明：/etc/httpd/conf/httpd.conf
 
 
         配置httpd支持https：
-            (1) 为服务器申请数字证书
+            (1) 为服务器申请数字证书，以下为在同台主机上演示
+                yum -y install mod_ssl httpd
+
                 测试：通过私建CA发证书
                     (a) 创建私有CA
-                    (b) 在服务器创建证书签署请求
-                    (c) CA签证
-                    
-            (2) 配置httpd支持使用ssl，及使用的证书；
-                yum -y install mod_ssl
+                        (umask 077; openssl genrsa -out /etc/pki/CA/private/cakey.pem 2048)
+                        openssl req -new -x509 -key /etc/pki/CA/private/cakey.pem -out /etc/pki/CA/cacert.pem -days 365
+                        touch /etc/pki/CA/{serial,index.txt}
+                        echo 01 > /etc/pki/CA/serial
 
+                    (b) 在服务器创建证书签署请求
+                        mkdir /etc/httpd/ssl
+                        cd /etc/httpd/ssl
+                        (umask 077; openssl genrsa -out httpd.key 2048)
+                        openssl req -new -key httpd.key -out httpd.csr
+
+                    (c) CA签证
+                        openssl ca -in /etc/httpd/ssl/httpd.csr -out /etc/pki/CA/certs/httpd.crt -days 365
+                        cp /etc/pki/CA/certs/httpd.crt /etc/httpd/ssl/
+                    
+            (2) 配置httpd支持使用ssl，及使用的证书
                 配置文件：/etc/httpd/conf.d/ssl.conf
-                    DocumentRoot
-                    ServerName
-                    SSLCertificateFile
-                    SSLCertificateKeyFile
+                    DocumentRoot "/var/www/html"
+                    ServerName test.liu2lin.com:443
+                    SSLCertificateFile      /etc/httpd/ssl/httpd.crt
+                    SSLCertificateKeyFile   /etc/httpd/ssl/httpd.key 
                     
             (3) 测试基于https访问相应的主机；
                 openssl  s_client  [-connect host:port] [-cert filename] [-CApath directory] [-CAfile filename]
+
+            (4) 浏览器加载自签证书
+                将/etc/pki/CA/cacert.pem复制到浏览器主机上，并重命名为.crt后缀文件再导入浏览器受信任证书列表
+                访问https://test.liu2lin.com即可
         
 
     17、服务器status页面

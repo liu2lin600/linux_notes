@@ -133,26 +133,26 @@ openssl：套件，开源程序
 
 	1. 生成密钥对儿
 		(umask 077; openssl genrsa -out /etc/pki/CA/private/cakey.pem 2048)
-		查看公钥：openssl rsa -in private/cakey.pem -pubout -text -noout
+		查看公钥：openssl rsa -in /etc/pki/CA/private/cakey.pem -pubout -text -noout
 
 	2. 生成自签证书
 		openssl req -new -x509 -key /etc/pki/CA/private/cakey.pem -out /etc/pki/CA/cacert.pem -days 365
-        -new:生成新证书签署请求
-        -x509:生成自签格式证书，专用于创建私有CA
-        -key:生成请求时用到的私有文件路径
-        -out:生成的请求文件，如果是自签操作则直接生成签署过的证书
-        -days:证书有效时长，天
+            -new:生成新证书签署请求
+            -x509:生成自签格式证书，专用于创建私有CA
+            -key:生成请求时用到的私有文件路径
+            -out:生成的请求文件，如果是自签操作则直接生成签署过的证书
+            -days:证书有效时长，天
         回车后填写的内容：
             国家代码：CN，省，城市，公司，部门，个人或服务器名，邮件
 
     3. 为CA提供所需目录及文件
-        mkdir /etc/pki/CA{cert,crl,newcerts}    # 如果已生成则此步省略
-        touch /etc/pki/CA{serial,index.txt}
+        mkdir /etc/pki/CA/{cert,crl,newcerts}    # 如果已生成则此步省略
+        touch /etc/pki/CA/{serial,index.txt}
         echo 01 > /etc/pki/CA/serial
 
 
 用openssl实现证书申请：
-	1. 在主机上生成密钥，保存至应用此证书的服务的配置文件目录下, 例如
+	1. 在申请主机上生成密钥，保存至应用此证书的服务的配置文件目录下, 例如
 		mkdir /etc/httpd/ssl
 		cd /etc/httpd/ssl
 		(umask 077; openssl genrsa -out httpd.key 2048)
@@ -160,11 +160,11 @@ openssl：套件，开源程序
 	2. 生成证书签署请求
 		openssl req -new -key httpd.key -out httpd.csr 
 
-	3. 将请求文件发往CA主机
+	3. 将请求文件发往CA服务主机
         scp httpd.csr root@xxx:/tmp
 	
     4. CA签署证书(CA主机上操作)
-		openssl ca -in /tmp/httpd.csr -out /etc/pki/CA/certs/httpd.crt -days DAYS
+		openssl ca -in /tmp/httpd.csr -out /etc/pki/CA/certs/httpd.crt -days 365
         查看证书信息：
             openssl x509 -in /etc/pki/CA/certs/httpd.crt -noout -serial -subject
 

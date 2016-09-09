@@ -4,7 +4,7 @@
 
 MariaDB or MySQL：
    
-    ♦ 版本：
+    ♦ 版本迭代：
         MySQL：5.1 --> 5.5 --> 5.6 --> 5.7
         MariaDB：5.5.x --> 10.x
 
@@ -17,7 +17,7 @@ MariaDB or MySQL：
         存储引擎：
             MyISAM、InnoDB(变种XtraDB)、Memory、Merge、Federated、CSV、Archive、Blackholl、Aria、SphinxSE、TokuDB
         
-    ♦ 特性：
+    ♦ 基本特性：
         插件式存储引擎
         单进程多线程
             
@@ -30,7 +30,7 @@ MariaDB or MySQL：
                 i686, x86_64; 注间依赖glibc VERSION版本
             3. prepackage：预编译
                 rpm, deb，注意os, arch区分 
-        
+
     ♦ 配置文件：
         启动时会读取多处的多个配置文件，而且会以指定的次序的进行，不同的配置文件中出现同一参数且拥有不同值时，后读取将为最终生效值
             
@@ -228,7 +228,8 @@ MariaDB or MySQL：
             mysql> SET @@global.sql_mode='STRICT_ALL_TABLES';
              
     ♦ SQL操作：
-        DDL，DML
+        DDL(数据定义语言)：定义关系、修改关系、删除关系、定义完整性约束、管理视图及访问权限
+        DML(数据操纵语言)：插入行、修改行、删除行
 
         • DDL：
             查看：mysql> HELP Data Definition
@@ -577,7 +578,7 @@ MariaDB or MySQL：
                 
             3. mysql> SELECT ... [FOR UPDATE | LOCK IN SHARE MODE]  # 查询指定行并施加锁，并立即释放，用于事务中
                 
-    ♦ 事务：
+    ♦ 事务机制：
         ✽ 注意：MyISAM不支持事务
 
         • 事务：一组原子性的SQL查询、或者是一个或多个SQL语句组成的独立工作单元
@@ -622,7 +623,7 @@ MariaDB or MySQL：
         • 查看InnoDB存储引擎的状态信息：
             mysql> SHOW ENGINE innodb STATUS;   # IO、缓存、缓冲、日志...
             
-    ♦ 权限：
+    ♦ 权限分类：
         类型：库级别、表级别、字段级别、管理类、程序类
         
         • 管理类：
@@ -875,11 +876,707 @@ MariaDB or MySQL：
                 · Using temporary ：使用了临时表以完成查询
                 · Using filesort  ：对结果使用了一个外部索引排序
     
+    ♦ 日志：
+        • 查询日志   ：general_log
+        • 慢查询日志 ：log_slow_queries
+        • 错误日志   ：log_error, log_warnings
+        • 二进制日志 ：binlog
+        • 中继日志   ：relay_log
+        • 事务日志   ：innodb_log_%
 
-    ♦ 
+        注：二进制日志最好不要跟数据文件放同一磁盘上
+        
+        1、查询日志：记录查询语句，一般关闭
+            · 存储位置：
+                文件：file
+                表：table (mysql.general_log)
+            
+            · 相关服务器变量：
+                log_output={FILE|TABLE|NONE}    # 决定是否记录，记录时以何种方式记录
+                general_log={ON|OFF}            # 是否启用
+                general_log_file=HOSTNAME.log   # 记录为文件时的文件名
+            
+        2、慢查询日志：记录运行时间超出指定时长的查询
+            · 存储位置：
+                文件：FILE
+                表：TABLE (mysql.slog_log)
+            
+            · 变量：
+                long_query_time=10.00000        # session级别，默认为10s
+                
+                log_output={FILE|TABLE|NONE}    # 决定是否记录
+                log_slow_queries={ON|OFF}       # 是否开启
+                    slow_query_log={ON|OFF}     # 旧版本变量
+                    slow_query_log_file=        # 旧版本变量
+                log_slow_rate_limit             # 
+                log_slow_verbosity              # 详细级别
+                log_slow_filter=admin,filesort,filesort_on_disk,full_join,full_scan,query_cache,query_cache_miss,tmp_table,tmp_table_on_disk
+                    定义过滤器
 
-    ♦ 
+            注：有时并非语句本身执行比较慢，有可能出现阻塞等其它原因造成，mysql本身不会去分析具体原因
+            
+        3、错误日志：
+            · 记录信息：
+                (1) mysqld启动和关闭过程输出的信息
+                (2) mysqld运行中产生的错误信息
+                (3) event scheduler(定时运行器)运行时产生的信息
+                (4) 主从复制架构中，从服务器复制线程启动时产生的日志
+            
+            · 变量：  
+                log_error    = /var/log/mariadb/mariadb.log
+                log_warnings = {ON|OFF}         # 是否把警告信息记录于错误日志中
+            
+        4、二进制日志：
+            用于记录引起数据改变或存在引起数据改变的潜在可能性的语句(STATEMENT)或改变后的结果(ROW)，也可能是二者混合，用于replay(重放)作用，日志文件会自动滚动
+            
+            · 记录格式：
+                binlog_format={STATEMENT|ROW|MIXED}
+                    STATEMENT：sql语句
+                    ROW：行，即语句执行结果，跟时下环境密切相关的语句时，如now()等
+                    MIXED：混编，mysql自行决定
+                
+            · 查看二进制日志文件列表：
+                mysql> SHOW MASTER|BINARY LOGS;
+                +----------------+-----------+
+                | Log_name       | File_size |
+                +----------------+-----------+
+                | log-bin.000001 |       245 |
+                +----------------+-----------+
 
-    ♦ 
+            · 手动滚动二进制日志：
+                mysql> FLUSH LOGS;
+                 
+            · 查看当前正在使用的二进制日志文件：
+                mysql> SHOW MASTER STATUS;
+                +----------------+----------+--------------+------------------+
+                | File           | Position | Binlog_Do_DB | Binlog_Ignore_DB |
+                +----------------+----------+--------------+------------------+
+                | log-bin.000001 |      330 |              |                  |
+                +----------------+----------+--------------+------------------+
 
-    ♦ 
+            · 查看二进制 日志文件中的事件：
+                mysql> SHOW BINLOG EVENTS [IN 'log_name'] [FROM pos] [LIMIT [offset,] row_count]
+                +----------------+-----+-------------+-----------+-------------+-------------------------------------------+
+                | Log_name       | Pos | Event_type  | Server_id | End_log_pos | Info                                      |
+                +----------------+-----+-------------+-----------+-------------+-------------------------------------------+
+                | log-bin.000001 |   4 | Format_desc |         1 |         245 | Server ver: 5.5.50-MariaDB, Binlog ver: 4 |
+                | log-bin.000001 | 245 | Query       |         1 |         330 | create database class                     |
+                +----------------+-----+-------------+-----------+-------------+-------------------------------------------+
+                
+            · 服务器变量：
+                log_bin=/PATH/TO/BIN_LOG_FILE   # 指定日志前缀，定义在配置文件中，重启生效
+                sql_log_bin={ON|OFF}            # 是否开启记录功能
+                max_binlog_size=1073741824      # 单文件最大
+                sync_binlog={1|0}               # 是否直接将日志从内存同步到磁盘上
+                
+            · 客户端查看命令：
+                mysqlbinlog [-hHOST] [-uUSER] [-p] [option] BIN_LOG_FILE
+
+                常用选项：
+                    --start-datetime='YYYY-MM-DD hh:mm:ss'
+                    --stop-datetime='YYYY-MM-DD hh:mm:ss'
+                    --start-position=NUM    # 从指定的事件位置查看
+                    --stop-position=NUM     # 只显示到指定的事件位置
+                
+            · 二进制日志事件格式：
+                # at 553
+                #160831  9:56:08 server id 1  end_log_pos 624   Query   thread_id=2     exec_time=0     error_code=0
+                SET TIMESTAMP=1472608568/*!*/;
+                BEGIN
+                /*!*/;
+                
+                事件的开始位置：# at 553
+                事件发生的日期时间：#160831  9:56:08
+                事件发生的服务器id：server id 1
+                事件的结束位置：end_log_pos 624
+                事件的类型：Query
+                事件发生时所在服务器执行此事件的线程的ID： thread_id=2 
+                语句的时间戳与将其写入二进制日志文件中的时间差：exec_time=0
+                错误代码：error_code=0
+                事件内容：SET TIMESTAMP=1472608568/*!*/;
+
+                备：通常每个文件开始于245位置，开始部分用于记录版本等服务器信息
+                
+        5、中继日志：
+            从服务器(slave)上记录下来从主服务器的二进制日志文件同步过来的事件
+            
+        6、事件日志：
+            事务型存储引擎innodb用于保证事务特性的日志文件
+                redo log 
+                undo log 
+                          
+    ♦ 备份和恢复：数据级别
+        备份：存储的数据副本，原始数据持续改变
+        恢复：把副本应用到线上系统，仅能恢复至备份操作时刻的数据状态
+        
+        • 备份原因：
+            1. 灾难恢复：硬件故障(冗余)、软件故障(bug)、自然灾害、黑客攻击、人为误操作...
+            2. 测试：用于测试
+            
+        • 备份时应该注意事项：
+            · 能容忍最多丢失多少数据
+            · 恢复数据需要在多长时间内完成(类似消防系统)
+            · 需要恢复哪些数据
+            
+             做恢复演练：
+                测试备份的可用性
+                增强恢复操作效率
+                ...
+            
+        • 备份类型：从不同纬度划分如下
+            ► 基于空间纬度(备份的数据的集范围)：
+                完全备份：整个数据集(所有库所有表)
+                部分备份：数据集的一部分，比如部分表
+                    
+            ► 基于时间纬度：
+                完全备份：所有库所有表
+                增量备份：仅备份自上一次完全备份或增量备份以来发生变化的那部数据
+                差异备份：仅备份自上一次完全备份以来发生变化的那部数据
+                
+            ► 物理或逻辑层面：
+                物理备份：复制数据文件进行备份
+                逻辑备份：从数据库导出数据另存在一个或多个文件中
+                
+            ► 根据数据服务是否在线：
+                热备份：读写操作均可进行的状态下所做的备份
+                温备份：可读但不可写状态下进行的备份
+                冷备份：读写操作均不可进行的状态下所做的备份
+        
+        • 备份需要考虑因素：
+            · 锁定资源多长时间？
+            · 备份过程的时长？
+            · 备份时的服务器负载？
+            · 恢复过程的时长？
+        
+        • 备份策略：
+            完全+差异 (热温冷)
+            完全+增量 (热温冷) 
+            
+            备份手段：物理、逻辑
+            
+        • 备份内容：
+            · 数据
+            · 二进制日志、InnoDB的事务日志
+            · 代码(存储过程、存储函数、触发器、事件调度器)
+            · 服务器的配置文件
+            
+        • 备份工具：
+            ► mysqldump：mysql服务自带的备份工具，逻辑备份工具，支持完全、部分备份
+                InnoDB：热备
+                MyISAM：温备
+
+            ► cp/tar：复制打包方式远程复制数据文件
+                lvm2：创建快照(请求一个全局锁)，之后立即释放锁，达到几乎热备的效果物理备份
+                注意：不能仅备份数据文件，要同时备份事务日志
+                    前提：要求数据文件和事务日志位于同一个逻辑卷
+
+            ► xtrabackup：由Percona提供，开源工具，支持对InnoDB做热备，物理备份工具
+                完全备份、部分备份
+                完全备份、增量备份
+
+                对InnoDB：热备，支持完全备份和增量备份
+                对MyISAM引擎：温备，只支持完全备份
+
+            ► select：
+                备份：SELECT ... INTO OUTFILE 'FILENAME';
+                恢复：CREATE TABLE ...
+                导入：LOAD DATA ...
+                
+        1. mysqldump方式备份：逻辑备份、完全备份、部分备份
+            · 二次封装工具：
+                mydumper、phpMyAdmin...
+                
+            · 格式： 
+                mysqldump [OPTIONS] database [tables]                   # 不包含创建数据库语句
+                mysqldump [OPTIONS] --databases [OPTIONS] DB1 [DB2...]  # 包含创建数据库语句
+                mysqldump [OPTIONS] --all-databases [OPTIONS]           # 
+                
+            · 选项：
+                MyISAM存储引擎：支持温备，备份时要锁定表
+                    -x, --lock-all-tables：锁定所有库的所有表，读锁
+                    -l, --lock-tables    ：锁定指定库所有表
+                    
+                InnoDB存储引擎：支持温备和热备
+                    --single-transaction：创建一个事务，基于此快照执行备份
+                    
+                其它选项：
+                    -R, --routines：存储过程和存储函数
+                    --triggers    ：触发器
+                    -E, --events  ：事件
+                    --flush-logs：锁定表完成后，即进行日志刷新操作
+                    --master-data[=1|2]：
+                        1：记录为CHANGE MASTER TO语句，此语句不被注释
+                        2：记录为CHANGE MASTER TO语句，此语句被注释
+                    
+            · 恢复：
+                mysql [-uUSER] [-hHOST] [-p] [Database] < /path/to/FILE.sql
+     
+        2. 基于lvm2的备份：完全备份+binlog
+        
+            · 前提：数据目录位于逻辑卷，包含了数据文件和事务日志
+                pvcreate /dev/sda6
+                vgcreate myvg /dev/sda6
+                lvcreate -L +5G -n mydata myvg
+                mke2fs -t ext4 -b 2048 /dev/myvg/mydata
+                blkid /dev/myvg/mydata --> /etc/fstab       # 添加开机自动挂载
+                mount /dev/myvg/mydata /mydata
+                mkdir -pv /mydata/{data,logs}
+                chown -R mysql:mysql /mydata
+
+                vim /etc/my.cnf 修改添加
+                    [mysqld]
+                    datadir=/mydata/data
+                    innodb_file_per_table = ON
+                    skip_name_resolve = ON
+                    log_bin = /mydata/logs/log_bin
+
+                启动mariadb
+            
+            · 备份：
+                (1) 请求锁定所有表
+                    mysql> FLUSH TABLES WITH READ LOCK;
+                    
+                (2) 记录二进制文件事件位置
+                    mysql> FLUSH LOGS;
+                    mysql> SHOW MASTER STATUS;
+                    
+                    mysql  -e  'SHOW MASTER STATUS;' >> /PATH/TO/SOME_POS_FILE
+                    
+                (3) 创建快照卷，注意数据大小设置相应值
+                    lvcreate  -L +1G -s -p r -n my_snapshoot /dev/myvg/mydata 
+                    
+                (4) 释放锁
+                    mysql> UNLOCK TABLES;
+                    
+                (5) 挂载快照卷，并执行备份
+                    mount /dev/myvg/my_snapshoot /mnt       # 挂载快照
+                    cp -a /mnt/data /root/backup-160901     # 从快照中复制数据
+
+                (6) 周期性备份二进制日志(增量) 
+                    cp /mydata/logs/log_bin.xxx /root/backup-160901
+
+            · 恢复：
+                (1) 将备份的数据放置对应数据目录，注意权限，然后启动服务
+                (2) 将二进制日志重放
+                    mysqlbinlog /root/backup-160901/log_bin.xxx > /tmp/160901
+                    mysql> set @@session.sql_log_bin=OFF
+                    mysql> \. /tmp/160901
+                    mysql> set @@session.sql_log_bin=ON
+                    mysql> FLUSH LOGS;
+                    mysql -e 'SHOW MASTER STATUS' >> /PATH/TO/SOME_POS_FILE
+
+        3. Xtrabackup：
+            MyISAM：温备，不支持增量备份
+            InnoDB：热备，增量
+            
+            实验环境：
+                percona-xtrabackup-2.2.9-4.el7.x86_64
+
+            (1) 完全备份+binlog：
+                最小权限：
+                    mysql> GRANT RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO 'bkuser'@'172.16.%.%' IDENTIFIED BY 'bkpass';
+                    mysql> FLUSH PRIVILEGES;
+                备份：innobackupex --user=bkuser --password=bkpass [--host=]  /tmp/backup       # 尽量使用绝对路径
+                准备：innobackupex --apply-log /tmp/backup/2016-09-01_17-17-02                  # 注意数据路径权限
+                恢复：innobackupex --copy-back /tmp/backup/2016-09-01_17-17-02
+                      chown -R mysql:mysql /var/lib/mysql                                       # 修改恢复后的数据权限
+
+                    注意：--copy-back需要在mysqld主机本地进行，mysqld服务不能启动，根据配置文件自动读取数据目录将数据复制过去
+                        注意查看生成的数据文件中ib_logfile0文件大小，如果不是50M可能会启动失败
+                        需设定/etc/my.cnf文件中的innodb_log_file_size值修改为ib_logfile0文件大小
+
+                    二进制文件还原：
+                        mysqlbinlog lob-bin.xxx --start-postition=NUM > /tmp/xxx    # 位置开始处从xtrabackup_binlog_info查看
+                        mysql> set @@session.sql_log_bin=OFF;
+                        mysql> \. /tmp/xxx;
+                        mysql> set @@session.sql_log_bin=ON;
+                        mysql> FLUSH LOGS;
+                        mysql -e 'SHOW MASTER STATUS' >> /PATH/TO/SOME_POS_FILE
+
+
+                备份生成文件：
+                    backup-my.cnf           # 部分innodb配置
+                    xtrabackup_binlog_info  # binlog文件及备份时的位置
+                    xtrabackup_checkpoints  # 类型(完全或部分)，日志序列号开始到结束
+                    xtrabackup_info         # 详细信息
+                    xtrabackup_logfile      # 二进制日志，如果不小心cat的话会比较乱码，使用reset命令
+
+                ✽ 注：备份恢复后最好做一次完全备份
+                        
+            (2) 完全+增量+binlog： 
+                备份：完全+增量+增量+...+binlog
+                      完全+差异+binlog
+
+                增量备份：完全备份同上，目录为BASEDIR，尽量使用绝对路径
+                    innobackupex --incremental /backup --incremental-basedir=BASEDIR            # 第一次增量基于完全备份
+                    innobackupex --incremental /backup --incremental-basedir=LAST_INCRE_DIR     # 基于上次增量的增量备份
+                    ...
+                    
+                    或: innobackupex --incremental /backup --incremental --incremental-basedir=BASEDIR
+                        基于上一次增量备份的增量，如再基于完全则为差异备份，还原时只要应用最后一次差异即可
+                
+                准备：以下路径尽量使用绝对路径
+                    innobackupex --apply-log --redo-only BASEDIR 
+                    innobackupex --apply-log --redo-only BASEDIR --incremental-dir=INCREMENTAL-DIR1
+                    innobackupex --apply-log --redo-only BASEDIR --incremental-dir=INCREMENTAL-DIR2
+                    ...
+
+                    注：--redo-only: 不对未完成的事务做回滚，有可能在下一次增量备份时会完成当前未完成的事务，但在最后一次增量应回滚
+                    
+                恢复：
+                    1. innobackupex --copy-back BASEDIR
+                       chown -R mysql.mysql BASEDIR
+                    2. 二进制日志还原同上
+                    
+            备份单库选项：
+                --databases=LIST
+
+        4. select方式：备份表
+            如：数据库为db，表为stu
+
+            mysql> SELECT * FROM db.stu INTO  OUTFILE 'backup.txt';     # 相对路径，直接在数据目录中生成
+            mysql> CREATE TABLE LIKE db.stu;                            # 创建空表
+            mysql> LOAD DATA INFILE 'backup.txt' INTO TABLE db.stu;     # 导入表数据
+
+        √ 备份方式总结：
+            1. mysqldump+binlog
+            2. lvm2+cp/tar+binlog
+            3. xtrabackup(innodb)+binlog 
+            
+    ♦ MySQL复制：
+        ▪ 主从复制：
+            • Master/Slave架构：
+                Master：write/read
+                    binlog dump:：将从服务的io thread发出读取二进制日志事件的请求对应的数据发送给对方
+                Slaves：read
+                    IO thread：向master请求二进制日志中的事件
+                    SQL thread：从中继日志中读取事件并在本地执行
+                
+            • 为什么？：
+                冗余：promte（提升为主），异地灾备
+                负载均衡：转移一部分read请求
+                支援安全的备份操作：将从服务器离线用于冷备份
+                ...
+                
+            • 主/从架构模型：
+                异步复制、半同步复制、一主多从、一从一主
+                    一从多主: (MariaDB 10)每个主服务器提供不同的数据库
+
+            • 数据库扩展的思路：
+                复制、切片
+
+            • 复制有三个步骤：
+                1. 在主库上启用二进制日志
+                2. 备库从主库复制二进制日志，并保存至本地的中继日志中
+                3. 备库从中继日志中读取事件并于本地执行一次
+
+                        
+            • 配置：
+                前提：
+                    · 时间：同步
+                    · 程序版本：从服务器mysqld程序版本必须等于或高于主服务器
+                    · 复制的开始位置：
+                        1. 从0开始，适用主从均为新建立的服务器
+                        2. 从主服务器备份中恢复到从节点后启动的复制
+                    
+                ► 主服务器：master
+                    配置文件：my.cnf
+                        server_id=#         # 定义服务id
+                        log_bin=log-bin     # 开启二进制日志
+                    
+                    启动服务：授权
+                        mysql> GRANT REPLICATION SLAVE,REPLICATION CLIENT ON *.* TO 'USER'@'HOST' IDENTIFIED BY 'YOUR_PASSWORD';
+                        mysql> FLUSH PRIVILEGES;
+                    
+                ► 从服务器：slave
+                    配置文件：my.cnf
+                        server_id=#             # 服务id
+                        relay_log=relay-log     # 开启中继日志
+                        read_only=ON            # 只读
+                    
+                    启动服务：
+                        mysql> CHANGE MASTER TO MASTER_HOST='HOST',MASTER_USER='USER',MASTER_PASSWORD='YOUR_PASSWORD',MASTER_LOG_FILE='BINLOG_NAME',MASTER_LOG_POS=#;
+                        
+                        mysql> START SLAVE [IO_THREAD|SQL_THREAD];      # 启动IO及SQL线程
+                        mysql> SHOW SLAVE STATUS\G;                       # 查看从服务器状态
+
+                    停止服务：
+                        mysql> STOP SLAVE;
+
+                        CHANGE MASTER TO选项：
+                            MASTER_BIND = 'interface_name'
+                            MASTER_HOST = 'host_name'               # 指明要连接的主节点，值类型字串
+                            MASTER_USER = 'user_name'               # 具有复制权限的账号，值类型为字串 
+                            MASTER_PASSWORD = 'password'            # 上述用户的密码，值类型为字串 
+                            MASTER_PORT = port_num
+                            MASTER_CONNECT_RETRY = interval
+                            MASTER_HEARTBEAT_PERIOD = interval
+                            MASTER_LOG_FILE = 'master_log_name'     # 复制起点，主节点上二进制日志，值类型为字串
+                            MASTER_LOG_POS = master_log_pos         # 复制起点，主节点上二进制日志中起始事件的位置，值类型为数值
+                            RELAY_LOG_FILE = 'relay_log_name'
+                            RELAY_LOG_POS = relay_log_pos
+                            MASTER_SSL = {0|1}                      # 是否启用ssl
+                            MASTER_SSL_CA = 'ca_file_name'          # ca证书文件
+                            MASTER_SSL_CAPATH = 'ca_directory_name'
+                            MASTER_SSL_CERT = 'cert_file_name'
+                            MASTER_SSL_KEY = 'key_file_name'
+                            MASTER_SSL_CIPHER = 'cipher_list'
+                            MASTER_SSL_VERIFY_SERVER_CERT = {0|1}
+                            IGNORE_SERVER_IDS = (server_id_list)    # 忽略哪些服务器
+                
+        ▪ 主主复制：
+            • 互为主从：两个节点各自都要开启binlog和relay log
+                1. 数据不一致
+                2. 自动增长id
+                    定义一个节点使用奇数id
+                        auto_increment_offset=1         # 起始
+                        auto_increment_increment=2      # 步径
+                    另一个节点使用偶数id
+                        auto_increment_offset=2
+                        auto_increment_increment=2
+
+                    注：此法会出现id不连续情况，最好解决方案为配置一个id生成服务器专门用于生成并分配id
+
+            • 配置：
+                A节点：
+                    [mysqld]
+                    server-id=1
+                    log_bin=bin-log
+                    relay_log=relay-log
+                    auto_increment_increment = 2
+                    auto_increment_offset = 1
+
+                B节点：
+                    [mysqld]
+                    server_id=21
+                    log_bin=bin-log
+                    relay_log=relay-log
+                    auto_increment_increment = 2
+                    auto_increment_offset = 2
+                
+                服务启动后执行如下两步：
+                    1. 都授权有复制权限的用户账号
+                        mysql> GRANT REPLICATION SLAVE,REPLICATION CLIENT ON *.* TO ...
+                    2. 各把对方指定为主节点
+                        mysql> CHANDE MASTER TO ...
+
+                    注：具体参考主从复制配置
+
+        ▪ 半同步复制：
+            master要等待一个从节点把数据完整复制过去，由google贡献的补丁，以插件的方式存在
+
+            • 支持多种插件：/usr/lib64/mysql/plugins/目录 (rpm方式时)
+        
+            • 需要安装方可使用：
+                mysql> INSTALL PLUGIN plugin_name SONAME 'shared_library_name'; 
+                
+            • 半同步复制共享库：
+                semisync_master.so
+                semisync_slave.so
+            
+            • 配置：
+                1. 主节点：
+                    mysql> INSTALL PLUGIN rpl_semi_sync_master SONAME 'semisync_master.so';
+                    mysql> SHOW GLOBAL VARIABLES LIKE 'rpl_semi%';
+                        +------------------------------------+-------+
+                        | Variable_name                      | Value |
+                        +------------------------------------+-------+
+                        | rpl_semi_sync_master_enabled       | OFF   |      # 已装载但未启用
+                        | rpl_semi_sync_master_timeout       | 10000 |      # 等待从服务写入完全超时时长，超时后降为异步
+                        | rpl_semi_sync_master_trace_level   | 32    |
+                        | rpl_semi_sync_master_wait_no_slave | ON    |
+                        +------------------------------------+-------+          
+
+                    mysql> SET GLOBAL rpl_semi_sync_master_enabled=ON;  # 启用半同步
+                        
+                2. 从节点：
+                    mysql> INSTALL PLUGIN rpl_semi_sync_slave SONAME 'semisync_slave.so';
+                    mysql> SHOW GLOBAL VARIABLES LIKE 'rpl_semi%';                        
+                        +---------------------------------+-------+
+                        | Variable_name                   | Value |
+                        +---------------------------------+-------+
+                        | rpl_semi_sync_slave_enabled     | OFF   |
+                        | rpl_semi_sync_slave_trace_level | 32    |
+                        +---------------------------------+-------+         
+                    
+                    mysql> STOP SLAVE IO_THREAD;
+                    mysql> SET GLOBAL rpl_semi_sync_slave_enabled=ON;   # 启用半同步
+                    mysql> START SLAVE IO_THREAD;
+                    
+            • 判断方法：
+                主节点：查看从节点信息
+                    mysql> SELECT GLOBAL STATUS LIKIE 'rpl_semi%';
+                    或：mysql> SELECT @@global.rpl_semi_sync_master_clients;
+
+        ▪ 复制时应该注意的问题：
+            1、从服务设定为"只读"，在从服务器启动read_only，但仅对非SUPER权限的用户有效
+                
+                mysql> SET GLOBAL read_only = 1;     # 命令行设置
+ 
+                [mysqld]                             # 配置文件中修改
+                read_only = 1
+                
+                mysql> FLUSH TABLES WITH READ LOCK;  # 阻止所有用户
+                    
+            2、尽量确保复制时的事务安全
+                在master节点启用参数：
+                    sync_binlog = ON    # 将事务提交立刻同步到磁盘
+                    
+                如果用到的是InnoDB存储引擎：
+                    innodb_flush_logs_at_trx_commit=ON      # 有事务提交时就将事务日志的刷写到磁盘
+                    innodb_support_xa=ON                    # 支持分布式提交
+                        
+            3、从服务器意外中止时尽量避免自动启动复制线程
+            4、从节点上记录主节点同步信息，master.info
+                sync_master_info=ON
+                sync_relay_log_info=ON
+
+            5、跟复制功能相关的文件
+                master.info：保存slave连接master时所需要信息；纯文本文件
+                relay-log.info：保存了当前slave节点上（主节点上的）二进制日志和当前节点中继日志的对应关系
+    
+        ▪ 复制过滤器：
+            仅复制有限一个或几个数据库相关的数据，而非所有，由复制过滤器进行
+        
+            2种实现思路：
+                (1) 主服务器仅向二进制日志中记录有关特定数据库相关的写操作
+                    问题：其它库的point-recovery将无从基于binlog实现，不常用
+                    
+                    配置参数：
+                        binlog_do_db=       # 数据库白名单，多个间逗号隔开
+                        binlog_ignore_db=   # 数据库黑名单
+                
+                (2) 从服务器的SQL THREAD仅重放关注数据库或表相关的事件，并将其应用于本地
+                    问题：增加网络IO和磁盘IO
+                    
+                    配置参数：
+                        Replicate_Do_DB=                # 库白名单
+                        Replicate_Ignore_DB=
+                        Replicate_Do_Table=             # 表白名单
+                        Replicate_Ignore_Table=
+                        Replicate_Wild_Do_Table=        # 基于通配置符的表白名单
+                        Replicate_Wild_Ignore_Table=
+
+        ▪ 复制监控和维护：
+            1. 清理日志：PURGE 
+                PURGE { BINARY | MASTER } LOGS { TO 'log_name' | BEFORE datetime_expr };
+                    清楚指定的文件或时间之前的日志，指定的文件或日期不会被清理
+
+            2. 复制监控：
+                    mysql> SHOW MASTER STATUS;
+                    mysql> SHOW BINLOG EVENTS;
+                    mysql> SHOW BINARY LOGS;
+                    
+                    mysql> SHOW SLAVE STATUS;
+                
+                        Seconds_Behind_Master: 0    # 判断从服务器是否落后于主服务器，为0则为同步
+                        
+            3. 如何确定主从节点数据是否一致：
+                通过表的CHECKSUM检查
+                使用percona-tools中pt-table-checksum
+                
+            4. 主从数据不一致时的修复方法：
+                重新复制
+
+
+
+
+补充：
+    
+    日志相关的服务器参数详解：
+        expire_logs_days={0..99}
+        设定二进制日志的过期天数，超出此天数的二进制日志文件将被自动删除。默认为0，表示不启用过期自动删除功能。如果启用此功能，自动删除工作通常发生在MySQL启动时或FLUSH日志时。作用范围为全局，可用于配置文件，属动态变量。
+
+        general_log={ON|OFF}
+        设定是否启用查询日志，默认值为取决于在启动mysqld时是否使用了--general_log选项。如若启用此项，其输出位置则由--log_output选项进行定义，如果log_output的值设定为NONE，即使用启用查询日志，其也不会记录任何日志信息。作用范围为全局，可用于配置文件，属动态变量。
+         
+        general_log_file=FILE_NAME
+        查询日志的日志文件名称，默认为“hostname.log"。作用范围为全局，可用于配置文件，属动态变量。
+
+        binlog-format={ROW|STATEMENT|MIXED}
+        指定二进制日志的类型，默认为STATEMENT。如果设定了二进制日志的格式，却没有启用二进制日志，则MySQL启动时会产生警告日志信息并记录于错误日志中。作用范围为全局或会话，可用于配置文件，且属于动态变量。
+
+        log={YES|NO}
+        是否启用记录所有语句的日志信息于一般查询日志(general query log)中，默认通常为OFF。MySQL 5.6已经弃用此选项。
+         
+        log-bin={YES|NO}
+        是否启用二进制日志，如果为mysqld设定了--log-bin选项，则其值为ON，否则则为OFF。其仅用于显示是否启用了二进制日志，并不反应log-bin的设定值。作用范围为全局级别，属非动态变量。
+         
+        log_bin_trust_function_creators={TRUE|FALSE}
+        此参数仅在启用二进制日志时有效，用于控制创建存储函数时如果会导致不安全的事件记录二进制日志条件下是否禁止创建存储函数。默认值为0，表示除非用户除了CREATE ROUTING或ALTER ROUTINE权限外还有SUPER权限，否则将禁止创建或修改存储函数，同时，还要求在创建函数时必需为之使用DETERMINISTIC属性，再不然就是附带READS SQL DATA或NO SQL属性。设置其值为1时则不启用这些限制。作用范围为全局级别，可用于配置文件，属动态变量。
+         
+        log_error=/PATH/TO/ERROR_LOG_FILENAME
+        定义错误日志文件。作用范围为全局或会话级别，可用于配置文件，属非动态变量。
+         
+        log_output={TABLE|FILE|NONE}
+        定义一般查询日志和慢查询日志的保存方式，可以是TABLE、FILE、NONE，也可以是TABLE及FILE的组合(用逗号隔开)，默认为TABLE。如果组合中出现了NONE，那么其它设定都将失效，同时，无论是否启用日志功能，也不会记录任何相关的日志信息。作用范围为全局级别，可用于配置文件，属动态变量。
+         
+        log_query_not_using_indexes={ON|OFF}
+        设定是否将没有使用索引的查询操作记录到慢查询日志。作用范围为全局级别，可用于配置文件，属动态变量。
+         
+        log_slave_updates
+        用于设定复制场景中的从服务器是否将从主服务器收到的更新操作记录进本机的二进制日志中。本参数设定的生效需要在从服务器上启用二进制日志功能。
+         
+        log_slow_queries={YES|NO}
+        是否记录慢查询日志。慢查询是指查询的执行时间超出long_query_time参数所设定时长的事件。MySQL 5.6将此参数修改为了slow_query_log。作用范围为全局级别，可用于配置文件，属动态变量。
+         
+        log_warnings=#
+        设定是否将警告信息记录进错误日志。默认设定为1，表示启用；可以将其设置为0以禁用；而其值为大于1的数值时表示将新发起连接时产生的“失败的连接”和“拒绝访问”类的错误信息也记录进错误日志。
+
+        long_query_time=#
+        设定区别慢查询与一般查询的语句执行时间长度。这里的语句执行时长为实际的执行时间，而非在CPU上的执行时长，因此，负载较重的服务器上更容易产生慢查询。其最小值为0，默认值为10，单位是秒钟。它也支持毫秒级的解析度。作用范围为全局或会话级别，可用于配置文件，属动态变量。
+
+        max_binlog_cache_size{4096 .. 18446744073709547520}
+        二进定日志缓存空间大小，5.5.9及以后的版本仅应用于事务缓存，其上限由max_binlog_stmt_cache_size决定。作用范围为全局级别，可用于配置文件，属动态变量。
+
+        max_binlog_size={4096 .. 1073741824}
+        设定二进制日志文件上限，单位为字节，最小值为4K，最大值为1G，默认为1G。某事务所产生的日志信息只能写入一个二进制日志文件，因此，实际上的二进制日志文件可能大于这个指定的上限。作用范围为全局级别，可用于配置文件，属动态变量。
+
+        max_relay_log_size={4096..1073741824}
+        设定从服务器上中继日志的体积上限，到达此限度时其会自动进行中继日志滚动。此参数值为0时，mysqld将使用max_binlog_size参数同时为二进制日志和中继日志设定日志文件体积上限。作用范围为全局级别，可用于配置文件，属动态变量。
+
+        innodb_log_buffer_size={262144 .. 4294967295}
+        设定InnoDB用于辅助完成日志文件写操作的日志缓冲区大小，单位是字节，默认为8MB。较大的事务可以借助于更大的日志缓冲区来避免在事务完成之前将日志缓冲区的数据写入日志文件，以减少I/O操作进而提升系统性能。因此，在有着较大事务的应用场景中，建议为此变量设定一个更大的值。作用范围为全局级别，可用于选项文件，属非动态变量。
+         
+        innodb_log_file_size={108576 .. 4294967295}
+        设定日志组中每个日志文件的大小，单位是字节，默认值是5MB。较为明智的取值范围是从1MB到缓存池体积的1/n，其中n表示日志组中日志文件的个数。日志文件越大，在缓存池中需要执行的检查点刷写操作就越少，这意味着所需的I/O操作也就越少，然而这也会导致较慢的故障恢复速度。作用范围为全局级别，可用于选项文件，属非动态变量。
+         
+        innodb_log_files_in_group={2 .. 100}
+        设定日志组中日志文件的个数。InnoDB以循环的方式使用这些日志文件。默认值为2。作用范围为全局级别，可用于选项文件，属非动态变量。
+         
+        innodb_log_group_home_dir=/PATH/TO/DIR
+        设定InnoDB重做日志文件的存储目录。在缺省使用InnoDB日志相关的所有变量时，其默认会在数据目录中创建两个大小为5MB的名为ib_logfile0和ib_logfile1的日志文件。作用范围为全局级别，可用于选项文件，属非动态变量。
+
+
+        relay_log=file_name
+        设定中继日志的文件名称，默认为host_name-relay-bin。也可以使用绝对路径，以指定非数据目录来存储中继日志。作用范围为全局级别，可用于选项文件，属非动态变量。
+
+        relay_log_index=file_name
+        设定中继日志的索引文件名，默认为为数据目录中的host_name-relay-bin.index。作用范围为全局级别，可用于选项文件，属非动态变量。
+
+        relay-log-info-file=file_name
+        设定中继服务用于记录中继信息的文件，默认为数据目录中的relay-log.info。作用范围为全局级别，可用于选项文件，属非动态变量。
+
+
+        relay_log_purge={ON|OFF}
+        设定对不再需要的中继日志是否自动进行清理。默认值为ON。作用范围为全局级别，可用于选项文件，属动态变量。
+
+        relay_log_space_limit=#
+        设定用于存储所有中继日志文件的可用空间大小。默认为0，表示不限定。最大值取决于系统平台位数。作用范围为全局级别，可用于选项文件，属非动态变量。
+
+
+        slow_query_log={ON|OFF}
+        设定是否启用慢查询日志。0或OFF表示禁用，1或ON表示启用。日志信息的输出位置取决于log_output变量的定义，如果其值为NONE，则即便slow_query_log为ON，也不会记录任何慢查询信息。作用范围为全局级别，可用于选项文件，属动态变量。
+
+        slow_query_log_file=/PATH/TO/SOMEFILE
+        设定慢查询日志文件的名称。默认为hostname-slow.log，但可以通过--slow_query_log_file选项修改。作用范围为全局级别，可用于选项文件，属动态变量。
+
+
+        sql_log_bin={ON|OFF}
+        用于控制二进制日志信息是否记录进日志文件。默认为ON，表示启用记录功能。用户可以在会话级别修改此变量的值，但其必须具有SUPER权限。作用范围为全局和会话级别，属动态变量。
+
+        sql_log_off={ON|OFF}
+        用于控制是否禁止将一般查询日志类信息记录进查询日志文件。默认为OFF，表示不禁止记录功能。用户可以在会话级别修改此变量的值，但其必须具有SUPER权限。作用范围为全局和会话级别，属动态变量。
+
+        sync_binlog=#
+        设定多久同步一次二进制日志至磁盘文件中，0表示不同步，任何正数值都表示对二进制每多少次写操作之后同步一次。当autocommit的值为1时，每条语句的执行都会引起二进制日志同步，否则，每个事务的提交会引起二进制日志同步。

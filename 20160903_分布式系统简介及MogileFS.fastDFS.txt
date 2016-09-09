@@ -1,0 +1,243 @@
+2016-09-03
+# edit by liu2lin600
+
+# 分布式系统
+
+♦ 分布式系统：
+    • 定义：
+        1、系统的各组件分布于网络上多个计算机
+        2、各组件彼此之间仅仅通过消息传递来通信并协调行动
+
+    • 分布式系统存在意义：
+        1、向上扩展的性价比越来越低
+        2、单机扩展存在性能上升临界点
+        3、出于稳定性及可用性考虑，单机会存在多方面的问题
+
+    • 多CPU扩展：
+        1. 互不通信的线程模型
+        2. 基于共享容器(队列)协同工作的模型
+        3. 通过事件协调的多线程模型，有可能出现死锁
+            A<-->B
+                A：触发事件(通知B) 
+                    B：等待事件(依赖A)                  
+        4. 多进程模型
+
+    • 网络IO扩展：
+        1. 多进程，每个进程响应一个请求
+        2. 多线程，多进程，每进程生成多个线程，每线程响应一个用户请求
+        3. 多线程，每线程直接响应多个请求
+
+        基于socket实现网络通信开发，其实现方式：
+            BIO：Blocking IO (阻塞IO)，一个进程或一个线程处理一个请求
+            NIO：Nonblocking IO (非阻塞IO)，基于事件驱动(epoll)思想，采用Reactor模式(反应堆)
+            AIO：Async IO (异步IO)，基于事件驱动思想，采用Proactor模式
+
+
+    • 如何把应用从单机扩展至多机：
+        输入设备的变化？
+        输出设备的变化？
+        控制器的变化？
+            实现的模式：
+                1. 透明代理: lvs-nat, haproxy, nginx
+                2. 旁路代理: lvs-dr,
+                3. 名称服务: dns
+                4. 规则服务: 
+                5. 主从机制:
+        运算器的变化？
+        存储器的变化？
+
+    • 分布式系统实现的难点：
+        缺乏全局时钟
+        面对故障时的独立性
+        处理单点故障
+        事务处理
+            ACID测试
+            解决方案: 2PC、BASE、CAP、Paxos
+
+♦ 大型网站站点的架构演进：
+    LAMT, LNMT
+
+    • 应用从资源占用的角度分两类：
+        CPU Bound：CPU密集型
+        IO Bound： IO密集型
+
+    • 引用MySQL主从面临的问题：
+        1、数据复制的问题，数据不一致问题
+        2、应用选择数据源的问题
+
+    • 引入搜索引擎：用于全文搜索
+        sphinx, elasticSearch
+
+    • 引入缓存：
+        1、页面缓存: varnish, squid
+        2、数据缓存: key-value store(memcached)
+
+    • MySQL主库写操作压力：数据库拆分
+        垂直拆分：把数据库中不同的业务的数据拆分到不同的数据库服务器中
+        水平拆分：把一个单独的表中的数据拆分到多个不同的数据库服务器上
+
+    • 引入CDN：自建或第三方
+        DNS解析返回cdn的cname，再次解析实现负载均衡及缓存等
+
+    • NoSQL：非关系数据，多数以k/v方式存储
+        文档数据库
+        列式数据库
+        ...
+
+    • DFS：分布式文件系统，用于存储非结构化数据
+        TFS, MogileFS：适用于海量小文件
+        HDFS, GFS：少量大文件
+
+    • 应用拆分：
+        1. 根据业务特性拆分
+        2. 根据用户拆分
+            用户注册、用户登录、用户信息维护等
+        3. 根据对底层应用的调用进行拆分
+        4. 应用服务化，如用户信息中心服务，对外提供API调用，实现用户管理认证等
+
+    • 异步模式：解耦
+        消息中间件：在分布式系统中，完成消息发送和接收的基础性软件
+            MOM：Message-oriented middleware
+            消息队列服务：RabbitMQ, ActiveMQ, ZMQ
+
+    • 数据访问层：数据库
+        拆分方式：
+            垂直拆分：
+                1. 单机的ACID保证被打破，要么放弃事务，要么引入分布式事务
+                2. 一些Join查询操作将变得非常困难
+                3. 原来依赖于外键实现的约束将无从保证
+
+            水平拆分：
+                1. 单机ACID保证被打破
+                2. 一些Join查询操作将变得非常困难
+                3. 原来依赖于外键实现的约束将无从保证
+                4. 自增序列的ID号的产生会有影响
+                5. 针对单张表的查询很有可能要跨库操作
+
+♦ 分布式存储：
+    • 数据类型：
+        结构化数据：SQL, TPS, MySQL
+        半结构化数据：json, xml 
+        非结构化数据：k/v
+
+    • 大数据带来的挑战：
+        数据采集、数据存储、数据搜索、数据共享、数据传输、数据分析、数据可视化
+
+    • 分布式文件系统设计目标：
+        访问透明、位置透明、并发透明、失效透明、硬件透明、可扩展性、复制透明、迁移透明
+
+    • 分布式事务的实现：
+        事务依赖因素：事务参与者、支持事务的服务器、资源服务器、事务管理器
+
+        分布式事务的模型及规范：
+            X/Open组织：XA(分布式事务规范)
+                X/Open DTP：分布式事务处理参考规范，定义了三个组件
+                    AP：应用程序，即使用DTP模型的程序
+                    RM：资源管理器，即DBMS系统
+                    TM：事务管理器，负责协调和管理管理条例，提供给AP应用程序编程接口并管理资源管理器
+
+                    通讯方式：AP与RM和TM通讯，RM与TM互相通讯
+
+        2PC：两段式提交
+            Two Phase Commitment Procotol，2个资源以上的事务时，第一段先准备好各资源，再提交各资源完成第二段
+
+        CAP：2000年7月，作者Eric Brewer
+            C：Consistency 一致性
+            A：Availability 可用性
+            P：Tolerance of network Partition 网络分区容错性
+
+            注：任何一种分布式系统最多只能同时满足上述三项中的两项
+                AP：妥协一致性，大多数他布式系统都选择此项
+                CA：放弃分区容错性，无法完成分布式
+                CP：代价大很少用
+
+        分布式系统的目标：加强A和P，在C上进行妥协
+            BASE模型：
+                BA：Basically Availibale 基本可用
+                S ：Soft state 软状态，接受一段时间内的状态不同步
+                E ：Eventually Consistent 最终一致性
+
+            服务器一致性：
+                N：节点数
+                W：写节点数
+                R：读节点数
+
+                    W + R > N   ==> 强一致性
+                    W = N,R=1   ==> 最佳读
+                    W = 1,R=N   ==> 最佳写，但不分摊负载
+                    W + R <=N   ==> 弱一致性
+
+                哈希取模，一致性哈希
+
+    • 分类：
+        通用分布式存储：分布式存储，不能mount，基于API进行存储，mogilefs, fastdfs
+        专用分布式存储：分布式文件系统，挂载使用
+
+    • 解决方案：
+            GFS：Google FileSystem
+            HDFS：Hadoop Distributed FileSystem (山寨GFS)
+            TFS：Taobal FileSystem，在名称节点上将元数据存储于关系型数据中，文件数量不在受限于名称节点的内存空间，可以存储海量小文件
+            
+            Lustre：Oracle，企业级应用，重量级
+            GlusterFS：去中心化设计
+            Ceph：内核级别构建，越来越流行
+
+            Mogilefs：存储海量小数据，主要用于存储图片
+                API(php, python, java...)
+            MooseFS：基于FUSE的格式，可以挂载
+            FastDFS：山寨Mogilefs
+
+            Perlbal：高性能的反向代理
+
+♦ MogileFS：
+    LiveJournal旗下Danga Interactive，perl语言研发
+
+    • 特性：
+        1. 在应用层提供服务，不需要使用核心组件
+        2. 无单点
+            Tracker(跟踪点)：配置成多节点
+            Mogstore(存储节点)：存储多个数据副本
+            Database(MySQL)：配置高可用
+        3. 自动文件复制，复制的最小单位不是文件，而是class
+        4. 传输中立，无特殊协议，可以通过NFS或HTTP实现通信
+        5. 简单的命名空间，没有目录，直接存在存储空间上，通过域来实现
+            domain, class, fid(key)
+        6. 不共享任何数据，元数据在MySQL之类数据库中，数据存放在Mogstore上
+        7. 不需要RAID
+
+    • 角色组成：
+        1. Tracker：
+            MogileFS的核心，是一个调度器，接收用户请求并均衡方式返回一个持有副本的节点上对应文件系统的访问路径
+        2. Mogstored：
+            数据存储的位置，通常是一个HTTP（webDAV）服务器，用来做数据的创建PUT，DELETE，GET
+        3. Database：用于存储元数据
+
+    • 服务进程：
+        1. mogilefsd：Tracker，负责删除数据、复制数据、监控、查询等。可以使用简单的负载均衡，可以使用Haproxy，lvs，nginx等，监听端口7001
+        2. mogstored：监听端口7500
+
+    • 内部组成：
+        · Domain：
+            一个mogilefs可以有多个domain用来存放不同大小类型的文件
+            同一个domain内，key必须唯一，不同domain内的key可相同
+        · Class：
+            文件属性管理
+            定义文件存储在不同的设备上的份数
+        · Fid：domain+fid定位文件
+
+    • 安装配置：
+        · perl模块安装方式：
+            在线：
+                CPAN> install module_name::name
+            线下：
+                perl Makefile.PL
+                make
+                sudo make install 
+            rpm包：
+                Tracker:
+                    yum install MogileFS-Server-xxx.rpm MogileFS-Server-mogilefsd-xxx.rpm
+                Mogstored:
+                    yum install perl-IO-AIO MogileFS-Server-xxx.rpm MogileFS-Server-mogstored-xxx.rpm
+
+        · 配置：
+
