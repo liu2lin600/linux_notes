@@ -26,33 +26,7 @@
         ^ 配置语言层(configure language)             # 通过底层接口编写实现具体功能
         | 事务层    (transaction layer)
         | 资源抽象层(resource abstraction layer)     # 将各操作系统对上提供接口
-        
-    • 单机模型：
-        · 流程：
-            maifests(各资源清单)-->compile-->catalog(伪代码)-->apply(先查询再执行)-->完成并报告状态
-
-        · 主程序包：
-            facter
-            puppet
-            puppet-server
-
-        · 命令语法：
-            puppet <subcommand> [options] <action> [options]
-            puppet help <subcommand>    
-            puppet help <subcommand> <action>
-            
-            subcommand：
-                apply      : 本地应用资源清单
-                facts      : 获取保存facts
-                help       : 帮助
-                module     : 创建安装或搜索模块  
-                man        : 手册
-                describe   : 资源类型
-            
-        · puppet apply：本地执行资源清单
-            语法：puppet apply  [-v|--verbose] [-d|--debug] [--noop] [--execute] <manifest_file>
-                --noop：干跑模式，测试使用
-            
+         
     • puppet资源：
         · 相关命令：
             puppet describe [-h|--help] [-s|--short] [-p|--providers] [-l|--list] [-m|--meta]
@@ -508,9 +482,12 @@
 
                 注：不同版本有可能不同，manifests, files, templates, lib保持不变
 
-            使用：？？？
-                文件：content => file('MODULE/FILE')
+            使用：
+                文件：source  => 'puppet:///modules/MODULE/FILE'
                 模版：content => template('MODULE/xxx.erb')
+
+            init.pp导入其它清单文件：
+                import '/PATH/FROM/SOME_MANIFEST_FILE'
 
         · 模块调用：
             puppet apply -e 'include MODULE_NAME'
@@ -563,3 +540,257 @@
             命令下调用：
                 puppet apply -e 'include mariadb('/data/mydata')'
         
+    • 单机模型：
+        · 流程：
+            maifests(各资源清单)-->compile-->catalog(伪代码)-->apply(先查询再执行)-->完成并报告状态
+
+        · 主程序包：
+            facter
+            puppet
+            puppet-server
+
+            yum仓库：
+                https://yum.puppetlabs.com/
+
+        · 命令语法：
+            puppet <subcommand> [options] <action> [options]
+            puppet help <subcommand>    
+            puppet help <subcommand> <action>
+            
+            subcommand：
+                apply      : 本地应用资源清单
+                facts      : 获取保存facts
+                help       : 帮助
+                module     : 创建安装或搜索模块  
+                man        : 手册
+                describe   : 资源类型
+            
+        · puppet apply：本地执行资源清单
+            语法：puppet apply  [-v|--verbose] [-d|--debug] [--noop] [--execute] <manifest_file>
+                --noop：干跑模式，测试使用
+    
+    • Master/Agent模型：
+        Master与Agent基于ssl的双向认证并使用主机名通讯，agent每隔30分钟到master端请求与自己相关的catalog，所以生产环境中必须基于dns解析进行
+        
+        · 流程：
+            1. 双方基于ssl的会话认证建立
+            2. Agent请求catalog，发送主机名和fasts
+            3. Master接收并查询对应站点的资源清单编译成catalog
+            4. Master将catalog发送回Agent
+            5. Agent接收后进行状态查询并执行目标状态
+            
+        · 部署Master：
+            ► 安装程序包：
+                facter:
+                puppet: 提供所有puppet命令
+                puppet-server: 仅提供服务功能，puppetmaster 默认监听8140/tcp
+
+                启动服务：systemctl start puppetmaster
+                
+            ► 配置文件：/etc/puppet/puppet.conf
+                [main]      # 公共配置段
+                [master]    # master端配置
+                [agent]     # agent端配置
+                ...
+            
+            ► 相关命令：
+                1. master端相关
+                    puppet master [-D|--daemonize|--no-daemonize] [-d|--debug] [-v|--verbose]
+
+                △ 如：
+                    puppet master --no-daemonize --verbose      # 初始化master，自建CA并自签
+                    puppet master --genconfig                   # 基于默认配置生效的各配置生成完整配置
+                    puppet agent --genconfig                    # 生成agent完整配置
+
+                2. 证书相关
+                    puppet cert <action> [--all] [<host>]   
+
+                △ 如：
+                    puppet cert list [--all]        # 显示待签或所有证书列表
+                    puppet cert sign {--all|HOST}   # 签证书
+                    puppet revoke {--all|HOST}      # 吊销指定的客户端的证书
+                    puppet clean {--all|HOST}       # 吊销指定的客户端的证书，并删除与其相关的所有文件
+                   
+                3. 显示或设置当前配置
+                    puppet config print|set [--section SECTION_NAME]
+
+            ► 站点清单：
+                默认位置：/etc/puppet/manifests/site.pp
+                    node 'www1.example.com' {
+                        include common
+                        include apache
+                    }
+                    node 'www1.example.com', 'www2.example.com', 'www3.example.com' {
+                        include common, apache, squid
+                    }
+                    node /^www\d+$/ {
+                        include common
+                    }
+
+                    节点定义的继承：
+                        node NODE::PAR inherits PAR_NODE_DEF {
+                            ...puppet code...
+                        }
+
+                独立配置：
+                    1. 如建立/etc/puppet/manifests/nodes/，并建立对应清单
+                    2. 在主site.pp中导入
+                        import 'nodes/*.pp'
+
+            ► 多环境配置示例：
+                各环境配置：
+                    /etc/puppet/environments/{production,development,testing}
+
+                master支持多环境：
+                    [master]
+                    # modulepath=
+                    # manifest=
+                    environments = production, development, testing
+                    
+                    [production]
+                    modulepath=/etc/puppet/environments/production/modules/
+                    manifest=/etc/puppet/environments/production/manifests/site.pp
+                    
+                    [development]
+                    modulepath=/etc/puppet/environments/development/modules/
+                    manifest=/etc/puppet/environments/development/manifests/site.pp 
+                    
+                    [testing]
+                    modulepath=/etc/puppet/environments/testing/modules/
+                    manifest=/etc/puppet/environments/testing/manifests/site.pp 
+                    
+                agent端：
+                    [agent]
+                    environment = { production|development|testing }
+
+
+            ► 
+
+        · 部署Agent：
+            ► 配置前提：时间同步
+
+            ► 安装程序包：facter、puppet
+                启动服务：systemctl start puppet     # 用于自动向服务端拉取catalog，可配置监听服务8139/tcp，用于接收服务主动推送更新信息
+
+            ► 命令行启动：
+                puppet agent [--no-daemonize] [--verbose] [--noop] [--debug] [--server MASTER]
+
+                注：首次启动会向master申请证书，在master端签发证书后，双方才能正常通讯
+
+            ► 配置：/etc/puppet/puppet.conf
+                [agent]
+                server = MASTRER_HOST
+
+        · kick：
+            master主动推送更新信息给agent，agent再去拉取catalog
+
+            ► agent端配置：
+                1. puppet.conf：添加
+                    [agent]
+                    listen = true
+            
+                2. auth.conf：添加
+                    path /run
+                    method save 
+                    auth any 
+                    allow master_host
+                    
+                    path /      # 默认最后一项，在此前添加上述配置
+                    auth any
+
+            ► master端推送：
+                puppet kick [--host <HOST>] [--all]
+
+
+        · 额外配置文件：
+            文件系统：fileserver.conf
+            认证(URL)：auth.conf
+
+        · 常用配置说明：
+            puppet config print  # 查看所有当前配置
+
+            confdir = /etc/puppet       # 配置目录
+            environments =              # master设置所有可用环境
+            environment =               # 当前应用环境
+            environment_timeout = 180   # 
+            modulepath =                # 模块路径
+            manifest =                  # 清单文件
+            fileserverconfig =          # 
+            server =                    # 指定master
+            listen =                    # agent是否开启监听
+
+
+    • 生产环境案例：
+        1. haproxy.pp
+
+        class haproxy {
+            # init haproxy
+            class init {
+                file { '/etc/init.d/haproxy': 
+                    ensure        => present,
+                    source        => "puppet:///modules/haproxy/haproxy/init.d/haproxy.init",
+                    group         => "root",
+                    owner         => "root",
+                    mode          => "0755",
+                }
+                exec { 'init_haproxy_service':
+                    subscribe     => File['/etc/init.d/haproxy'],
+                    refreshonly   => true, 
+                    command       => "/sbin/chkconfig --add haproxy; /sbin/chkconfig --level 235 haproxy off;",
+                }
+                service { 'haproxy':
+                    ensure      => running,
+                    enable      => true, 
+                    hasrestart  => true, 
+                    hasstatus   => true, 
+                }
+            }
+
+            # init haproxy.cfg
+            class conf {
+                file { ['/usr/local/haproxy','/usr/local/haproxy/etc']: 
+                    ensure        => directory,
+                    before        => File['/usr/local/haproxy/etc/haproxy.cfg'],
+                    group         => "root",
+                    owner         => "root",
+                    mode          => "0755",
+                }
+
+                class piccenter {
+                    file { '/usr/local/haproxy/etc/haproxy.cfg': 
+                        ensure        => present,
+                        source        => "puppet:///modules/haproxy/haproxy/conf/haproxy_piccenter.cfg",
+                        group         => "root",
+                        owner         => "root",
+                        mode          => "0644",
+                    }
+                }
+            }
+        }
+
+        2. keepalived.pp
+
+        class keepalived {
+            # init haproxy
+            class init {
+                file { '/etc/init.d/keepalived': 
+                    ensure        => present,
+                    source        => "puppet:///modules/haproxy/keepalived/init.d/keepalived.init",
+                    group         => "root",
+                    owner         => "root",
+                    mode          => "0755",
+            }
+                exec { 'init_keepalived_service':
+                    subscribe     => File['/etc/init.d/keepalived'],
+                    refreshonly   => true, 
+                    command       => "/sbin/chkconfig --add keepalived; /sbin/chkconfig --level 235 keepalived off;",
+                }
+                service { 'keepalived':
+                    ensure      => running,
+                    enable      => true, 
+                    hasrestart  => true, 
+                    hasstatus   => true, 
+                    restart     => true,
+                }
+            }
+        }
