@@ -701,13 +701,12 @@
             ► master端推送：
                 puppet kick [--host <HOST>] [--all]
 
-
         · 额外配置文件：
             文件系统：fileserver.conf
             认证(URL)：auth.conf
 
         · 常用配置说明：
-            puppet config print  # 查看所有当前配置
+            puppet config print         # 查看所有当前配置
 
             confdir = /etc/puppet       # 配置目录
             environments =              # master设置所有可用环境

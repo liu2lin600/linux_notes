@@ -1,0 +1,455 @@
+2016-09-15
+# edit by liu2lin600
+
+Docker：
+
+♦ Namespace：名称空间
+    内核级别，环境隔离
+
+    • 分类：
+        1. PID Namespace:  (linux 2.6.24) 进程号隔离
+        2. Network Namespace: (linux 2.6.29) 网络设置、网络栈、端口和网络资源隔离 
+        3. User Namespace: (linux 3.8) 用户和组资源隔离
+        4. IPC Namespace: 进程间通讯名称空间(linux 2.6.19) 信号量、消息队列和共享内存隔离
+        5. UTS Namespace: (linux 2.6.19) 主机名和域名隔离
+        6. Mount Namespace: (linux 2.4.19) 挂载点(文件系统)隔离
+
+♦ Cgroup：linux control group(控制组) linux 2.6.24
+    内核级别，限制、控制与一个进程组群的资源
+
+    • 主要限制资源：CPU，内存，IO
+
+    • 功能：
+        1. 资源限制 resource limitation
+        2. 优先级控制 prioritization
+        3. 审计及统计 Accounting 计费功能
+        4. 挂起及恢复进程 control
+
+        
+    • CGroup子系统：subsystem
+        blkio：设定块设备的IO限制
+        cpu：设定cpu限定
+        cpuacct：cpu使用率
+        cpuset：cpu集合，为cgroup任务分配cpu和内存资源
+        memory：设定内存使用空间限制
+        devices：控制cgroup中的任务对设备的访问
+        freezer：实现挂起或恢复指定cgroup任务
+        net_cls：使用等级级别标识符来标记网络数据包，实现基于不同cgroup中流量控制
+        perf_event：使用后使cgroup中的任务可以进行统一的性能测试
+        hugetlb：大内存页限制
+
+        映射在/sys/fs/cgroup目录下，可使用以下命令查看(centos7)
+            mount
+            lssubsys -m
+
+    • 常用术语：
+        cgroup：一个独立的资源控制单位，可包含一个或多个子系统
+        task：进程或线程，一个task只能属于一个cgroup
+        subsystem：子系统
+        hierarchy：层级关系
+
+♦ AUFS：
+    another(->alter->adance) union filesystem 高级联合文件系统(非内核自带)
+
+    UnionFS：内核自带，把不同物理位置的目录合并到同一个目录中，最后一目录下可写，快照
+
+♦ Device mapper：
+    2.6内核引入，用于在内核中支持逻辑卷管理的通用设备映射机制
+
+    Mapped Device
+    Mapping Table
+    Target Device
+
+    ✽ 注：在生产环境中，基于device mapper的docker不推荐使用
+
+♦ Docker：
+    2013年dotcloud发布，go语言，apache 2.0协议，lxc-->libcontainer
+
+    • C/S架构：
+        Docker Client：客户端工具，发起docker请求的，用户使用主要接口
+        Docker Server：容器运行节点，接收来自来自客户端请求
+
+    • 功能：
+        隔离应用 
+        维护镜像
+        创建易于分发的应用
+        快速扩展应用
+
+    • 相关组件：
+        Containers：容器，运行中的docker实例，应用+环境，随应用结束而停止，为运行单一程序而存在
+        Images：镜像文件，只读，用来创建容器，可从公共仓库获取，也可本地创建仓库
+            包含启动容器所需的文件系统层级及内容，基于unionFS分层结构实现
+                bootfs, rootfs, 
+        Repository：
+            公共仓库：docker Hub/registry 官方基础公共镜像仓库 (hub.docker.com注册)
+            私有仓库：docker registry 用户私有仓库
+        Dockfiles：创建镜像文件的配置文件
+        Docker link：链接
+        Docker volume：数据卷
+        Graph：记录各镜像
+        GraphDB：记录维护docker daemon运行的各容器及之间链接关系等
+
+    • 应用：
+        registry：保存镜像及其层次结构和元数据，包含多个repository
+        repository：由具有某个功能的镜像所有相关版本构成的集合
+        index：管理用户的帐号、访问权限、镜像标签等相关 (search命令搜索位置)
+        graph：从registry中下载的镜像需保存在本地，由graph完成 (/var/lib/docker/graph)
+
+    • 安装：
+        centos6: epel
+        centos7: base-extra
+
+        官方yum仓库：centos7
+            [dockerrepo]
+            name=Docker Repository
+            baseurl=https://yum.dockerproject.org/repo/main/centos/7/
+            enabled=1
+            gpgcheck=1
+            gpgkey=https://yum.dockerproject.org/gpg
+
+        程序：docker docker-selinux [docker-engine，docker-engine-selinux]
+
+    • 常用命令：
+        I. 环境信息相关：
+            docker info
+            docker version
+        
+        II. 系统维护相关：
+            docker run              # 创建新容器
+            docker inspect          # 查看镜像或容器的
+            docker build            # 基于dockerfile创建镜像
+            docker commit           # 基于当前实例创建镜像
+            docker top              # 用于查看正在运行的容器中的进程状态
+            docker kill             # 终止容器实例
+            docker rm               # 删除容器实例
+            docker rmi              # 删除本地镜像
+            docker pause/unpause    # 暂停容器实例
+            docker attach           # 关联至一个运行的容器
+            docker start [-i]       # 启动
+            docker stop/restart     # 停止/重启容器实例
+            docker export           # 导出并归档本地文件系统
+            docker import           # 镜像导入
+
+        III. 日志信息相关：
+            docker events   # 
+            docker history  # 
+            docker logs     # 获取历史输出信息
+
+        IV. 服务相关：
+            docker login    # 登录官方仓库
+            docker logout   # 登出
+            docker daemon   # 
+            
+            docker search   # 搜索镜像
+            docker pull     # 从仓库中拉取镜像
+            docker push     # 将本地创建的镜像上传到仓库，需先登录
+
+        V. 监控相关：
+            docker ps [-a]  # 显示容器状态
+            docker images   # 列出本地镜像
+            docker stats    # 容器状态
+            docker port     # 端口映射
+
+            工具：google/cadvisor
+
+    • 命令具体用法：
+        1. 运行容器
+            语法：docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+                --name=     # 为启动的容器命名，之后操作可基于此名字
+                -i          # 交互模式
+                -t          # 打开并关联一个伪终端
+                --rm        # 关闭容器时自动删除
+                --net=      # 设定网络模式
+                -d          # 后台运行容器本身
+                -v          # 绑定挂载一个卷，默认映射宿主机/var/lib/docker/volumes/..
+                -h          # 容器主机名设定
+                --dns       # 设定使用dns服务
+                --add-host  # 设定/etc/hosts，可多个，如: --add-host 'HOST:IP'
+                -m
+                --cpuset-cpus
+                --shm-size
+
+            △ 如： docker run -it --name=bb busybox:latest /bin/bash
+                   docker stop bb
+
+            运行步骤：
+                1. 检查本地是否有指定镜像，不存在则从registry下载
+                2. 利用镜像启动容器
+                3. 分配一个文件系统，并且在只读镜像层外挂一个可读写层
+                4. 从宿主机配置的网桥接口桥接一个虚拟给此容器
+                5. 执行用户指定的应用
+                6. 程序执行完成后容器停止
+
+            交互模式下：
+                exit或ctrl+d终止一个实例
+
+        2. 基于当前运行实例创建镜像
+            语法：docker commit [OPTIONS] CONTAINER [REPOSITORY[:TAG]]
+
+            △ 如： docker commit 64e041484a46 centos:test
+
+        3. 详细状态信息
+            语法：docker inspect [OPTIONS] CONTAINER|IMAGE [CONTAINER|IMAGE...]
+
+            △ 如：docker inspect -f {{.State.Pid}} cd33177a1b97
+
+        4. 
+
+        5.
+
+    • 私有仓库：
+        1. 安装 docker-registry
+        2. 启动 docker-registry，默认监听tcp/5000
+        3. 建议nginx反代，使用ssl及基于basic用户认证
+
+        docker端使用私有仓库：以172.16.60.1仓库为例
+            1. vim /etc/sysconfig/docker
+
+                ADD_REGISTRY='--add-registry 172.16.60.1:5000'
+                INSECURE_REGISTRY='--insecure-registry 172.16.60.1:5000'   # 如果不用ssl认证时
+
+            2. push镜像
+                docker tag IMAGE_ID 172.16.60.1:5000/[username/]NAME[:TAG]
+                docker push 172.16.60.1:5000/NAME[:TAG]
+
+            3. pull镜像
+                docker pull 172.16.60.1:5000/NAME[:TAG]
+
+    • Docker数据卷：
+        供一个容器或多个容器使用的目录或文件，映射到宿主机上的目录
+
+        · 特性：
+            1. 可以共享于多个容器之间
+            2. 对数据卷的修改会立即生效
+            3. 对数据卷的更新与镜像无关
+            4. 数据卷会一直存在，即使容器被删除
+
+        · 使用：
+            1. docker run -v /MOUNT_POINT ...
+                默认映射的宿主机路径: /var/lib/docker/volumes/....
+
+            2. -v /HOST/DIR:/MOUNT_POINT        # 使用已有的卷
+                /HOST/DIR: 宿主机上的路径
+                /MOUNT_POINT: 容器上的路径
+
+            3. dockerfile中什么VOLUME指令定义
+
+        · 在容器间共享卷：
+            docker run --volumes-from=CONTAINER_NAME ...
+
+        · 删除容器时同时删除卷：
+            docker rm -v CONTAINER_NAME
+            docker run --rm ...      # 容器关闭时自动删除卷(此卷没被其它容器使用时)
+
+    • Docker网络：
+        · 网络模式模型：
+            1. closed container：--net=none
+                只有一个本地回环接口
+                不参与网络通讯，仅适用于无须网络通讯应用，如备份程序调试
+
+                △ 如：docker run -it --name=bb --net=none busybox:latest /bin/sh
+
+            2. bridge container：--net=bridge
+                以太网接口: 桥接到docker daemon设定桥，默认docker0桥
+                回环接口
+
+                启动相关选项：--net, -h, --dns, --add-host 
+
+                △ 如：docker run -it --name=bb --net=bridge busybox:latest /bin/sh
+
+                ▪ 让docker0 NAT桥接模型上的容器发布给外部访问：docker run
+                    -p PORT：容器的指定端口映射到宿主随机(32768+)
+                    -p hostPORT:PORT：容器指定端口映射到宿主机指定端口
+                    -p hostIP::PORT：将容器指定端口映射到主机指定IP随机端口
+                    -p hostIP:hostPORT:PORT：
+                    -P：发布所有端口，跟'--expose'指明要暴露的端口
+
+                    ► 查看端口映射：
+                        docker port ID
+                        docker ps
+                        docker inspect
+
+                    △ 示例：
+                        docker run -it --name=bb -p 80 busybox:latest /bin/sh   # 作用为在主机上添加iptables规则
+                            mkdir /web
+                            echo 'container page' > /web/index.html     # 容器内添加测试页
+                            httpd -f -h /web                            # 启动httpd
+
+                        docker port bb      # 查看端口映射并测试
+                        外部网络访问测试如 172.16.60.1:32768
+
+            3. 联盟式container：--net=container:NAME
+                启动一个容器时，让其使用已经存在的容器的网络名称空间
+
+                △ 如：使用一个已存在的bb容器
+                    docker run --rm --net=container:bb busybox:latest ifconfig -a
+
+            4. 开放式container：--net host
+                容器使用宿主机的网络空间，不安全
+
+                △ 如：使用主机网络，可进行yum安装操作等
+                    docker run --name=centos --net=host -it centos:latest /bin/bash
+
+            ✽ 注：在容器中运行服务时，不能将服务运行在后台，不然将会被直接退出
+                如：docker -d --name web busybox:latest httpd -f
+                    -d: 将容器本身运行在后台
+
+        · 容器互联：容器之间安全的进行交互(容器本身为运行单一程序而存在)
+            --link
+
+            任务编排解决方案：
+                docker: swarm, machine, compose
+                apache: mesos,
+                google: kubemetes
+
+    • Dockerfile：
+        由一系列用于根据基础镜像构建新的镜像文件的专用指令序列组成
+            指令：选定基础镜像、安装程序、复制配置文件和数据文件、自动运行服务及端口等
+
+        · 命令：docker build ==> docker server参与完成
+
+        · 语法：指令行、注释和空白行
+            指令行：由指令及其参数构成，一般全大写
+            注释行：#开头，必须单独一行
+            空白行：会被忽略
+
+        · 指令：
+            ► FROM ： 必须是第一个非注释行，用于指定所用到基础镜像，可多次使用，建议使用一个
+                
+                FROM <images>[:tags]
+                FROM <images>@<digest>
+
+            ► MAINTAINER：用于提供作者本人信息等，建议放置FROM之后
+
+                MAINTAINER <author's detail>
+
+            ► COPY：从宿主机复制文件到正在创建的镜像中
+
+                COPY <src> [<src> ...]  <dst>
+                COPY "<src>" [,"<src>"...]  "<dst>"     # 当文件名有空格时
+
+                △ 如：COPY *.conf /etc/httpd/conf.d/
+
+                ✽ 注：
+                    1. 源必须是build上下文中路径，不能使用'../xx/xx'
+                    2. 源如果是目录，递归复制会自动进行，多个源时，目标必须是目录以'/'结尾
+                    3. 目标路径建议使用绝对路径，相对路径时相对WORDDIR，所有生成文件UID和GID均为0
+                    4. 目标如果不存在，会自动被创建，包括其父目录
+                    5. 不支持网络下载路径
+
+            ► ADD：类似COPY指令，额外还支持tar文件及url路径
+
+                ADD <src> [<src> ...]  <dst>
+                ADD ["<src>", ...  "<dst>"]     # 数组形式
+
+                △ 如：
+                    ADD my.cnf /etc/my.cnf
+                    ADD *.conf /etc/httpd/conf.d/
+                    ADD http://www.liu.com/xxx/download/a.jpg /tmp/
+
+                ✽ 注：
+                    1. 同上
+                    2. 如果是本地的tar文件，会自动展开，网络下载的tar则不自动展开
+
+            ► ENV：定义环境变量，可被当前dockerfile中的其它指令调用($VAR或${VAR})
+
+                ENV key value               # 定义单个，value有空白无需引号或转义
+                ENV key=value k2=v2...      # value中有空白时，需使用'\'转义或加引号
+
+                △ 如：
+                    ENV name1="jerry" dogs=tim\ kerry
+
+            ► USER：指定运行镜像时或dockerfile中的RUN/CMDENTRYPOINT指令指定程序时的用户名
+
+                USER uid|username
+
+                ✽ 注：uid应该使用/etc/passwd中存在的用户uid
+
+            ► WORKDIR：为后续的RUN、CMD、ENTRYPOINT指令配置工作目录
+
+                WORKDIR <dirpath>
+
+                ✽ 注：可以使用多个WORKDIR指令，后续命令如果参数是相对路径，则会基于之前命令指定的路径，可调用ENV定义环境变量
+
+            ► VOLUME：创建一个可以从本地主机或其他容器挂载的挂载点，一般用来存放数据库和需要保持的数据等
+
+                VOLUME <mountpoint>
+                VOLUME ["<mountpoint>", ...]
+
+                ✽ 注：如挂载点存在文件，挂载后会将原来文件复制回来
+
+            ► RUN：用于指定docker build命令构建过程中要运行的命令
+
+                RUN <command>                         # 启动一个shell解析器来运行，但不能关闭
+                RUN ["executable", "param1", ...]     # 不会以shell解析器运行
+
+                △ 如：
+                    RUN ["/bin/bash", "-c","echo hello"] 
+                    RUN yum install nginx && yum clean all
+
+                ✽ 注：每个RUN运行会创建一个新层，建议一个RUN运行多个命令
+
+            ► CMD：类似RUN运行程序，但其在docker run时运行提供默认程序
+
+                CMD <command>                          
+                CMD ["executable", "param1", ...]
+                CMD ["param1", "param2"]    # 为ENTRYPOINT指定程序提供默认参数
+
+                △ 如：docker run -it busybox:latest ==> 不指定运行程序则会自动调用CMD指定程序
+                ✽ 注：存在多个CMD时，仅最后一个生效
+
+            ► ENTRYPOINT：类似CMD，但不会被docker run命令行参数指定指令所覆盖，可用--entrypoint覆盖
+
+                ENTRYPOINT <command>                    
+                ENTRYPOINT ["executable", "param1", ...]
+
+                注：docker run如果有指定的令会被参数传递给ENTRYPOINT
+
+            ► EXPOSE：用于为容器指定要暴露端口
+
+                EXPOSE <port>[/tcp|udp] ...     # 默认为tcp
+
+            ► ONBUILD：定义触发器
+                当前dockerfile构建的镜像被用作基础镜像时去构建其它镜像时，才会被触发，不能自我嵌套，且不会触发FROM及MAINTAINER指令
+
+                ONBUILD <instruction>
+
+                △ 如：ONBUILD ADD my.cnf /etc/my.cnf
+
+
+        △ 简单示例： 
+            mkdir /root/docker
+            cd /root/docker
+            echo 'test page' > index.html
+            vim /root/docker/test.dockerfile
+
+                # liu2lin600
+                FROM busybox:latest
+                MAINTAINER liu2lin600 liu2lin600@163.com
+                COPY index.html /web/index.html
+                EXPOSE 80/tcp
+                CMD ["httpd","-f","-h","/web"]
+
+            docker build -f /root/docker/test.dockerfile -t busybox:test /root/docker
+            docker images
+            docker run -d --name web -P busybox:test
+
+    • 相关书箱：
+        Docker in Action
+        Using Docker
+        Docker cookbook
+
+
+dockerfile示例：
+
+# 安装httpd
+FROM centos:latest
+MAINTAINER liu2lin600 liu2lin60@163.com
+
+ADD aliyun7.repo /etc/yum.repos.d
+RUN /usr/bin/mv /etc/yum.repos.d/CentOS-Base.repo{,.bak} && \
+        yum -y install httpd php && \
+        yum clean all && \
+        echo -e "<?php\n\tphpinfo();?>" > /var/www/html/info.php
+EXPOSE 80
+CMD ["/usr/sbin/httpd","-DFOREGROUND"]
