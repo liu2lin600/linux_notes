@@ -54,9 +54,9 @@ Git版本控制：
         git ls-files [-s]           # 显示暂存(索引)文件
         git ls-files -o             # 显示未被追踪文件
         git ls-files --unmerged     # 冲突时查看未合并前分支
+        git hash-object FILENAME    # 计算文件的hash码
         git cat-file -p HASH        # 查看对象内容
         git cat-file -t HASH        # 查看对象类型
-        git hash-object FILENAME    # 计算文件的hash码
         git write-tree              # 根据当前索引中的内容创建树对象
 
 ♦ Git仓库：
@@ -168,10 +168,10 @@ Git版本控制：
               │             <----git diff HEAD---->              │
 
 ♦ Git回退：
-    • git reset [--soft|--mixed|--head] COMMIT_ID
+    • git reset [--soft|--mixed|--hard] COMMIT_ID
         --soft ：将HEAD引用指向指定提交，但不影响索引及工作目录
         --mixed：将HEAD引用指向指定提交，并将索引内容改变为指定提交的快照，但不改变工作目录
-        --head ：将HEAD引用指向指定提交，并将索引内容改变为指定提交的快照，同时改变工作目录
+        --hard ：将HEAD引用指向指定提交，并将索引内容改变为指定提交的快照，同时改变工作目录
 
     • git checkout <file> == git reset HEAD <file>
         将添加的暂存区的指定文件索引
