@@ -117,7 +117,7 @@ tftp：Trivial FTP，简单文件传输协议，高效传输小文件，监听69
      
             基于xinetd瞬时守护进程的配置文件：/etc/xinted.d/Service_name
 
-            启动：
+            启动：centos6
                 chkconfig xinetd on
                 service xinetd start
 

@@ -14,7 +14,7 @@ openssl
         DES（56bits）：数据加密标准
         3DES：加密3次DES
         AES（128bits）：高级加密标准
-        Blowfish, Twofish, IDEA, RC6, CAST5, Serpent...
+            Blowfish, Twofish, IDEA, RC6, CAST5, Serpent...
         
         特性：
             1. 加密/解密使用统一口令

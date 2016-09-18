@@ -168,8 +168,10 @@ Docker：
                 -m
                 --cpuset-cpus
                 --shm-size
+                -p
+                -P
 
-            △ 如： docker run -it --name=bb busybox:latest /bin/bash
+            △ 如： docker run -it --name=bb --rm busybox:latest /bin/bash
                    docker stop bb
 
             运行步骤：
@@ -263,6 +265,12 @@ Docker：
                     -p hostIP::PORT：将容器指定端口映射到主机指定IP随机端口
                     -p hostIP:hostPORT:PORT：
                     -P：发布所有端口，跟'--expose'指明要暴露的端口
+
+                    △ 如：
+                        docker run -d -p 80 centos:httpd
+                        docker run -d -p 80:80 centos:httpd
+                        docker run -d -p 172.16.60.1::80 centos:httpd
+                        docker run -d -p 172.16.60.1:80:80 centos:httpd
 
                     ► 查看端口映射：
                         docker port ID

@@ -44,11 +44,11 @@ SELinux规则库：
         setenfore 0|1: 临时切换
     
     chcon：打标签
-       -t TYPE：修改为指定类型
-       -R 递归
-       --reference=RFILE：以RFTIE为参照
-       -u USER
-       -r ROLE
+        -t TYPE：修改为指定类型
+        -R ：递归
+        --reference=RFILE：以RFTIE为参照
+        -u USER：
+        -r ROLE：
 
     restorecon：
         -R 递归改回原来的标签属性
@@ -61,7 +61,7 @@ SELinux规则库：
                 allow_ftpd_full_access on
     
     getsebool：获取某一或全部布尔型标签
-       -a
+        -a
 
 httpd
 vsftp

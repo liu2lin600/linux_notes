@@ -7,15 +7,15 @@ OpenSSH简介：
     telnet服务：明文传输，监听tcp协议的23号端口
         客户端：telnet
         服务器：telnet-server
-        查看：ss -tan |grep 23
+        查看：ss -tan | grep 23
 
-        默认禁止管理员直接登陆，
+        注：默认禁止管理员直接登陆
 
     ssh：Secure SHell，监听tcp协议的22号端口
         注：建议使用普通用户登录。而后su到管理员
 
         C/S：
-            Server：OpenSSH(sshd)，监听tcp22
+            Server：OpenSSH(sshd)，监听22/tcp
             Client：OpenSSH(ssh, scp)
             windows客户端：xmanager(xshell)、SecureCRT、putty、sshshellcilent
 
@@ -38,7 +38,7 @@ OpenSSH：
         ssh：/etc/ssh/ssh_config
 
 OpenSSH客户端组件：
-    ssh：
+    ssh：远程连接命令
         ssh [-p PORT] Username@HOST [command]
         ssh [-p PORT] -l Username HOST [command]
 
@@ -64,7 +64,7 @@ OpenSSH客户端组件：
             2. 源文件在远程，目标在本机，即下载
                 scp User@HOST:/path/to/somefile /path/to/somewhere
 
-            常用选项:
+            常用选项：
                 -r：当源文件为目录，以实现递归复制
                 -p：保留源文件的复制及修改时间戳，以及权限
                 -q：静默模式
@@ -98,8 +98,8 @@ openSSH服务器端：sshd
         HostKeys for protocol version 2
         HostKey /etc/ssh/ssh_host_rsa_key
         HostKey /etc/ssh/ssh_host_dsa_key   # 验证主机的公钥
-        KeyRegenerationInterval 1h  # 密钥的使用时间
-        ServerKeyBits 1024  # 密钥长度
+        KeyRegenerationInterval 1h          # 密钥的使用时间
+        ServerKeyBits 1024                  # 密钥长度
         
         LogLevel INFO       # 日志级别
         LoginGraceTime 2m   # 登陆宽限期
@@ -109,12 +109,12 @@ openSSH服务器端：sshd
         MaxSessions 10      # 最大并发连接数
         
         PasswordAuthentication yes  # 是否使用用户名和密码的方式
-        Kerberos            # 统一认证管理
-        X11Forwarding yes   # 是否转发图形窗口
-        PrintMotd           # 登录是否显示/etc/motd内容
-        PrintLastLog        # 显示上次登录日志
-        UseDNS no           # dns反解
-        Subsystem           # sftp
+        Kerberos                    # 统一认证管理
+        X11Forwarding yes           # 是否转发图形窗口
+        PrintMotd                   # 登录是否显示/etc/motd内容
+        PrintLastLog                # 显示上次登录日志
+        UseDNS no                   # dns反解
+        Subsystem                   # sftp
         
         AllowUsers user1...     # 用户白名单
         Allowgroups  grp1...    # 组白名单

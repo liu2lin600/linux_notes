@@ -77,6 +77,7 @@
 				(2) 半虚拟化化：通常适用于硬盘和网卡 
 				(3) IO-through：IO透传，虚拟机直接使用物理设备，需硬件支持，性能最高
 					Intel: VT-d 基于北桥的硬件辅助的虚拟化技术
+
 	• 虚拟化技术类型：
 		1. 主机虚拟化：xen, kvm, virtualbox
 		2. 容器(用户空间隔离)：lxc, openVZ(提供vps服务), Solaris Container, FreeBSD jails 
@@ -112,11 +113,11 @@
 
 	• 网络虚拟化：
 		· 5种网络模型：
-			bridge mode 	: 桥接模型(将真实网卡当交换机，再虚拟出个桥设备作真实机网卡)
+			bridge mode 	: 桥接模型  (将真实网卡当交换机，再虚拟出个桥设备作真实机网卡)
 			host mode   	: 仅主机模型(宿主机上虚拟出交换机和网卡，各虚拟机和宿主机通讯)
-			route mode  	: 路由模型(打开核心转发功能的host模型)，不常用
-			nat mode    	: nat模型(添加nat源地址和目标地址转换的host模型)
-			isolation mode  : 隔离通道(虚拟机之间的虚拟通道)
+			route mode  	: 路由模型  (打开核心转发功能的host模型)，不常用
+			nat mode    	: nat模型   (添加nat源地址和目标地址转换的host模型)
+			isolation mode  : 隔离通道  (虚拟机之间的虚拟通道)
 
 		· 创建桥设备：
 			关闭NetworkManager，安装bridge-utils程序提供brctl命令，默认已安装 

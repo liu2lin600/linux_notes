@@ -115,9 +115,9 @@ Linux：单内核
 
 二次编译清理操作：
     cd /usr/src/linux
-    make clean: 只清理编译生成的文件，保留配置文件.config及编译外部模块所需的文件
-    make mrproper: 删除编译生成的文件和.config（最好先备份.config）
-    make distclean: 恢复最初状态
+    make clean          # 只清理编译生成的文件，保留配置文件.config及编译外部模块所需的文件
+    make mrproper       # 删除编译生成的文件和.config（最好先备份.config）
+    make distclean      # 恢复最初状态
 
 
 内核参数的查看与配置：

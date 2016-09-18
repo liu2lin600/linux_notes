@@ -4,14 +4,14 @@
 
     
 传输层协议：TCP，UDP，SCTP
-    tcp: tran Control Protocol
+    tcp：Transmission Control Protocol
         面向连接的协议：双方通信前需要先建立虚连接
-    udp: User Datagram Protocol
+    udp：User Datagram Protocol
         无连接的协议：
 
 C/S架构：
-    Client: 发起应用请求的程序
-    Server: 响应请求的程序
+    Client：发起应用请求的程序
+    Server：响应请求的程序
 
 
 DNS：Domain Name Service，应用层协议
@@ -82,9 +82,9 @@ DNS：Domain Name Service，应用层协议
         反向解析：IP --> 名称(FQDN)   ==> 区域
 
         区域传送：
-            全量传送：axfr，传送整个数据库
+            全量传送：axfr(all transform)，传送整个数据库
                 dig -t axfr IP
-            增量传送：lxfr，仅传送变化的数据
+            增量传送：lxfr(incremental transform)，仅传送变化的数据
 
     区域数据库文件：
         资源记录：rr(resource record)
@@ -102,11 +102,10 @@ DNS：Domain Name Service，应用层协议
                         存活时长  关键字 资源类型   值
 
             SOA：Start Of Authority
-                name: 区域名称，通常可以简写为@
-                value: 主DNS服务器的FQDN，也可以当前区域的区域名称
+                name： 区域名称，通常可以简写为@
+                value：主DNS服务器的FQDN，也可以当前区域的区域名称
                     1)当前区域的名称
-                    2)当有区域管理员的邮箱，但不能使用@，一般使用.来替代
-                    3)
+                    2)当有区域管理员的邮箱，但不能使用@，一般使用.来替代a@b.com ==> a.b.com
 
                 例如：google.com.   86400   IN      SOA     ns.google.com.   admin.google.com. (
                                 2017060601  ;serial number，解析库的版本号,通常使用日期加版本
@@ -117,32 +116,32 @@ DNS：Domain Name Service，应用层协议
                       )   
 
             NS：name server
-                name: 区域名称
-                value: DNS服务器的FQDN
+                name： 区域名称，通常可简写为@
+                value：DNS服务器的FQDN，可使用相对名称
 
                 例如：
                     google  86400   IN  NS  ns1.google.com.
                     google  86400   IN  NS  ns2.google.com.
 
                 注意：
-                    如果有多台NS服务器，每一个都必须有对应的NS记录；
-                    对于正向解析文件来讲，每一个NS的FQDN都应该有一个A记录；
+                    如果有多台NS服务器，每一个都必须有对应的NS记录
+                    对于正向解析文件来讲，每一个NS的FQDN都应该有一个A记录
 
             MX：Mail eXchanger
-                name: 当前区域名称
-                value: 邮件服务器的FQDN
+                name： 当前区域名称，用于标识stmp服务器
+                value：优先级和邮件服务器的FQDN，数字小优先级高
 
                 例如：
                     google  86400   IN  MX  10  mail.google.com.
                     google  86400   IN  MX  20  mail2.google.com.
 
                 注意：
-                    如果有多台MX服务器，每一个都必须有对应的MX记录；但各MX记录还有优先级属性
-                    对于正向解析文件来讲，每一个NS的FQDN都应该有一个A记录；
+                    如果有多台MX服务器，每一个都必须有对应的MX记录，但各MX记录还有优先级属性
+                    对于正向解析文件来讲，每一个NS的FQDN都应该有一个A记录
 
-            A：Address
-                name: FQDN
-                value: IP
+            A：Address 只能定义在正向区域数据文件中
+                name ：FQDN
+                value：IP
 
                 例如：
                     www.google.com.     IN   A      1.1.1.1
@@ -154,16 +153,16 @@ DNS：Domain Name Service，应用层协议
             AAAA：ipv6 IP
 
             CNAME：Canonical Name
-                name: FQDN格式别名
-                value: FQDN格式的正式名
+                name ：FQDN格式别名
+                value：FQDN格式的正式名
 
                 例如：
                     www.google.com.     IN    A    1.1.1.5
                     web.google.com.     IN    CNAME www.google.com.
 
-            PTR：pointer
-                name: 逆向的主机IP地址加后缀in-addr.arpa，例如172.16.100.7/16, 网络地址为172.16, 主机地址为100.7，其name为7.100.in-addr.arpa.
-                value: FQDN
+            PTR：pointer指针记录，只能记录在反向区域数据文件中
+                name ：逆向的主机IP地址加后缀in-addr.arpa，例如172.16.100.7/16, 网络地址为172.16, 主机地址为100.7，其name为7.100.in-addr.arpa.
+                value：FQDN
 
                 例如：
                     7.100.in-addr.arpa.     IN      PTR     www.google.com.
@@ -180,11 +179,12 @@ DNS服务安装配置：
         dns：协议
         bind：dns协的一种实现 
         named：bind程序的运行进程名
+
     程序包：
-        bind:提供dns server程序及几个常用的测试程序
-        bind-utils:bind客户端程序集，如dig,host,nxlookup
-        bind-libs:被bind和bind-util包中的程序共同用到的库文件
-        bind-chroot:选装，让named运行在jail模式下
+        bind：       提供dns server程序及几个常用的测试程序
+        bind-utils： bind客户端程序集，如dig,host,nxlookup
+        bind-libs：  被bind和bind-util包中的程序共同用到的库文件
+        bind-chroot：选装，让named运行在jail模式下
 
     bind：
         服务脚本：/etc/rc.d/init.d/named
@@ -212,7 +212,7 @@ DNS服务安装配置：
                 logging{...}
             区域配置段：
                 zone "xx" IN {
-                    type {hint|master|slave|forward};
+                    type { hint|master|slave|forward };
                     file "xx.zone";
                 };
 
@@ -277,7 +277,7 @@ DNS服务安装配置：
     I.配置解析一个正向区域：(以li2lin.com为例)
         1. 定义一个区域在主配置文件或其包含的配置文件/etc/named.rfc1912.zones）
             zone "liu2lin.com." IN {
-                type {hint|master|slave|forward};
+                type hint;
                 file "liu2lin.com.zone";
             };
 
@@ -285,12 +285,12 @@ DNS服务安装配置：
             添加内容：
                 $TTL 3600
                 $ORIGIN liu2lin.com.
-                @    IN   SOA   ns1.liu2lin.com.   dnsadmin.liu2lin.com.(
+                @    IN   SOA   ns1.liu2lin.com.   dnsadmin.liu2lin.com. (
                     2017010201 1H 10M 3D 1D
                 )
                 @    IN   NS            ns1
-                @    IN   MX    A   10  mx1
-                @    IN   MX    A   20  mx2
+                @    IN   MX      10    mx1
+                @    IN   MX      20    mx2
                 ns1  IN   A   192.168.99.11
                 mx1  IN   A   192.168.99.12
                 mx2  IN   A   192.168.99.13
@@ -305,12 +305,12 @@ DNS服务安装配置：
             
             chgrp named /var/named/liu2lin.com.zone
             chmod o= /var/named/liu2lin.com.zone
-            named-checkzone "liu2lin.com" /var/named/liu2lin.com.zone      # 检测区域文件语法
-            named-checkconf                                   # 检测主配置文件
+            named-checkzone "liu2lin.com" /var/named/liu2lin.com.zone    # 检测区域文件语法
+            named-checkconf                                              # 检测主配置文件
 
         3. 让服务器重载配置文件和区域数据文件
-            centos6: rndc reload
-            centos7: systemctl reload named.service
+            centos6：rndc reload
+            centos7：systemctl reload named.service
             或：
             killall -1 named
 
@@ -516,8 +516,8 @@ DNS服务安装配置：
             ......
 
         使用view注意的事项：
-            1、通常只为内网客户端提供递归功能，提供根区域等；
-            2、通过只为外网客户端提供本机所负责的区域的解析；
+            1、通常只为内网客户端提供递归功能，提供根区域等
+            2、通过只为外网客户端提供本机所负责的区域的解析
 
 
 

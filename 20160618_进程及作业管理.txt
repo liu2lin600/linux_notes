@@ -80,13 +80,13 @@
 
         进程间通信：IPC (InterProcess Communication)
             同一主机：
-                signal
+                signal：
                 shm：共享内存
-                semerphor: 旗语
+                semerphor：旗语
 
             不同主机：
-                rpc: Remote Procedure Calling
-                socket: 
+                rpc: Remote Procedure Calling 远程过程调用
+                socket: 套节字通讯
 
         CPU虚拟化：时间片, timeslice
             5ms

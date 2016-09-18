@@ -4,7 +4,7 @@
 内核管理
 
 os：
-   内核的功能：
+    内核的功能：
         进程管理：task_struct，scheduler
     	内存管理：
     	I/O管理：中断及中断处理
@@ -12,12 +12,12 @@ os：
     	驱动程序：
     	安全相关：SELinux
     	是通用软件，平台类的软件
-        内核设计流派：
-            单内核：单一体系结构
-    	    Linux
-    	       模块化设计：核心+外围功能性模块组成
-    	           .ko:Kernel object
-    		   内核支持动态装卸载模块
+    内核设计流派：
+        单内核：单一体系结构
+	    Linux
+	       模块化设计：核心+外围功能性模块组成
+	           .ko:Kernel object
+		   内核支持动态装卸载模块
     		       
     	微内核：内核子系统
     	    Windows
@@ -34,7 +34,7 @@ CentOS的启动流程
 
  POST：加电自检
   
- BIOS:Boot Sequence，启动次序（一般按F2进入BISO设置）
+ BIOS：Boot Sequence，启动次序（一般按F2进入BISO设置）
      MBR:
          446：bootloader,还要能识别文件系统
          64：分区表，16个字节一个分区
@@ -55,7 +55,7 @@ CentOS的启动流程
 
 
  init：
-    CentOS 5: SysV格式的系统初始化程序，串行初始化
+    CentOS 5：SysV格式的系统初始化程序，串行初始化
     CentOS 6：upstart，dbus
 	          systemd：参考OS X中并行初始化过程
 
@@ -88,36 +88,39 @@ centos5,6
     
 init要完成任务：(用户空间)
     /etc/inittab中定义的操作
-        1.指定默认运行级别
-        2.指定系统运行的初始脚本
-        3.启动指定级别下的要启动的服务，关闭要停止的服务
+        1. 指定默认运行级别
+        2. 指定系统运行的初始脚本
+        3. 启动指定级别下的要启动的服务，关闭要停止的服务
             /etc/init.d/:存放服务脚本，可接受{start|stop|status|reload...}操作
                 /etc/rc.d/rc.N.d(0-6)
                     S##：启动
                     K##：关闭
             }
-        4.定义ctrlaltdel组合的动作
-        5.初始化字符终端
+        4. 定义ctrlaltdel组合的动作
+        5. 初始化字符终端
             终端：对应的是设备
-                /dev/tty#，/dev/ttyS#，/dev/console，/dev/pts/#
+                物理终端：/dev/console
+                虚拟终端：/dev/tty#
+                串行终端：/dev/ttyS#
+                  伪终端：/dev/pts/#
             调用：login-->/etc/issue
-        6.启动图形终端（如需要）
+        6. 启动图形终端（如需要）
             X-windows
 
-cmdline:内核启动时传递给内核的参数
+cmdline：内核启动时传递给内核的参数
 系统初始化脚本：/etc/rc.d/rc.sysinit        # 学习脚本的好范本
-    1.设置主机名：
-    2.打印文本欢迎信息
-    3.激活SELinux和udev
-    4.激活swap
-    5.挂载/etc/fstab定义的本地文件系统
-    6.实现检查根文件系统并对其以读写重新挂载
-    7.设置系统时钟
-    8.装载键盘映射
-    9.根据/etc/sysctl.conf设置内核参数
-    10.激活RAID和LVM设备
-    11.加载额外设备的驱动程序
-    12.清理操作
+    1. 设置主机名
+    2. 打印文本欢迎信息
+    3. 激活SELinux和udev
+    4. 激活swap
+    5. 挂载/etc/fstab定义的本地文件系统
+    6. 实现检查根文件系统并对其以读写重新挂载
+    7. 设置系统时钟
+    8. 装载键盘映射
+    9. 根据/etc/sysctl.conf设置内核参数
+    10. 激活RAID和LVM设备
+    11. 加载额外设备的驱动程序
+    12. 清理操作
 
 centos7上兼容5，6操作，可以使用service命令，不过建议使用systemctl
     格式：systemctl {start|stop|restart|status} name.service
@@ -152,9 +155,9 @@ bootloader：引导加载器，是一个程序
 grub 0.x相关内容：
 
     Grub的功能：
-        1.选择要启动的内核或系统，允许传递参数给内核，能隐藏交互式接口
-        2.交互式接口。e: 编辑模式, c: 命令模式
-        3.基于密码保护
+        1. 选择要启动的内核或系统，允许传递参数给内核，能隐藏交互式接口
+        2. 交互式接口。e: 编辑模式, c: 命令模式
+        3. 基于密码保护
             启用内核映像：定义在响应title下
             传递参数（进入编辑模式）：定义在全局段中
     
