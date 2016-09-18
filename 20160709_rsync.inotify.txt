@@ -2,7 +2,8 @@
 # edit by liu2lin600
 
 
-rsync: Remote Sync 远程同步工具，具有可使本地和远程两台主机之间的数据快速复制同步镜像、远程备份的功能，本身不具备加密功能
+rsync：Remote Sync 
+    远程同步工具，具有可使本地和远程两台主机之间的数据快速复制同步镜像、远程备份的功能，本身不具备加密功能
 
     特点：
         1、可以镜像保存整个目录树或文件系统
@@ -81,9 +82,9 @@ rsync: Remote Sync 远程同步工具，具有可使本地和远程两台主机�
                 write only = no
                 hosts allow = 172.16.0.0/16     # 多个使用逗号隔开
                 hosts deny = *  
-                    1. 默认规则为允许访问，二者都不出现时
-                    2. 只出现hosts allow, 定义白名单；但没有被匹配到的由默认规则处理，即为允许
-                    3. 只出现hosts deny, 定义黑名单；出现在名单中的都被拒绝
+                    1. 默认规则为允许访问，allow和deny二者都不出现时
+                    2. 只出现hosts allow, 定义白名单，但没有被匹配到的由默认规则处理，即为允许
+                    3. 只出现hosts deny, 定义黑名单，出现在名单中的都被拒绝
                     4. 二者同时出现，先检查hosts allow,如果匹配就allow，否则，检查hosts deny 如果匹配则拒绝，如二者均无匹配，则使用默认的，即允许
                 list = false        # 显示列表
                 uid = root
@@ -132,7 +133,7 @@ inotify-tools：
     为linux下inotify文件监控工具提供的一套C的开发接口库函数，同时还提供了一系列的命令行工具，这些工具可以用来监控文件系统的事件。inotify-tools是用c编写的，除了要求内核支持inotify外，不依赖于其他
     
     inotify-tools提供两种工具：
-        inotifywait：它是用来监控文件或目录的变化，
+        inotifywait：它是用来监控文件或目录的变化
         inotifywatch：它是用来统计文件系统访问的次数
 
     安装：

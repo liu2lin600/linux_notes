@@ -3,14 +3,13 @@
 
 http基础：
 
-套接字：两类
+套接字：BSD发明
     socket：IP port 
             IP:port
             Ip.port
 
     unix sock：基于文件系统通信实现
-
-    BSD发明：
+    
     MTU：最大传输单元
 
 传输层协议：
@@ -23,29 +22,25 @@ http基础：
     UDP套接字
     raw套接字（由程序自身维护）
 
-物理层=硬件
-数据链路层=驱动
+    物理层=硬件
+    数据链路层=驱动
 
 通信：点对点
       c/s（client/server）
 
-客户端的为随机端口
+    客户端的为随机端口
 
 c/s：
    通信子网：传输
    应用层协议：特定的
       http，https，smtp,pop,imap,ftp,ldap
 
-
-
 http： 超文本传输协议（hyprttext transport protcol）
-    html:hypertext mark language(超文本标记语言)
+    html：hypertext mark language(超文本标记语言)
 
-    client:browser
+    client：browser
         URI（统一资源提示符）的子集：URL（统一资源定位符）
-    server:http server
-
-
+    server：http server
 
 
 动态页面：
@@ -113,6 +108,19 @@ HTTP报文：
             <status>：状态码
             <reason-phrase>：原因短语，数字状态吗易读信息
             <entity-body>：主体部分
+
+            如：
+                HTTP/1.1 200 OK
+                Server: bfe/1.0.8.18
+                Date: Sun, 18 Sep 2016 09:38:30 GMT
+                Content-Type: text/html
+                Content-Length: 277
+                Last-Modified: Mon, 13 Jun 2016 02:50:01 GMT
+                Connection: Keep-Alive
+                ETag: "575e1f59-115"
+                Cache-Control: private, no-cache, no-store, proxy-revalidate, no-transform
+                Pragma: no-cache
+                Accept-Ranges: bytes
 
         http协议：是一种stateless（无状态）协议，一次HTTP事务结束后，链接即行断开
 

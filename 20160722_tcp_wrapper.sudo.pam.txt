@@ -1,7 +1,7 @@
 2016-07-22
 # edit by liu2lin600
 
-# tcp_wrapper  PAM
+# tcp_wrapper  sudo PAM
 
 tcp_wrapper：tcp包装器
 
@@ -22,18 +22,18 @@ tcp_wrapper：tcp包装器
         格式：daemon_list:client_list[:options]
        
         I. daemon_list：服务列表
-            1. 单个应用程序文件名称，如vsftpd、sshd
-            2. 应用程序列列表: 如果有多个，用逗号分隔即可
-            3. ALL: 匹配所有受tcpwrap控制的程序
+            1. 单个应用程序文件名称：如vsftpd、sshd
+            2. 应用程序列列表：如果有多个，用逗号分隔即可
+            3. ALL：匹配所有受tcpwrap控制的程序
         
         II. client_list：客户端列表
             1. ip地址：172.16.100.100
-            2. 域名：www.magedu.com
+            2. 域名：www.liu2lin.com
             3. 网络地址[/mask]：如有掩码必须使用长格式
                 172.16. : 表示172.16.0.0/255.255.0.0
             4. 内置的ACL：
                 ALL: 
-                KEOWN: 主机名能正常解析的
+                KNOWN: 主机名能正常解析的
                 UNKNOWN: 主机名不能正常解析
                 PARANOID: 主机名正反项解析不匹配的
             5. EXCEPT：除外，如 vsftpd: 172.16. EXCEPT 172.16.11.11
@@ -64,7 +64,7 @@ sudo：
 
     su：switch user 
         su - USER：登录式切换
-        su USER：非
+        su USER：非录式切换
         -c：不切换用户，以用户的身份执行命令
     root：
         用户管理：
@@ -74,17 +74,19 @@ sudo：
 
     1、定义sudo授权，/etc/sudoers
     
-    语法： who   where=(whom)   command   ==> 谁能以谁的身份，在那些主机上执行那些命令(多命令间用逗号隔开)
+    语法： who   where=(whom)   command
+        谁(who)，能以谁(whom)的身份，在那些主机(where)上执行那些命令(多命令间用逗号隔开)
+
         who：
-            username: 单个用户
-            #uid: 单用户id
-            %group: 组内所有用户
-            %#gid: 组内所有用户
-            user_alias: 用户别名
+            username    : 单个用户
+            #uid        : 单用户id
+            %group      : 组内所有用户
+            %#gid       : 组内所有用户
+            user_alias  : 用户别名
         where：
-            ip或hostname:
-            netAddr:
-            host_alias:
+            ip或hostname
+            netAddr
+            host_alias
         whom：
             username
             #uid
@@ -100,18 +102,20 @@ sudo：
         hadoop ALL=(root) /usr/sbin/useradd, /usr/sbin/usermod
 
         别名：都以大写字母定义
-            Host_Alias：定义主机别名，使用，分隔
-            User_Alias：定义用户别名，可以是用户名，也可以是组名(%组名)
-            Cmnd_Alias：定义命令别名，可以定义不能执行的命令，使用!/usr/bin/passwd root
-            Runas_Alias：定义以那些用户执行
-            NOPASSWD：定义用户执行命令时可以不输入密码
-            PASSWD：定义用户执行命令时需要输入密码
+            Host_Alias  ：定义主机别名，使用，分隔
+            User_Alias  ：定义用户别名，可以是用户名，也可以是组名(%组名)
+            Cmnd_Alias  ：定义命令别名，可以定义不能执行的命令，使用!/usr/bin/passwd root
+            Runas_Alias ：定义以那些用户执行
+            NOPASSWD    ：定义用户执行命令时可以不输入密码
+            PASSWD      ：定义用户执行命令时需要输入密码
 
             示例：
                 User_Alias USERADMINS = jerry, lily
                 Cmnd_Alias USERADMINSD = /usr/sbin/useradd, /usr/sbin/userdel, /usr/sbin/passwd [a-z]*, !/usr/sbin/passwd root
 
                 USERADMINS  ALL=(root)  USERADMINSD
+
+                注：'!'为取反
 
         标签：
             PASSWD：切换指定命令时需要输入密码
@@ -138,7 +142,7 @@ PAM：Pluggable Authentication Moudle
 
 
      配置文件：/etc/pam.conf
-               /etc/pam.d/*
+               /etc/pam.d/*                             ：
 
      type: 栈
          account：跟认证无关的账号检测机制，

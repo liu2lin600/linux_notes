@@ -10,7 +10,7 @@ Docker：
         1. PID Namespace:  (linux 2.6.24) 进程号隔离
         2. Network Namespace: (linux 2.6.29) 网络设置、网络栈、端口和网络资源隔离 
         3. User Namespace: (linux 3.8) 用户和组资源隔离
-        4. IPC Namespace: 进程间通讯名称空间(linux 2.6.19) 信号量、消息队列和共享内存隔离
+        4. IPC Namespace: (linux 2.6.19) 进程间通讯名称空间 信号量、消息队列和共享内存隔离
         5. UTS Namespace: (linux 2.6.19) 主机名和域名隔离
         6. Mount Namespace: (linux 2.4.19) 挂载点(文件系统)隔离
 
@@ -25,7 +25,6 @@ Docker：
         3. 审计及统计 Accounting 计费功能
         4. 挂起及恢复进程 control
 
-        
     • CGroup子系统：subsystem
         blkio：设定块设备的IO限制
         cpu：设定cpu限定
@@ -51,7 +50,7 @@ Docker：
 ♦ AUFS：
     another(->alter->adance) union filesystem 高级联合文件系统(非内核自带)
 
-    UnionFS：内核自带，把不同物理位置的目录合并到同一个目录中，最后一目录下可写，快照
+    UnionFS：联合文件系统，内核自带，把不同物理位置的目录合并到同一个目录中，最后一目录下可写，快照
 
 ♦ Device mapper：
     2.6内核引入，用于在内核中支持逻辑卷管理的通用设备映射机制
@@ -252,8 +251,8 @@ Docker：
                 △ 如：docker run -it --name=bb --net=none busybox:latest /bin/sh
 
             2. bridge container：--net=bridge
-                以太网接口: 桥接到docker daemon设定桥，默认docker0桥
-                回环接口
+                (1) 以太网接口: 桥接到docker daemon设定桥，默认docker0桥
+                (2) 回环接口
 
                 启动相关选项：--net, -h, --dns, --add-host 
 
@@ -397,7 +396,7 @@ Docker：
 
                 ✽ 注：每个RUN运行会创建一个新层，建议一个RUN运行多个命令
 
-            ► CMD：类似RUN运行程序，但其在docker run时运行提供默认程序
+            ► CMD：运行程序，但其在docker run时运行提供默认程序
 
                 CMD <command>                          
                 CMD ["executable", "param1", ...]
@@ -411,7 +410,7 @@ Docker：
                 ENTRYPOINT <command>                    
                 ENTRYPOINT ["executable", "param1", ...]
 
-                注：docker run如果有指定的令会被参数传递给ENTRYPOINT
+                注：docker run如果有指定的令会被当作参数传递给ENTRYPOINT
 
             ► EXPOSE：用于为容器指定要暴露端口
 

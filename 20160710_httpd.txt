@@ -249,14 +249,14 @@ httpd-2.2配置文件说明：/etc/httpd/conf/httpd.conf
             digest：摘要认证，hash编码之后发送
 
         虚拟用户：不是系统用户，只是为了获取某种资源类型的一种虚拟的用户，仅用于访问某服务的帐号密码，保存位置有
-            1. 文件:/etc/httpd/conf/.htpasswd
-            2. SQL数据库
-            3. dbm:
-            4. ldap:轻量级目录访问协议
+            1. 文件：如/etc/httpd/conf/.htpasswd
+            2. SQL数据库：mysql
+            3. dbm：
+            4. ldap：轻量级目录访问协议
         
         安全域：
 
-        案例：基于文件，做basic基本认证根据用户和组进行授权
+        示例：基于文件，做basic基本认证根据用户和组进行授权
             1、编辑配置文件，为需要认证的目录配置认证机制
                 <Directory "/web/admin/">
                     Options None
@@ -269,7 +269,7 @@ httpd-2.2配置文件说明：/etc/httpd/conf/httpd.conf
 
                     指定用户：Require user liu tom lily
 
-            2、使用 htpsswd 命令使用生成认证库
+            2、使用 htpasswd 命令使用生成认证库
                 -c: 创建密码，创建第一个用户时使用
                 -m: MD5格式存放
                 -s: SHA加密
@@ -355,7 +355,7 @@ httpd-2.2配置文件说明：/etc/httpd/conf/httpd.conf
             注意：SSL会话是基于IP地址创建；所以单IP的主机上，仅可以使用一个https虚拟主机；
 
 
-        配置httpd支持https：
+        配置httpd支持https示例：
             (1) 为服务器申请数字证书，以下为在同台主机上演示
                 yum -y install mod_ssl httpd
 
@@ -408,28 +408,28 @@ httpd-2.2配置文件说明：/etc/httpd/conf/httpd.conf
                 Allow from all
             </Location>
 
-            注：如没有用户帐号文件需先生成，htpasswd -c -m /etc/http/conf/.htpasswd tom
+            注：如果没有用户帐号文件需先生成，如:htpasswd -c -m /etc/http/conf/.htpasswd tom
 
             访问：http://IP/server-status
 
     18、curl命令
 
-    curl是基于URL语法在命令行方式下工作的文件传输工具，它支持FTP, FTPS, HTTP, HTTPS, GOPHER, TELNET, DICT, FILE及LDAP等协议。curl支持HTTPS认证，并且支持HTTP的POST、PUT等方法， FTP上传， kerberos认证，HTTP上传，代理服务器， cookies， 用户名/密码认证， 下载文件断点续传，上载文件断点续传,，http代理服务器管道（ proxy tunneling）， 甚至它还支持IPv6， socks5代理服务器,，通过http代理服务器上传文件到FTP服务器等
+        curl是基于URL语法在命令行方式下工作的文件传输工具，它支持FTP, FTPS, HTTP, HTTPS, GOPHER, TELNET, DICT, FILE及LDAP等协议。curl支持HTTPS认证，并且支持HTTP的POST、PUT等方法， FTP上传， kerberos认证，HTTP上传，代理服务器， cookies， 用户名/密码认证， 下载文件断点续传，上载文件断点续传,，http代理服务器管道（ proxy tunneling）， 甚至它还支持IPv6， socks5代理服务器,，通过http代理服务器上传文件到FTP服务器等
 
-    格式：curl [OPTIONS] [URL...]
+        格式：curl [OPTIONS] [URL...]
 
-    curl的常用选项：
-        -I/--head：只显示响应报文首部信息
-        -H/--header <line>：自定义头信息传递给服务器
-        -A/--user-agent <string>：设置用户代理发送给服务器，即告诉服务器浏览器是什么
-        -basic：使用HTTP基本验证
-        --tcp-nodelay：使用TCP_NODELAY选项
-        -e/--referer <URL>：来源网址，跳转过来的网址
-        --cacert <file>：指定CA证书 (SSL)
-        --compressed：要求返回是压缩的形势，如果文件本身为一个压缩文件，则可以下载至本地
-        --limit-rate <rate>：设置传输速度
-        -u/--user <user[:password]>：设置服务器的用户和密码
-        -0/--http1.0：使用HTTP 1.0
+        curl的常用选项：
+            -I/--head：只显示响应报文首部信息
+            -H/--header <line>：自定义头信息传递给服务器
+            -A/--user-agent <string>：设置用户代理发送给服务器，即告诉服务器浏览器是什么
+            -basic：使用HTTP基本验证
+            --tcp-nodelay：使用TCP_NODELAY选项
+            -e/--referer <URL>：来源网址，跳转过来的网址
+            --cacert <file>：指定CA证书 (SSL)
+            --compressed：要求返回是压缩的形势，如果文件本身为一个压缩文件，则可以下载至本地
+            --limit-rate <rate>：设置传输速度
+            -u/--user <user[:password]>：设置服务器的用户和密码
+            -0/--http1.0：使用HTTP 1.0
 
     19、使用mod_deflate模块压缩页面优化传输速度，可以写为一行，也可以写多行，默认为gzip
         适用场景：
@@ -502,7 +502,7 @@ httpd-2.2配置文件说明：/etc/httpd/conf/httpd.conf
 
 
 httpd-2.4的新特性：
-    1. MPM支持在运行时装载；
+    1. MPM支持在运行时装载
         --enable-mpms-shared=all --with-mpm={prefork|worker|event}
     2. 支持event mpm
     3. 异步读写
