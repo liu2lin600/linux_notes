@@ -241,3 +241,30 @@
 
         · 配置：
 
+♦ fastDFS：
+    C++语言，开源轻量级分布式文件系统
+
+    • 3个角色：
+        1. tracker server：跟踪服务器
+            负责调度，在内存中记录所有存储组和存储服务器的状态信息
+
+        2. storage server：存储服务器
+            由多个组，每个组存在镜像组成(类似raid10)，存储文件(data)和文件属性(metadata)，同时向tracker周期性报告自身状态等信息
+
+        3. client：客户端
+            业务请求发起方，通过专用接口基于tcp与tracker及storage进行交互，同时记录上传生成的fid等
+
+    • 相关概念：
+        fid：group_name/M##/ab/ed/file_name
+
+            · group_name：存储组的组名，上传后客户端自行保存
+            · M##       ：服务器配置虚拟路径，与磁盘选项store_path#对应
+            · ab/ed     ：2位16进制数组成的目录名
+            · file_name ：与原文件名不同，由storage根据特定信息生成，包含存储服务器IP、创建时间戳、大小、随机数及扩展名等
+
+            如：group1/M00/01/12/ebsmnwrkjfksdfvxdvsdfsdfsdf
+
+    • 安装配置：
+        · 源码下载：
+            git clone https://github.com/happyfish100/fastdfs.git
+            git clone https://github.com/happyfish100/libfastcommon.git

@@ -71,9 +71,9 @@ Linux日志：
         mail.=info      /var/log/maillog    # 明确指定级别
         mail.!info      *                   # 除了指定级别
         *.info          | COMMAND           # 所有facility的info级别
-        mail.*:         -/var/log/maillog   # mail的所有级别，'-'表示异步记录
-        mail,news.info:                     # 等同于mail.info;news.info
-        local2.*   @192.168.1.100   # 记录到指定主机上
+        mail.*          -/var/log/maillog   # mail的所有级别，'-'表示异步记录
+        mail,news.info  /var/log/xx         # 等同于mail.info;news.info
+        local2.*        @192.168.1.100      # 记录到指定主机上
 
     其它日志文件：
         /var/log/btmp：当前系统上，用户尝试登录失败相关的日志，使用lastb命令查看

@@ -6,31 +6,32 @@
     内核：nfs (Sun)
     跨平台：samba，在Linux实现CIFS（SMB）协议
 
-    注：以上只适用于小规模的对性能要求不是特别高的场景
+    ✽ 注：以上只适用于小规模的对性能要求不是特别高的场景
 
-一、ftp：File Transfer Protocol，基于tcp的应用层协议, 21/tcp，C/S架构
+♦ ftp：
+    File Transfer Protocol，基于tcp的应用层协议, 21/tcp，C/S架构
     
-    建立2种连接：
+    • 建立2种连接：
         1. 命令连接：文件管理类命令，始终在线的连接，用来传输命令如get,mget...
         2. 数据连接：数据传输，按需创建及关闭的连接
 
             数据传输格式：(流式化数据) 文本传输、二进制传输
 
-            主动：由服务器创建连接(以客户端50000为例)
+            ► 主动：由服务器创建连接(以客户端50000为例)
                 命令：
                     Client:50000 --> Server: 21
                 数据：
                     Server: 20/tcp --> Client: 50000+1
 
-                注：如果客户端有防火墙，数据传输将会被拒绝
+                ✽ 注：如果客户端有防火墙，数据传输将会被拒绝
 
-            被动：由客户端创建连接                 
+            ► 被动：由客户端创建连接                 
                 命令：
                     Client:50000 --> Server: 21
                 数据：
                     Client:50000+1 --> Server: 随机端口(解决多个数据传输请求)
 
-    常用实现C/S：
+    • 常用实现C/S：
         Server：
             wu-ftpd:华盛顿大学
             proftpd:
@@ -41,11 +42,11 @@
             CLI: ftp, lftp, lftpget, wget, curl
             GUI: filezilla(开源), gftp(Linux), flashfxp(win), cuteftp(win)
 
-    ftp数据传输安全：ftp协议是明文
+    • ftp数据传输安全：ftp协议是明文
         sftp：ssh提供的基于ssh协议的ftp
         ftps：基于ssl的ftp
 
-    ftp响应码：
+    • ftp响应码：
         1xx: 信息
         2xx: 成功类的状态码
         3xx: 提示需进一步提供补充类信息的状态码
@@ -53,7 +54,7 @@
         5xx: 服务端错误
 
 
-    vsftpd安装配置：
+    • vsftpd安装配置：
         用户认证配置文件：/etc/pam.d/vsftpd
             nsswitch: network server switch, 名称解析框架 (name --> uid)
                 模块：/lib64/libnss*, /usr/lib64/libnss*
@@ -72,25 +73,25 @@
             系统用户：用户自己的家目录
             虚拟用户：给虚拟用户指定的映射成为的系统用户的家目录，仅用于访问某特定服务中的资源，存放hash file或mysql中
 
-    主配置文件配置：/etc/vsftpd/vsftpd.conf
-        注：键名必须顶格写！！！
+    • 主配置文件配置：/etc/vsftpd/vsftpd.conf
+        ✽ 注：键名必须顶格写！！！
         
-        匿名用户的配置：
+        ► 匿名用户的配置：
             anonymous_enable=YES            # 允许匿名
             anon_upload_enable=YES          # 上传
             anon_mkdir_write_enable=YES     # 创建目录
             anon_ohter_write_enable=YES     # 删除
 
-            注：匿名登录用户名为anoymous或ftp，写入权限取决于文件系统本身和ftp服务权限的交集
+            ✽ 注：匿名登录用户名为anoymous或ftp，写入权限取决于文件系统本身和ftp服务权限的交集
                 同时如果SELinux开启时，需设置 setsebool -P ftpd_full_access=on
                 还要保持不被防火墙过滤
 
-        系统用户的配置：
+        ► 系统用户的配置：
             local_enable=YES
             write_enable=YES
             local_umask=022
 
-            注：默认情况下用户登录后可以查看其它文件
+            ✽ 注：默认情况下用户登录后可以查看其它文件
 
             禁锢所有的ftp本地用户于其家目录中：
                 chroot_local_user=YES
@@ -100,17 +101,17 @@
 
                 allow_writeable_chroot=YES  # 默认家目录不能可写才能登录，此项则开启可写目录允许登录
 
-        用户的欢迎信息login banners：
+        ► 用户的欢迎信息login banners：
             ftpd_banner=Welcom...           # 此优先级高
             banner_file=/etc/vsftpd/banner  # 文件可自定义
 
-        切换目录时的欢迎信息：
+        ► 切换目录时的欢迎信息：
             dirmessage_enable=YES
             在目录下创建.messages文件
 
-        vsftp控制登陆系统用户的机制：
+        ► vsftp控制登陆系统用户的机制：
             /etc/vsftpd/ftpusers中的用户不允许使用ftp服务器，这是在/etc/pam.d/vsftpd中定义的
-            注：编译安装不存在/etc/pam.d/vsftpd，为redhat的rpm包提供
+            ✽ 注：编译安装不存在/etc/pam.d/vsftpd，为redhat的rpm包提供
 
             是否启用控制用户登录的列表文件：/etc/vsftpd/user_list
                 黑名单：
@@ -120,35 +121,35 @@
                     userlist_enable=YES
                     uselist_deny=NO
 
-            注：ftpusers文件优先级高
+            ✽ 注：ftpusers文件优先级高
 
 
-        连接限制：
+        ► 连接限制：
             max_clients=    # 最大并发连接数
             max_per_ip=     # 每个IP可同时发起的并发请求数
 
-        速率限制：
+        ► 速率限制：
             anon_max_rate=      # 匿名用户的最大传输速率, byte/s
             local_max_rate=     # 本地用户
 
-        上传文件的umask：
+        ► 上传文件的umask：
             anno_umask=     # 匿名用户上传文件的umask，默认077
             local_umask=    # 本地用户
 
-        改变上传文件的属主属组：默认为ftp:ftp
+        ► 改变上传文件的属主属组：默认为ftp:ftp
             chown_uploads=YES
             chown_username=USERNAME
 
-        日志：
+        ► 日志：
             xferlog_enable=YES
             xferlog_std_format=YES
             xferlog_file=/var/log/xferlog
         
-        vsftpd使用pam完成用户认证，其用到的pam配置文件：
+        ► vsftpd使用pam完成用户认证，其用到的pam配置文件：
             pam_service_name=vsftpd
 
 
-    实现虚拟用户：
+    • 实现虚拟用户：
         所有的虚拟用户会映射成一个系统用户，访问时的文件目录是为此系统用户的家目录
 
         虚拟用户：
@@ -164,36 +165,37 @@
             # yum -y install pam_mysql
 
 
-二、NFS：Network File System，传统意义上，文件系统在内核中实现，依赖与RPC服务
+♦ NFS：
+    Network File System，传统意义上，文件系统在内核中实现，依赖与RPC服务
 
-    RPC：Remote Procedure Call protocol，远程过程调用，函数调用（远程主机上的函数）
+    • RPC：Remote Procedure Call protocol，远程过程调用，函数调用（远程主机上的函数）
         一部分功能由本地程序完成，另一部分功能由远程主机上的函数完成
 
-    NFS协议：Sun公司研发
+    • NFS协议：Sun公司研发
         NFSv1
         NFSv2, udp
         NFSv3,
         NFSv4.0, NFSv4.1 , NFSv4.2
 
-    中心认证服务：
+    • 中心认证服务：
         NIS：Network Information Server，网络信息服务，集中于某服务器完成身份认证功能(不加密)
         Kerberos：
         LDAP：Lightweight Directory Access Protocol
             LDAPS: LDAP over ssl/tls
 
-    NFS：基于IP的认证，不对身份进行认证，只提供文件服务
+    • NFS：基于IP的认证，不对身份进行认证，只提供文件服务
         监听端口：2049/tcp, 2049/udp
         配置文件：/etc/sysconfig/nfs
 
-    RPC服务：portmapper实现(centos6)
+    • RPC服务：portmapper实现(centos6)
         监听端口：111/tcp, 111/udp
 
-        注：各基于rpc的进程，在启动时向rpc注册监听在某个端口上，rpc服务从还没被使用的端口中挑一个给此进程监听(半随机)
+        ✽ 注：各基于rpc的进程，在启动时向rpc注册监听在某个端口上，rpc服务从还没被使用的端口中挑一个给此进程监听(半随机)
 
-    nfs服务安装配置：
-        yum -y install rpcbind nfs-utils    (nfs为内核模块，nfs-utils为nfs服务器包)
-        service start nfs        # 默认会启动几个进程，如下
-        rpcinfo [-p HOST]        # 查看rpc服务监听端口及服务，可以指定地址查看该服务器上的共享
+    • nfs服务安装配置：
+        yum -y install rpcbind nfs-utils    # nfs为内核模块，nfs-utils为nfs服务器包
+        service start nfs                   # 默认会启动几个进程，如下
+        rpcinfo [-p HOST]     # 查看rpc服务监听端口及服务，可以指定地址查看该服务器上的共享
 
         三个关键进程： 
             mountd：挂载守护进程，负责客户端来源认证进程，默认端口号随机，可在/etc/sysconfig/nfs中配置固定端口
@@ -206,7 +208,7 @@
             格式：文件系统    客户端1(文件系统导出选项)  客户端2(选项)...
                 如：/nfsfile  192.168.1.0/24(rw,no_root_squash)  172.16.60.0/24(rw)
 
-            注：导出的文件夹的目录权限需要添加写权限，远程用户才能执行写操作
+            ✽ 注：导出的文件夹的目录权限需要添加写权限，远程用户才能执行写操作
 
                 客户端格式：
                     IP：172.16.100.7
@@ -236,17 +238,17 @@
             -u FS: 关闭指定的导出的文件系统
             -v: 显示详细过程
 
-    nfs客户端：
+    • nfs客户端：
         客户端挂载NFS文件系统：
             mount -t nfs SERVER:/path/to/sharedfs  /path/to/mount_point
 
         客户端开机自动挂载nfs：/etc/fstab
             SERVER:/PATH/TO/EXPORTED_FS  /mount_point  nfs  defaults,_netdev  0 0
 
-        注：使用root时会被映射成nfsnobody。默认其它用户映射远程时以UID关联，所以最好客户端和服务端上同一用户的UID一致
+        ✽ 注：使用root时会被映射成nfsnobody。默认其它用户映射远程时以UID关联，所以最好客户端和服务端上同一用户的UID一致
 
 
-三、samba：用于Linux与windows系统直接的文件共享和打印共享，也可以用于Linux与Linux之间的资源共享
+♦ samba：用于Linux与windows系统直接的文件共享和打印共享，也可以用于Linux与Linux之间的资源共享
         smb：Service Message Block smbd(cifs) ==> tcp:445
         NetBIOS：本地名称解析 nmbd ==> udp:137 138, tcp:139
         winbindd：window的绑定进程
@@ -287,13 +289,13 @@
             [shared_name]: 自定义共享
 
             [shared_name]
-            path =                  # 共享路径
-            comment =               # 说明
-            guest ok = {yes|no}     # 
-            public = {yes|no}       # 是否公开，即文件属主属级不属于当前用户时，是否可访问
-            writable = {yes|no}     # 是否可写
-            browseable = {yes|no}   # 文件属主属级不属于当前用户时，是否可显示
-            read only = {yes|no}    # 是否只读
+            path =                   # 共享路径
+            comment =                # 说明
+            guest ok = {yes|no}      # 
+            public = {yes|no}        # 是否公开，即文件属主属级不属于当前用户时，是否可访问
+            writable = {yes|no}      # 是否可写
+            browseable = {yes|no}    # 文件属主属级不属于当前用户时，是否可显示
+            read only = {yes|no}     # 是否只读
             write list = USER|+GROUP # 可写的用户或组，多用户使用逗号隔开,组名前加+或@
 
 
@@ -322,7 +324,7 @@
             disable = no    # 启用
             only_from =     # 允许来源
 
-        注：图形设置直接修改配置文件并直接生效
+        ✽ 注：图形设置直接修改配置文件并直接生效
 
 
     练习：建立samba共享，共享目录为/data
