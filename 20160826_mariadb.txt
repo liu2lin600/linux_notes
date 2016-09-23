@@ -520,7 +520,7 @@ MariaDB or MySQL：
                 tbl_name.MYI：索引文件
                 
         • 行格式：
-             DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT
+            DEFAULT|DYNAMIC|FIXED|COMPRESSED|REDUNDANT|COMPACT
              
         • 其它的存储引擎：
             1. CSV        ：将CSV文件（以逗号分隔字段的文本文件）作为MySQL表文件 

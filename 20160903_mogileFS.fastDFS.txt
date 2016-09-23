@@ -57,6 +57,8 @@
 ♦ 大型网站站点的架构演进：
     LAMT, LNMT
 
+    单一主机-->数据库分离-->负载均衡(会话保持)-->主从读写分离-->搜索引擎-->引入缓存-->动静分离-->NoSQL-->分布式系统-->
+
     • 应用从资源占用的角度分两类：
         CPU Bound：CPU密集型
         IO Bound： IO密集型
@@ -70,7 +72,7 @@
 
     • 引入缓存：
         1、页面缓存: varnish, squid
-        2、数据缓存: key-value store(memcached)
+        2、数据缓存: key-value store(memcached、redis...)
 
     • MySQL主库写操作压力：数据库拆分
         垂直拆分：把数据库中不同的业务的数据拆分到不同的数据库服务器中
@@ -262,7 +264,7 @@
             · ab/ed     ：2位16进制数组成的目录名
             · file_name ：与原文件名不同，由storage根据特定信息生成，包含存储服务器IP、创建时间戳、大小、随机数及扩展名等
 
-            如：group1/M00/01/12/ebsmnwrkjfksdfvxdvsdfsdfsdf
+            如：group1/M00/01/12/ebsmnwrkjfksdfvxdvsdfsdfsdf             
 
     • 安装配置：
         · 源码下载：

@@ -114,7 +114,7 @@ ansible：
                 present：创建(默认)
                 absent：删除
 
-                # ansible all -m cron -a "minute=*/5 job='/sbin/ntpdate 172.16.0.1 > /dev/null' name=Synctime"
+                # ansible all -m cron -a "minute=*/5 job='/usr/sbin/ntpdate 172.16.0.1 &> /dev/null' name=Synctime"
                 
         • fetch模块：从远程拉取文件到本机
         

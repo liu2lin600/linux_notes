@@ -143,7 +143,7 @@ Linux Cluster集群
                     service-address:集群服务，即director
                     server-address:即real-server
 
-                1. 添加修改一个集群服务：
+                1. 添加或修改一个集群服务：
                     ipvsadm -A|E -t|u|f service-address [-s scheduler] [-p [timeout]]
                         -A：添加一个集群服务
                         service-address：
@@ -154,7 +154,7 @@ Linux Cluster集群
                             -p：timeout persistent connection 持久连接
                         -E：修改定义过的集群服务
 
-                        # ipvsadm -A -t 172.16.60.1:80 -s rr
+                        如：ipvsadm -A -t 172.16.60.1:80 -s rr
 
                 2. 向一个已经存在集群服务添加一个RS：
                     ipvsadm -a|e -t|u|f service-address -r server-address [options]
@@ -164,7 +164,7 @@ Linux Cluster集群
                         -i: ipip encapsulation (tunneling)
                         -m: masquerading (NAT) 地址伪装
 
-                        # ipvsadm -a -t 172.16.60.1:80 -r 192.168.1.1:8080 -m -w 1
+                        如：ipvsadm -a -t 172.16.60.1:80 -r 192.168.1.1:8080 -m -w 1
 
                 3. 查看已经定义的集群服务及RS：
                     ipvsadm -L [options]
