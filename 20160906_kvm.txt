@@ -54,7 +54,7 @@
 			内核：物理地址空间
 
 			malloc：内存分配
-			shadow page table：(虚拟页表) 软件模拟，用于地址转换(线性-->物理)
+			shadow page table：早期(影子页表) 软件模拟，用于地址转换(线性-->物理)
 
 			一般流程：虚拟机线性地址-->虚拟机物理地址-->宿主物理地址
 
@@ -116,8 +116,8 @@
 			bridge mode 	: 桥接模型  (将真实网卡当交换机，再虚拟出个桥设备作真实机网卡)
 			host mode   	: 仅主机模型(宿主机上虚拟出交换机和网卡，各虚拟机和宿主机通讯)
 			route mode  	: 路由模型  (打开核心转发功能的host模型)，不常用
-			nat mode    	: nat模型   (添加nat源地址和目标地址转换的host模型)
-			isolation mode  : 隔离通道  (虚拟机之间的虚拟通道)
+			nat mode    	: nat模型   (添加nat源地址和目标地址转换规则的host模型)
+			isolation mode  : 隔离模型  (虚拟机之间的虚拟通道)
 
 		· 创建桥设备：
 			关闭NetworkManager，安装bridge-utils程序提供brctl命令，默认已安装 
@@ -148,7 +148,7 @@
 
 				注：先拆物理网卡ip再添加到桥
 
-		· 网络命名空间：隔离网络
+		· 网络命名空间：隔离网络，可当路由功能，其核心转发功能由物理机决定
 			✽ 创建一对网卡分别置于不同的网络空间中：router1名称空间及vnetx.1和vnetx.2网卡对为例
 				1. 创建网络命名空间：
 					ip netns add router1 	# 添加网络命名空间
@@ -162,6 +162,8 @@
 
 				4. 在指定网络空间运行命令：
 					ip netns router1 exec ifconfig -a
+
+				注：centos6上的默认iproute没提供netns，需更新
 
 			示例：在网络命名空间实现源地址转换
 				环境：
@@ -191,6 +193,80 @@
 
 				5. ping测试
 					ip netns exec ns1 ping 172.16.0.1
+
+		· 相关技术： 
+			❖ VLAN、VXLAN：
+				Virtual LAN(虚拟局域网)，LAN为广播帧能够到的节点范围，即可直接通信范围
+
+				实现方式：
+					基于MAC、IP、端口、用户等方式
+				交换机接口类型：
+					访问链接(access link)、汇聚接口(trunc link)
+				汇聚方式：
+					IEEE：802.1q
+					ISL：Inter Switch Link 
+				linux内核支持的模块：
+					8021q
+				VLAN间路由：
+					路由器：
+						访问链接：router为每个VLAN提供一个接口
+						汇聚链接：router只向交换机提供一个接口
+					三层交换机：
+
+			❖ openVSwitch：虚拟交换机软件，基于C语言，支持xen, kvm...
+				支持：
+					802.1q , trunk link, access link
+					NIC binding
+					NetFlow, sFlow
+					Qos配置及策略
+					GRE(通用路由封装)，VxLAN
+					OpenFlow
+					基于linux完成高性能转发
+					...
+
+				组成部分：
+					ovs-vswitchd：守护进程，实现数据报文交换
+					ovsdb-server：数据库服务器，保存整个ovs配置信息等
+					ovs-vsctl：用于获取或更改ovs-switchd配置信息，其修改值保存在ovsdb-server中
+					ovs-dpctl：
+					ovs-appctl：
+					ovsdbmonitor：
+					ovs-controller：
+					ovs-ofctl：
+					ovs-pki：
+
+					ovs-vsctl命令使用：
+						show: 显示ovsdb配置内容
+						list-br: 显示所有桥
+						add-br NAME: 添加桥设备
+						del-br NAME: 删除桥
+						add-port BRIDGE PORT: 将port添加到指定桥 
+						del-port [BRIDGE] PORT: 从指定桥上删除指定PORT
+						list-ifaces BRIDGE: 显示桥上的接口
+
+				安装：openvswitch-2.5.1为例
+					1. 安装所需程序
+						yum -y install make gcc openssl-devel autoconf automake rpm-build redhat-rpm-config python-devel openssl-devel kernel-devel kernel-debug-devel libtool wget
+
+					2. 构建RPM准备
+						mkdir -p ~/rpmbuild/SOURCES
+						wget http://openvswitch.org/releases/openvswitch-2.5.1.tar.gz
+						cp openvswitch-2.5.1.tar.gz ~/rpmbuild/SOURCES/
+						tar xfz openvswitch-2.5.1.tar.gz
+
+					3. 构建RPM
+						rpmbuild -bb --nocheck openvswitch-2.5.1/rhel/openvswitch.spec
+
+					4. 安装RPM
+						ls -l ~/rpmbuild/RPMS/x86_64/
+						yum localinstall ~/rpmbuild/RPMS/x86_64/openvswitch-2.5.1-1.x86_64.rpm
+
+					5. 启动
+						systemctl start openvswitch.service
+
+
+			❖ 虚拟路由：
+
 
 
 ♦ KVM：
@@ -224,7 +300,7 @@
 
 
 	✽ 使用virt-manager管理KVM：图形化，远程管理通过virsh连接
-		yum install qemu-kvm libvirt libvirt-daemon virt-manager	# 安装程序，qemu-kvm命令路径为/usr/libexec下
+		yum install qemu-kvm libvirt libvirt-daemon virt-manager	# 安装程序，qemu-kvm命令路径为/usr/libexec下，可创建软链接使用
 		modprobe kvm  												# 装载kvm
 		systemctl start libvirtd.service  							# 启动libvirtd服务
 		virt-manager & 												# 运行图形化配置

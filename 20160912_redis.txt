@@ -15,7 +15,7 @@
         2. column Family：列式数据库 hbase
         3. document：文档数据库 mongodb
         4. GraphDB：图式数据库
-        
+
 ♦ Redis：
     REmote DIctionary Server，数据结构服务器，k/v型存储，单进程，可持久化
 
@@ -229,7 +229,7 @@
             · min-slaves-to-write 3         ：
             · min-slaves-max-lag 10         ：
             
-    • sentinel：监控、通知、自动故障转移
+    • redis-sentinel：监控、通知、自动故障转移，单独的服务
         选举机制使用流言协议、投票协议
 
         ► 相关配置项：

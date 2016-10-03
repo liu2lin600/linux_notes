@@ -61,24 +61,51 @@ openssl
         x.509v3：定义证书的结构及认证协议标准
             版本号、序列号、签名算法ID、发行者名称、有效期、主体名、主体公钥、发行者的唯一标识、主体的唯一标识、扩展、发行者的签名
 
-    SSL协议：Secure Socket Layer 安全套接字层(网景公司1994)
-        sslv1, sslv2, sslv3
+    SSL/TLS：位于TCP/IP协议与各种应用层协议之间
+    
+        SSL协议：Secure Socket Layer 安全套接字层(网景公司1994)
+            sslv1, sslv2, sslv3 
+        TLS协议：Transport Layer Security 传输层安全(IETF1999)
+            tlsv1.0 v1.1 v1.2...
 
-    TLS协议：Transport Layer Security 传输层安全(IETF1999)
-        tlsv1.0 v1.1 v1.2...
-
-        分层设计：
-            1. 最底层，基础算法原语实现，aes,rsa,md5...
-            2. 第二层，各种算法的实现
-            3. 组合简洁的实现的半成品
-            4. 用各种组件拼装而成的各种成品密码学协议软件
+            分层设计：
+                1. 最底层，基础算法原语实现，aes,rsa,md5...
+                2. 第二层，各种算法的实现
+                3. 组合简洁的实现的半成品
+                4. 用各种组件拼装而成的各种成品密码学协议软件
 
         ssl会话三步：
             1. 客户端向服务器索取并验证证书
             2. 双方协商生成'会话密钥'
             3. 双方采用'会话密钥'进行加密通信
 
-    协议开源实现：OpenSSL、gpg
+            SSL Handshake Protocol：
+                第一阶段：ClientHello
+                    (1) 支持的协议版本，比如TLS 1.0版
+                    (2) 一个客户端生成的随机数，稍后用于生成"对话密钥"
+                    (3) 支持的加密方法，比如RSA公钥加密
+                    (4) 支持的压缩方法
+
+                第二阶段：ServerHello
+                    (1) 确认使用的加密通信协议版本，比如TLS 1.0版本。如果浏览器与服务器支持的版本不一致，服务器关闭加密通信
+                    (2) 一个服务器生成的随机数，稍后用于生成"对话密钥"
+                    (3) 确认使用的加密方法，比如RSA公钥加密
+                    (4) 服务器证书
+
+                第三阶段：客户端验证
+                    (1) 验证服务器证书(发证机构、证书完整性、证书持有者、有效期...)，确认后取出其公钥
+                    (2) 发送以下信息给服务器:
+                        一个随机数(pre-master key)
+                        编码变更通知，表示随后的信息都将用双方商定的加密方法和密钥发送
+                        客户端握手结束通知
+
+                第四阶段：服务端
+                    (1) 收到pre-master key后，计算生成本次会话所用到的"会话密钥"
+                    (2) 向客户端发送如下信息:
+                        编码变更通知，表示随后的信息都将用双方商定的加密方法和密钥发送
+                        服务器握手结束通知
+
+        协议开源实现：OpenSSL、gpg
 
 
 openssl：套件，开源程序
@@ -99,33 +126,45 @@ openssl：套件，开源程序
         算法：md5, sha1, sha512
         加密：openssl dgst [-md5|-md4|-md2|-sha1|-sha|-mdc2|-ripemd160|-dss1][-out filename] /path/to/somefile
    
-    生成用户密码：
-        工具：passwd openssl passwd
+    生成用户密码：man sslpasswd
+        工具：passwd, openssl passwd
             openssl passwd -1 -salt SALT
+                -1: md5方式加密
+                -salt: 加盐，尽量使用随机数
  
-    生成随机数：
+    生成随机数：man sslrand
         工具：openssl rand
             openssl rand -base64 NUM
             openssl rand -hex NUM
 
     公钥加密：公钥加密，私钥解密
-        加密解密：
+        1. 加密解密：
             算法：RSA，EIGamal
             工具：gpg openssl rsautl
 
-        数字签名：私钥加密，公钥解密
+        2. 数字签名：私钥加密，公钥解密
             算法：RSA，EIGamal，DSA
                 DSA:Digital Signature Algorithm
                 DSS: Digital Signature standard
-        密钥交换：IKE
+        3. 密钥交换：IKE
             算法：DH（Diffie-Hellman），公钥加密
 
-        生成密钥：
+        生成密钥对：
             私钥：(umask 077;openssl genrsa -out /XXX NUM_bits)
                 使用()让命令在子shell中运行，这样不影响当前shell的mask值，NUM_bits为2的n次方如2048
             公钥：openssl rsa -in /XXX -pubout
                 公钥是从私钥中提取而来
 
+    一般加密过程：
+        1. 使用单向加密获取{数据特征码}
+        2. 使用私钥加密特征码得到{数字签名}并附加到{数据}上
+        3. 使用对称加密(一次性)加密{数据+数字签名}
+        4. 使用对方公钥加密上一步中使用的密码并附加在{数据+数字签名}上
+
+    解密过程：
+        1. 使用私钥解密得到上述4中的{密码}
+        2. 使用{密码}解密得到{数据+数字签名}
+        3. 使用对方公钥解密，如果能解开就能验证对方身份，同时得到数据
 
 
 用openssl实现私有CA：

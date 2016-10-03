@@ -291,7 +291,7 @@ Tomcat：使用java语言编写，需运行在jvm上
         • Server组件：代表tomcat实例，即表现出的一个jvm进程，监听在8005端口，只接收"SHUTDOWN"。各server监听的端口不能相同，因此，在同一物理主机启动多个实例时，需要修改其监听端口为不同的端口
             
             关闭进程：
-                telnet 12.0.0.1 8005
+                telnet 127.0.0.1 8005
                 SHUTDOWN
 
         • Service组件：用于实现将一个或多个connector组件关联至一个engine组件
@@ -323,7 +323,7 @@ Tomcat：使用java语言编写，需运行在jvm上
                 defaultHost="localhost"
                 jvmRoute=
                 
-        • Host组件：位于engine内部用于接收请求并进行相应处理的主机或虚拟主机，
+        • Host组件：位于engine内部用于接收请求并进行相应处理的主机或虚拟主机
             默认示例：
                 <Host name="localhost"  appBase="webapps"
                     unpackWARs="true" autoDeploy="true">

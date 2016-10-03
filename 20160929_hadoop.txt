@@ -1,0 +1,150 @@
+2016-09-29
+# edit by liu2lin600
+
+Hadoop：
+
+♦ 大数据：海量数据
+    ▫ 数据分类：
+        结构化：行数据，可存放关系型数据库中
+        非结构化：文件，图片...
+        半结构化：html, xml, json, ...自描述，将结构与数据本身存储在一起
+
+    ▫ Google论文：
+        2003年：The Google File System
+        2004年：Mapreduce: Simplified Date Processing On Large Cluster 
+        2006年：BigTable: A Distributed Stored System For Structure Data
+
+    ▫ 开源大数据处理方案：
+        Storm   Twitter                 流式处理(实时分析)
+        S4      Yahoo                   流式处理
+        Hadoop  Apache                  批处理(时间无法预测)
+        Spark   UC Berkeley AMPLab      批处理
+        Disco   Nokia                   批处理
+        HPCC    LexisNexis              批处理
+
+    ▫ hadoop组成：由以上3篇论文的实现
+        GFS       --> HDFS
+        MapReduce --> MapReduce（开发API、框架、运行时环境）
+        BigTable  --> Hbase
+
+            HDFS + Mapreduce == Hadoop
+
+    ▫ map/reduce：
+        (1) 向外扩展
+        (2) 假设故障常见，自我完成数据冗余，并自我完成故障处理
+        (3) 将程序移向数据
+        (4) 顺序处理数据，并避免随机访问
+        (5) 向程序员隐藏系统级别的细节
+        (6) 实现平滑扩展
+
+♦ Hadoop：
+    基于java语言，hadoop.apache.org
+        hadoop-2.6.2  jdk1.6+
+        hadoop-2.7.0  jdk1.7+
+
+    ▫ 核心组件：
+        • HDFS：集群，设计适用于少量的大容量单文件的文件系统
+            1. NameNode：名称节点
+                (1) 存储文件的metadata，运行时所有数据都保存到内存，整个HDFS可存储的文件数受限于NameNode的内存大小
+                (2) 一个Block在NameNode中对应一条记录（一般一个block占用150字节），如果是大量的小文件，会消耗大量内存。同时map task的数量是由splits来决定的，所以用MapReduce处理大量的小文件时，就会产生过多的map task，线程管理开销将会增加作业时间。处理大量小文件的速度远远小于处理同等大小的大文件的速度。因此Hadoop建议存储大文件
+                (3) 数据会定时保存到本地磁盘，但不保存block的位置信息，而是由DataNode注册时上报和运行时维护（NameNode中与DataNode相关的信息并不保存到NameNode的文件系统中，而是NameNode每次重启后，动态重建）
+                (4) NameNode失效则整个HDFS都失效了，所以要保证NameNode的可用性
+
+            2. Second NameNode：第二名称节点
+                定时与NameNode进行同步（定期合并文件系统镜像和编辑日志，然后把合并后的传给NameNode，替换其镜像，并清空编辑日志，类似于CheckPoint机制），但NameNode失效后仍需要手工将其设置成主机
+
+            3. DataNode：数据节点
+                (1) 保存具体的block数据
+                (2) 负责数据的读写操作和复制操作
+                (3) DataNode启动时会向NameNode报告当前存储的数据块信息，后续也会定时报告修改信息
+                (4) DataNode之间会进行通信，复制数据块，保证数据的冗余性
+
+            4. Block：数据块
+                (1) 基本存储单位，一般大小为64M
+                (2) 一个大文件会被拆分成一个个的块，然后存储于不同的机器
+                (3) 基本的读写单位，类似于磁盘的页，每次都是读写一个块
+                (4) 每个块都会被复制到多台机器，默认复制3份
+
+            5. HDFS Client：
+                利用Hadoop API从NameNode上获取数据位置信息，再从指定DataNode中获取数据，存也一样过程
+
+        • MapReduce：集群
+            并行计算框架，它将运行与大规模集群上的复杂的并行计算过程高度地抽象为两个函数: Map和Reduce。一个Map/Reduce作业（Job）通常会把输入的数据集切分为若干独立的数据块，由Map任务（Task）以完全并行的方式处理它们，框架先对Map的输出进行排序，然后把结果输入给Reduce任务（Task）。作业的输入和输出都会被存储在文件系统中。 通常，MR框架和分布式文件系统是运行在一组相同的节点上的，也就是说，计算节点和存储节点在一起
+
+            1. jobtracker(map+reduce)，追踪任务状态，一般运行在NameNode
+            2. tasktracker，任务执行，一般运行在每个DataNode上
+
+            执行过程：split -> map(mapper) -> shuffle and sort -> reducer -> store 
+                split：(framework)将文件以指定的方式切割成键值对，用户自行开发程序完成
+                map：将上述数据处理成reduce可折叠的键值对，所有map完成后统一下一步处理
+                shuffle/sort：(framework)将键相同的发往同一个reducer
+                reducer：折叠同一键的值
+                store：(framework)可保存在HDFS上
+
+                注：数据量较大时，有可能需要执行多次map/reduce
+
+                补充过程：mapper --> combinder -> partitioner(shuffle and sort) --> reducer
+                    combinder：在本地完成简单合并(merge)，由程序员自行开发
+                    partitioner：负责sort后的键值发往reducer，由程序员自行开发
+
+            发展：MRv1(Hadoop1) --> MRv2(Hadoop)
+                MRv1：负责集群资源管理和数据处理
+                MRv2：
+                    YARN：负责集群资源管理
+                    MRv2：数据处理
+                        MR:  batch
+                        Tez: execution engine
+
+                        RM: Resource Manager
+                        NM: Node Manager
+
+                        AM: Application Master
+                        container: mapreduce任务
+
+    ▫ 相关组件：
+        • HBase：Hadoop DataBase，集群方式存在
+            基于Google Bigtable的分布式列存数据库，可运行在HDFS集群上，解决存储海量小文件，依赖zookeeper
+
+            zookeeper：提供HBase与HDFS的等协调工作
+
+        • Hive：
+            建立在Hadoop上的数据仓库基础架构，提供一系统工具，用来进行数据提取、转化、加载，这是一种可以存储、查询和分析存储在Hadoop大规模数据的机制。Hive定义了简单地类SQL的查询语言，用户可以用SQL语法查询数据
+
+        • Pig：
+            脚本方式的Hadoop数据处理接口
+
+        • flume、scribe、chukwa：
+            日志收集工具
+
+        • Sqoop、hiho：
+            数据同步工具，用于传统数据库和Hadoop之间传递数据
+
+        • Oozie：
+            可扩展伸缩的工作流协调管理器
+
+        • Spark：
+            Spark是UC Berkeley AMP lab所开源的类Hadoop MapReduce的通用的并行计算框架，Spark基于map reduce算法实现的分布式计算，拥有Hadoop MapReduce所具有的优点；但不同于MapReduce的是Job中间输出和结果可以保存在内存中，从而不再需要读写HDFS，因此Spark能更好地适用于数据挖掘与机器学习等需要迭代的map reduce的算法
+
+            据说，Spark性能可以比Hadoop高100倍，而且它提供了更上层的API，同样地算法实现往往只有Hadoop的1/10甚至1/100的长度
+
+        • Storm：
+            实时数据分析处理
+
+        • R Connectors：
+            R语言实现，数据统计
+
+        • Mahout：
+            机器学习，分析行为，人工智能
+
+    ▫ 主要发行版：
+        Cloudera：CDH
+        Hortonworks：HDP
+        Intel：IDH
+        MapR：
+
+    ▫ 模型分类：
+        • 单机模型：测试使用
+
+        • 伪分布式模型：运行于单机
+
+        • 分布式模型：群集模型

@@ -11,7 +11,7 @@ Docker：
         2. Network Namespace: (linux 2.6.29) 网络设置、网络栈、端口和网络资源隔离 
         3. User Namespace: (linux 3.8) 用户和组资源隔离
         4. IPC Namespace: (linux 2.6.19) 进程间通讯名称空间 信号量、消息队列和共享内存隔离
-        5. UTS Namespace: (linux 2.6.19) 主机名和域名隔离
+        5. UTS Namespace: (linux 2.6.19) Unix Time-sharing System 主机名和域名隔离
         6. Mount Namespace: (linux 2.4.19) 挂载点(文件系统)隔离
 
 ♦ Cgroup：linux control group(控制组) linux 2.6.24

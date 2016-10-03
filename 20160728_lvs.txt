@@ -36,9 +36,9 @@ Linux Cluster集群
             perlbal
             pound
         基于工作的协议层划分：
-            传输层：
+            传输层：4层负载
                 lvs, nginx, haproxy
-            应用层：
+            应用层：7层负载
                 http: nginx, haproxy, httpd
                 fastcgi: nginx, httpd
                 mysql: mysql-proxy

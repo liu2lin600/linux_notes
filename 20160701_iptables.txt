@@ -124,9 +124,9 @@ iptables：
             处理目标：
                 DROP、REJECT、ACCEPT、SNAT、DNAT、RETURN、REDIRECT、LOG
                     -j DROP|ACCEPT|REJECT|RETURN            # RETURN一般用于自定义链上，自定义链被内置链引用时，没被匹配时，返回内置链的下一条规则
-                    -j SNT --to-source SIP                  # 规则添加在POSTROUTING链
+                    -j SNAT --to-source SIP                 # 规则添加在POSTROUTING链
                     -j MASQUERAADE                          # 动态获取
-                    -j DNAT --to-destination DIP[:PORT]     # 支持端口映射
+                    -j DNAT --to-destination DIP[:PORT]     # PREROUTING链上，支持端口映射
                     -j LOG --log-prefix 'xxx'               # 添加日志前缀，放规则第一条
                     -j REDIRECT --to-ports PORT[:PORT]      # 用于PREROUTING，OUTPUT上，nat表上端口转换
 

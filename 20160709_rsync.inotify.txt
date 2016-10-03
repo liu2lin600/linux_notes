@@ -24,6 +24,7 @@ rsync：Remote Sync
         远程shell模式：类scp
             Pull: rsync [OPTION...] [USER@]HOST:SRC... [DEST]
             Push: rsync [OPTION...] SRC... [USER@]HOST:DEST
+            
         服务daemon模式：
             Pull: rsync [OPTION...] [USER@]HOST::SYNC_NAME... [DEST]
             Push: rsync [OPTION...] SRC... [USER@]HOST::SYNC_NAME

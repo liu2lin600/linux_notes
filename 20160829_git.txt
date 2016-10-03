@@ -28,7 +28,7 @@ Git版本控制：
     • 仓库级：REPO/.git/config  
     • 系统级：/etc/git/gitconfig    --system
 
-        git config -l     # 查看所有配置信息
+        git config -l     # 查看所有配置信息，man git-config查看帮助
         git config --global user.name liu2lin600
         git config --global user.email 'liu2lin600@gmail.com'
 
@@ -137,9 +137,9 @@ Git版本控制：
     • 提交标识：
         1. 引用：ID, reference, SHA1, 绝对提交名
         2. 符号引用：symbolic reference(symref) 间接引用
-            1) 本地特性分支名称 --> refs/heads/REF
-            2) 远程跟踪分支名称 --> refs/remotes/REF
-            3) 标签名
+            1) 本地特性分支名称 --> refs/heads/REF_name
+            2) 远程跟踪分支名称 --> refs/remotes/REF_name
+            3) 标签名 --> refs/tags/REF_name
 
         ✫ 自动维护几个特定目的的特殊符号引用：
             1. HEAD：始终指向当前分支的最近提交，或检出到其它分支时，目标分支的最近分支
@@ -153,14 +153,18 @@ Git版本控制：
                       B1 <-- B2 <--MERGE_HEAD
 
         ✫ 相对提交名：
-            ^：HEAD^1  12e42d^2
-            ~：
-                ^1 == ~1 == ^ 
+            ^：如上图为例: 
+                HEAD^1 == ORIG_HEAD, HEAD^^ == XX
+                HEAD^2 == MERGE_HEAD
+            ~：沿一个分支向前
+                ^1 == ~1 == ^ == ~
                 ^^ == ~2
 
     • 提交差异比较：git diff [--color]
         git diff FILE1 FILE2        # 比较2个文件差异
         git diff commit1 commit2    # 比较2次提交差异
+
+        注：比较不涉及未追踪文件
 
         示意图：
             工作区                     索引                   版本库
@@ -207,16 +211,16 @@ Git版本控制：
         1. 新建分支feature1 并在其中修改
         2. 切回master分支，在相同文件中做了不同的修改
         3. 这时想要合并feature1时会出现冲突
-        4. 找到冲突文件打开在冲突的地方修改后，再commit，此时再合并冲突解决
+        4. 找到冲突文件打开在冲突的地方修改后，再add及commit完成
         5. 使用 git log --graph 查看分支的合并情况
 
         ✽ 放弃合并：git reset --hard ORIG_HEAD
 
     • 变基操作：rebase
-        git checkout hotfix
-        git rebase master
-        git checkout master
-        git merger -m 'MES' hotfix
+        git checkout hotfix         # 切换到另一分支
+        git rebase master           # 改变基础点为master
+        git checkout master         # 切回master
+        git merger -m 'MES' hotfix  # 合并，实际上无意义合并
 
     • 保存现场：stash
         在dev分支上开发还未完成，临时需要在master上改个小bug，又不想直接提交dev中的修改
@@ -230,25 +234,25 @@ Git版本控制：
     克隆远程分支时，一般只会克隆远程的master分支
 
     • 服务器协议：local(本地), ssh, http/https, git
-        1. local
+        1. local协议
             /path/to/repo.git   (目录)
             file:///path/to/repo.git
 
                 如：git clone file:///root/test /tmp/
 
-        2. git
+        2. git协议
             由git-daemon程序提供，监听在9418/tcp，仅支持读操作且无任何认证措施
 
             git://host/path/to/repo.git
             git://host/~USER/path/to/repo.git
 
-        3. ssh
+        3. ssh协议
             ssh://[USER@]host[:port]/path/to/repo.git
             ssh://[USER@]host[:port]/~USER/path/to/repo.git
 
             [USER@]host/~USER/path/to/repo.git
 
-        4. http/https
+        4. http/https协议，现在主流使用
             v1.6.5-：哑http协议
             v1.6.6+：智能http协议，支持读、写、认证
 
@@ -260,7 +264,7 @@ Git版本控制：
         示例：
             [remote "origin"]
                 url = git@github.com:liu2lin600/helloworld.git
-                fetch = +refs/heads/*:refs/remotes/origin/*                                 ：
+                fetch = +refs/heads/*:refs/remotes/origin/*             ：
 
     • 推拉示意图：
         远程：A <-- B <-- C <-- D(master) <---------- Z
