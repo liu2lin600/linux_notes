@@ -40,8 +40,8 @@
 ♦ 虚拟化：
 	• 计算机5大部件虚拟化：
 		1. CPU虚拟化：
-			模拟：emulation，可模拟出与物理架构不同的硬件，不过效率较低 PearPC, Bochs, QEMU
-			虚拟：virtulization
+			模拟方式：emulation，可模拟出与物理架构不同的硬件，不过效率较低 PearPC, Bochs, QEMU
+			虚拟方式：virtulization
 				(1) 完全虚拟化(full-virtulization)
 					各虚拟机不会意识到运行在虚拟环境中，需翻译再向宿主机内核发起调用
 					BT：(软件) 二进制翻译，运行时翻译
@@ -69,16 +69,24 @@
 			I/O设备：
 				外存：硬盘、光盘、U盘
 				网络设备：网卡
-				显示设备：VGA (frame buffer机制虚拟)
+				显示设备：VGA (frame buffer帧缓冲机制虚拟)
 				键盘鼠标：ps/2, usb (完全模拟方式)
 
 			I/O虚拟化的方式：
 				(1) 模拟：完全使用软件来模拟真实硬件，性能最低
-				(2) 半虚拟化化：通常适用于硬盘和网卡 
+				(2) 半虚拟化化：通常适用于硬盘和网卡 (IO fronted/backend)
 				(3) IO-through：IO透传，虚拟机直接使用物理设备，需硬件支持，性能最高
 					Intel: VT-d 基于北桥的硬件辅助的虚拟化技术
 
-	• 虚拟化技术类型：
+	• 虚拟化技术分类(1)：
+		1. 模拟：PeerPC、Bochs、Qemu
+		2. 完全虚拟化：vmware workstation、kvm、xen...
+		3. 半虚拟化：xen、uml(user-mod linux)
+		4. OS级别虚拟化：openVZ、
+		5. 库虚拟化：wine、cygwin、babun
+		6. 应用程序虚拟化：jvm, pvm
+
+	• 虚拟化技术类型(2)：
 		1. 主机虚拟化：xen, kvm, virtualbox
 		2. 容器(用户空间隔离)：lxc, openVZ(提供vps服务), Solaris Container, FreeBSD jails 
 		3. 系统库虚拟化：wine(linux上模拟win); cygwin, babun(win上模拟linux)
@@ -87,7 +95,7 @@
 	• 主机虚拟化类型：
 		Type-I：于硬件级别直接运行hypervisor
 			xen, vmware ESX/ESXi
-		Type-II：于硬件级别运行一个OS（Host OS），而此OS上运行一个VMM
+		Type-II：于硬件级别运行一个OS（Host OS），而此OS上运行一个VMM(虚报机监控器)
 			kvm, vmware workstation, virtualbox
 
 	• Linux目前流行的开源虚拟化技术解决方案：
