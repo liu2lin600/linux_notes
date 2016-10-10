@@ -246,8 +246,8 @@ zabbix：
                 
         • trigger：触发器
             逻辑表达式，阈值，通常用于定义数据的不合理区间
-                OK：正常 状态 --> 较老的zabbix版本，其为FALSE；
-                PROBLEM：非正常 状态 --> 较老的zabbix版本，其为TRUE；
+                OK：正常 状态 --> 较老的zabbix版本，其为FALSE
+                PROBLEM：非正常 状态 --> 较老的zabbix版本，其为TRUE
                 
                 OK --> PROBLEM 
                 Recovery：PROBLEM --> OK 
@@ -375,13 +375,13 @@ zabbix：
                     命名方式：大写字母、数字和下划线
                     
         • discovery：网络发现
-            zabbix server扫描指定网络范围内的主机；
+            zabbix server扫描指定网络范围内的主机
             
             发现方式：
                 ip地址范围；
                     可用服务（ftp, ssh, http, ...）
-                    zabbix_agent的响应；
-                    snmp_agent的响应； 
+                    zabbix_agent的响应
+                    snmp_agent的响应 
                     
             分两个阶段：
                 1. discovery： 发现 --> discovery events 
@@ -421,7 +421,7 @@ zabbix：
                 UserParameter=nginx.requests,curl -s http://localhost/status | awk '/^[[:space:]]*[0-9]/{print $3}'         
                         
             实践：
-                监控lvs director上web服务的相关统计数据及速率数据；
+                监控lvs director上web服务的相关统计数据及速率数据
                 
                 制定出lvs director的监控模板：
                     items, trigger, graph 

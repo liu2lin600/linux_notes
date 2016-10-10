@@ -62,7 +62,7 @@ Docker：
     ✽ 注：在生产环境中，基于device mapper的docker不推荐使用
 
 ♦ Docker：
-    2013年dotcloud发布，go语言，apache 2.0协议，lxc-->libcontainer
+    2013年dotcloud发布，go语言，apache 2.0协议，容器格式:lxc-->libcontainer(v1.20+)
 
     • C/S架构：
         Docker Client：客户端工具，发起docker请求的，用户使用主要接口
@@ -144,7 +144,7 @@ Docker：
             docker push     # 将本地创建的镜像上传到仓库，需先登录
 
         V. 监控相关：
-            docker ps [-a]  # 显示容器状态
+            docker ps [-a]  # 显示容器状态，'-q'只显示容器ID
             docker images   # 列出本地镜像
             docker stats    # 容器状态
             docker port     # 端口映射
@@ -160,17 +160,20 @@ Docker：
                 --rm        # 关闭容器时自动删除
                 --net=      # 设定网络模式
                 -d          # 后台运行容器本身
-                -v          # 绑定挂载一个卷，默认映射宿主机/var/lib/docker/volumes/..
-                -h          # 容器主机名设定
+                -v          # 绑定挂载一个卷
+                --volumes-from  # 挂载指定容器的数据卷
+                -h HOST     # 容器主机名设定
                 --dns       # 设定使用dns服务
                 --add-host  # 设定/etc/hosts，可多个，如: --add-host 'HOST:IP'
                 -m
                 --cpuset-cpus
                 --shm-size
-                -p
-                -P
+                -p          # 指定发布的端口
+                -P          # 发布所有端口，用法见下网络部分
+                --link      # 容器互联
+                -b BRIDGE   # 手动指定创建桥设备
 
-            △ 如： docker run -it --name=bb --rm busybox:latest /bin/bash
+            △ 如： docker run -it --name=bb --rm -v /data/docker:/vol busybox:latest /bin/bash
                    docker stop bb
 
             运行步骤：
@@ -185,18 +188,34 @@ Docker：
                 exit或ctrl+d终止一个实例
 
         2. 基于当前运行实例创建镜像
-            语法：docker commit [OPTIONS] CONTAINER [REPOSITORY[:TAG]]
+            语法：docker commit [OPTIONS] <container> [REPOSITORY[:TAG]]
 
             △ 如： docker commit 64e041484a46 centos:test
 
         3. 详细状态信息
-            语法：docker inspect [OPTIONS] CONTAINER|IMAGE [CONTAINER|IMAGE...]
+            语法：docker inspect [OPTIONS] <container>|IMAGE [<container>|IMAGE...]
 
             △ 如：docker inspect -f {{.State.Pid}} cd33177a1b97
 
-        4. 
+            △ 连接容器：
+                PID=$(docker inspect --format "{{ .State.Pid }}" <container>)
+                nsenter --target $PID --mount --uts --ipc --net --pid
 
-        5.
+                    备注：nsenter命令由util-linux(2.24+)包提供
+
+        4. 方便使用的命令集
+            wget -P ~ https://github.com/yeasy/docker_practice/raw/master/_local/.bashrc_docker;
+            echo "[ -f ~/.bashrc_docker ] && . ~/.bashrc_docker" >> ~/.bashrc; source ~/.bashrc
+
+            △ 如：docker-pid <container>
+                  docker-enter <container> ls
+                  docker-ip <container>
+
+        5. 删除容器
+            docker rm <container>           # 删除终止态的容器
+            docker rm -f <container>        # 强制删除指定容器
+            docker rm -v <container>        # 删除指定容器及数据卷(没被其它窗口挂载时)
+            docker rm $(docker ps -a -q)    # 删除所有终止状态的容器
 
     • 私有仓库：
         1. 安装 docker-registry
@@ -226,21 +245,32 @@ Docker：
             4. 数据卷会一直存在，即使容器被删除
 
         · 使用：
-            1. docker run -v /MOUNT_POINT ...
-                默认映射的宿主机路径: /var/lib/docker/volumes/....
+            1. docker run -v /MOUNT_POINT ...           # 挂载数据卷
+               docker run --volumes-from <container>    # 使用已存在数据卷
 
-            2. -v /HOST/DIR:/MOUNT_POINT        # 使用已有的卷
-                /HOST/DIR: 宿主机上的路径
-                /MOUNT_POINT: 容器上的路径
+            2. 选项说明：
+                -v /CONTAINER_PATH                  # 默认映射宿主机/var/lib/docker/volumes/..
+                -v /HOST/PATH:/CONTAINER_PATH       # 指定宿主机被挂载目录
+                -v /HOST/PATH:/CONTAINER_PATH:ro    # 只读挂载
+                -v /HOST/FILE:/FILE                 # 挂载本地指定文件到容器
 
             3. dockerfile中什么VOLUME指令定义
-
-        · 在容器间共享卷：
-            docker run --volumes-from=CONTAINER_NAME ...
 
         · 删除容器时同时删除卷：
             docker rm -v CONTAINER_NAME
             docker run --rm ...      # 容器关闭时自动删除卷(此卷没被其它容器使用时)
+
+        · 备份、恢复、迁移数据卷示例：
+            1. 容器bb1挂载数据卷为/vol，将其备份到宿主机当前目录下backup.tar 
+                docker run --volumes-from bb1 -v $(pwd):/backup busybox tar cvf /backup/bak.tar /vol
+
+            2. 创建一空数据卷容器
+                docker run -v /vol --name bb2 busybox /bin/sh 
+
+            3. 再创建一容器挂载上一容器卷，并解压当前目录备份的数据
+                docker run --volumes-from bb2 -v $(pwd):/backup busybox tar xf /backup/bak.tar
+
+            4. 在bb2中查看数据是否恢复
 
     • Docker网络：
         · 网络模式模型：
@@ -259,7 +289,7 @@ Docker：
                 △ 如：docker run -it --name=bb --net=bridge busybox:latest /bin/sh
 
                 ▪ 让docker0 NAT桥接模型上的容器发布给外部访问：docker run
-                    -p PORT：容器的指定端口映射到宿主随机(32768+)
+                    -p PORT：容器的指定端口映射到宿主随机(32768+)，可同时指定多个
                     -p hostPORT:PORT：容器指定端口映射到宿主机指定端口
                     -p hostIP::PORT：将容器指定端口映射到主机指定IP随机端口
                     -p hostIP:hostPORT:PORT：
@@ -302,12 +332,7 @@ Docker：
                     -d: 将容器本身运行在后台
 
         · 容器互联：容器之间安全的进行交互(容器本身为运行单一程序而存在)
-            --link
-
-            任务编排解决方案：
-                docker: swarm, machine, compose
-                apache: mesos,
-                google: kubemetes
+            --link name:alias   # name 是要链接的容器的名称，alias为别名
 
     • Dockerfile：
         由一系列用于根据基础镜像构建新的镜像文件的专用指令序列组成
@@ -445,6 +470,11 @@ Docker：
         Docker in Action
         Using Docker
         Docker cookbook
+
+    • 任务编排解决方案：
+        docker: swarm, machine, compose
+        apache: mesos
+        google: kubemetes
 
 
 dockerfile示例：
