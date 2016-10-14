@@ -125,7 +125,7 @@ Linux：单内核
         
     配置参数：
         echo "string" > /proc/sys/path/to/some_parameter
-            如：echo 1 > /proc/sys/net.ipv4/icmp_echo_ignore_all
+            如：echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_all
         sysctl -w var=value
             如：sysctl -w net.ipv4.icmp_echo_ignore_all=1
     查看参数：
@@ -136,8 +136,8 @@ Linux：单内核
     
     配置文件：/etc/sysctl.conf
         net.ipv4.ip_forward：ip转发
-        kernel.hostname：主机名
         net.ipv4.icmp_echo_ignore_all：ping功能
+        kernel.hostname：主机名
         vm.drop_caches：清除缓存
     
     重读配置文件：sysctl -p 

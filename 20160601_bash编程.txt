@@ -189,8 +189,8 @@ bash编程：
             2、显示每个文件所拥的行数；
 
             3、显示本次共对多少个文件执行了行数统计；
-            !/bin/bash
-            #
+            #!/bin/bash
+            
             for file in $*; do
                 lines=`wc -l $file | cut -d' ' -f1`
                 echo "$file has $lines lines."

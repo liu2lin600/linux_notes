@@ -63,6 +63,7 @@ Docker：
 
 ♦ Docker：
     2013年dotcloud发布，go语言，apache 2.0协议，容器格式:lxc-->libcontainer(v1.20+)
+    linux内核 3.10+，64bit
 
     • C/S架构：
         Docker Client：客户端工具，发起docker请求的，用户使用主要接口
@@ -128,6 +129,8 @@ Docker：
             docker stop/restart     # 停止/重启容器实例
             docker export           # 导出并归档本地文件系统
             docker import           # 镜像导入
+            docker exec             # 
+            docker diff             # 列出指定容器变化，A(增加)，D(删除)，C(改变)
 
         III. 日志信息相关：
             docker events   # 
@@ -474,7 +477,7 @@ Docker：
     • 任务编排解决方案：
         docker: swarm, machine, compose
         apache: mesos
-        google: kubemetes
+        google: kubernetes
 
 
 dockerfile示例：
