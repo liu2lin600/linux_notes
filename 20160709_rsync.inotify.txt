@@ -49,7 +49,7 @@ rsync：Remote Sync
         -o: 保留属主
         -D: 保留设备文件
 
-        -e ssh: 使用ssh作为传输承载
+        -e 'ssh -p 7788': 使用ssh作为传输承载，可指定端口等信息
         -z: 压缩后传输
 
         --progress: 显示进度条
