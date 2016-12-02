@@ -77,6 +77,9 @@ sudo：
     1、定义sudo授权，/etc/sudoers
     
     语法： who   where=(whom)   command
+           who   where=(user:group) command
+           who   where=command
+
         谁(who)，能以谁(whom)的身份，在那些主机(where)上执行那些命令(多命令间用逗号隔开)
 
         who：
@@ -130,7 +133,8 @@ sudo：
             -l：可以查看sudo模式可以执行的命令
             -k：将会强迫用户在下一次使用sudo命令时必须输入密码
             su -：纯粹的切换到root环境下
-            -i: 为了频繁的执行某些只有超级用户才能执行的权限，而不用每次输入密码，可以使用该命令。提示输入密码时该密码为当前账户的密码。没有时间限制。执行该命令后提示符变为“#”而不是“$”。想退回普通账户时可以执行“exit”或“logout” 
+            -i：为了频繁的执行某些只有超级用户才能执行的权限，而不用每次输入密码，可以使用该命令。提示输入密码时该密码为当前账户的密码。没有时间限制。执行该命令后提示符变为'#'而不是'$'。想退回普通账户时可以执行'exit'或'logout' 
+            -V：显示版本
 
             sudo -i ≈ sudo su -
 
@@ -182,28 +186,21 @@ PAM：Pluggable Authentication Moudle
 
 附录：sudoer配置文件
 
-# Sample /etc/sudoers file.
-#
-# This file MUST be edited with the 'visudo' command as root.
-#
-# See the sudoers man page for the details on how to write a sudoers file.
-#
-
 ##
-# User alias specification
+# 用户别名
 ##
 User_Alias      FULLTIMERS = millert, mikef, dowdy
 User_Alias      PARTTIMERS = bostley, jwfox, crawl
 User_Alias      WEBMASTERS = will, wendy, wim
 
 ##
-# Runas alias specification
+# 操作类型分类
 ##
 Runas_Alias     OP = root, operator
 Runas_Alias     DB = oracle, sybase
 
 ##
-# Host alias specification
+# 主机别名
 ##
 Host_Alias      SPARC = bigtime, eclipse, moet, anchor:\
                 SGI = grolsch, dandelion, black:\
@@ -215,7 +212,7 @@ Host_Alias      SERVERS = master, mail, www, ns
 Host_Alias      CDROM = orion, perseus, hercules
 
 ##
-# Cmnd alias specification
+# 命令别名
 ##
 Cmnd_Alias      DUMPS = /usr/sbin/dump, /usr/sbin/rdump, /usr/sbin/restore, \
                         /usr/sbin/rrestore, /usr/bin/mt
@@ -232,7 +229,7 @@ Cmnd_Alias      VIPW = /usr/sbin/vipw, /usr/bin/passwd, /usr/bin/chsh, \
                        /usr/bin/chfn
 
 ##
-# Override built-in defaults
+# 不同的用户采用不同地策略
 ##
 Defaults               syslog=auth
 Defaults>root          !set_logname
@@ -241,17 +238,17 @@ Defaults:millert       !authenticate
 Defaults@SERVERS       log_year, logfile=/var/log/sudo.log
 
 ##
-# User specification
+# 用户设置
 ##
 
-# root and users in group wheel can run anything on any machine as any user
+# root及wheel组内用户最高权限
 root            ALL = (ALL) ALL
 %wheel          ALL = (ALL) ALL
 
-# full time sysadmins can run anything on any machine without a password
+# FULLTIMERS   可以运行任何命令在任何主机而不用输密码
 FULLTIMERS      ALL = NOPASSWD: ALL
 
-# part time sysadmins may run anything but need a password
+# PARTTIMERS   可以运行任何命令在任何主机，但是必须先验证自己的密码
 PARTTIMERS      ALL = ALL
 
 # jack may run anything on machines in CSNETS
@@ -267,7 +264,7 @@ operator        ALL = DUMPS, KILL, SHUTDOWN, HALT, REBOOT, PRINTING,\
 # joe may su only to operator
 joe             ALL = /usr/bin/su operator
 
-# pete may change passwords for anyone but root on the hp snakes
+# pete可以为除root 之外地用户修改密码
 pete            HPPA = /usr/bin/passwd [A-z]*, !/usr/bin/passwd root
 
 # bob may run anything on the sparc and sgi machines as any user
@@ -311,3 +308,6 @@ WEBMASTERS      www = (www) ALL, (root) /usr/bin/su www
 # anyone can mount/unmount a cd-rom on the machines in the CDROM alias
 ALL             CDROM = NOPASSWD: /sbin/umount /CDROM,\
                 /sbin/mount -o nosuid\,nodev /dev/cd0a /CDROM
+
+# 包含目录，注意前面#不能去，同时#后不能有空格
+#includedir /etc/sudoers.d
