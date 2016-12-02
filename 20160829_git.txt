@@ -160,7 +160,7 @@ Git版本控制：
                 ^1 == ~1 == ^ == ~
                 ^^ == ~2
 
-    • 提交差异比较：git diff [--color]
+    • 提交差异比较：git diff [--color] [--stat]
         git diff FILE1 FILE2        # 比较2个文件差异
         git diff commit1 commit2    # 比较2次提交差异
 
@@ -200,6 +200,8 @@ Git版本控制：
         git merge --no-ff -m '说明' <name>[ <name2> ..]   # 合并后能看出来曾经做过合并
         git branch -d <name>            # 删除分支
         git branch -D <name>            # 强行删除
+
+        git checkout -b branch-name origin/branch-name  # 拉取远程分支
         git push origin --delete <name> # 删除远程分支
 
     • 分支合并概念：

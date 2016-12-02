@@ -420,8 +420,10 @@ httpd-2.2配置文件说明：/etc/httpd/conf/httpd.conf
 
         curl的常用选项：
             -I/--head：只显示响应报文首部信息
+            -XPUT：指定请求方式，包括GET, HEAD, POST及PUT
             -H/--header <line>：自定义头信息传递给服务器
             -A/--user-agent <string>：设置用户代理发送给服务器，即告诉服务器浏览器是什么
+            -d DATA：传输数据
             -basic：使用HTTP基本验证
             --tcp-nodelay：使用TCP_NODELAY选项
             -e/--referer <URL>：来源网址，跳转过来的网址
