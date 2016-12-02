@@ -148,3 +148,65 @@ Hadoop：
         • 伪分布式模型：运行于单机
 
         • 分布式模型：群集模型
+
+    ▫ hdfs命令操作
+
+        语法：hadoop fs -CMD <args>
+
+        • ls
+            hadoop fs -ls [-R] /                # 列出hdfs根文件目录，-R递归
+
+        • mkdir：创建目录
+            hadoop fs -mkdir [-p] /tmp/xxx      # 创建目录 
+
+        • put：上传
+            hadoop fs -put <local-file> <hdfs-file>             # 上传文件或目录
+            hadoop fs -moveFromLocal <local-file> <hdfs-file>
+            hadoop fs -copyFromLocal <local-file> <hdfs-file>
+        
+        • get：下载
+            hadoop fs -get <hdfs-file> [local-dir]              # 下载文件或目录
+            hadoop fs -moveToLocal <hdfs-file> [local-dir]
+            hadoop fs -copyToLocal <hdfs-file> [local-dir]
+
+        • cp, rm, mv
+            hadoop fs -cp <hdfs-file> <hdfs-file>
+            hadoop fs -rm <hdfs-file>
+            hadoop fs -mv 
+
+        • du：查看大小
+            hadoop fs -du < hdfs-path>
+            hadoop fs -du -s <hdfs-path>
+            hadoop fs -du -h <hdfs-path> 
+
+        • text：将文本文件或某些格式的非文本文件通过文本格式输出
+            hadoop fs -text <hdfs-file>
+
+        • tail：显示文件末尾的1KB数据
+            hadoop fs -tail <hdfs-file>
+
+        • count：统计目录下的目录个数，文件个数，文件总计大小
+            hadoop fs -count <hdfs-path>
+
+        • getmerge：将hdfs指定目录下所有文件排序后合并到local指定的文件中，存在文件会覆盖
+            hadoop fs -getmerge -nl  < hdfs dir >  < local file >
+
+        • setrep：修改文件副本数
+            hadoop fs -setrep -R 3 <hdfs-path>      # -R递归
+
+        • test：检测文件或目录
+            hadoop fs -test -e filename
+
+                -e 检查文件是否存在。如果存在则返回0
+                -z 检查文件是否是0字节。如果是则返回0 
+                -d 如果路径是个目录，则返回1，否则返回0
+
+        • balancer：手动均衡数据
+            hdfs balancer
+
+
+
+
+
+
+
