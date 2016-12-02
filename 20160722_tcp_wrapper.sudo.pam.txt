@@ -66,6 +66,8 @@ sudo：
         su - USER：登录式切换
         su USER：非录式切换
         -c：不切换用户，以用户的身份执行命令
+            su - USER -c 'whoami'
+            
     root：
         用户管理：
             useradd，userdel，usermod，passwd
