@@ -75,6 +75,10 @@ sudo：
             ifconfig ifup ifdowm ip route netstat
 
     1、定义sudo授权，/etc/sudoers
+
+        sudoers文件的属主和属组ID必须都是0，文件权限位是0440。不小心改变了默认权限，应当立即恢复它们
+            chown -c root:root /etc/sudoers
+            chmod -c 0440 /etc/sudoers
     
     语法： who   where=(whom)   command
            who   where=(user:group) command
@@ -103,6 +107,9 @@ sudo：
             cmd_alias
 
     编辑：visudo命令
+
+        visudo：编辑后保存退出时会自动校验语法
+        visudo -c：检测语法
 
         hadoop ALL=(root) /usr/sbin/useradd, /usr/sbin/usermod
 
