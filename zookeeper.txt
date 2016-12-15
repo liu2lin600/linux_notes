@@ -1,0 +1,166 @@
+
+Zookeeper：
+	
+	分布式系统：是一个硬件或软件组件分布在网络中的不同的计算机之上，彼此间仅通过消息传递进行通信和协作的系统。
+	
+		特征：
+			分布性、对等性、并发性、缺乏全局时钟、故障必然会发生 
+			
+		典型问题：
+			通信异常、网络分区、三态(成功、失败、超时)、节点故障
+		
+	CAP：2000,7, Eric Brewer, ACM PODC, 
+		2002, MIT, Seth Gilbert, Nancy Lynch；
+		
+		最多只能满足2个：
+			CP：一致性
+			AP：可用性
+			P：分区容错性
+				
+	BASE：
+		BA：基本可用
+		S：软状态
+		E：最终一致性
+			因果一致性、会话一致性、单调读一致性、单调写一致性、读己之所写一致性；
+			
+	保证分布式系统的一致性多种协议：
+		2PC：2 Phase-Commit，两段式提交，请求和执行
+		3PC：3 Phase-Commit， CanCommit->PreCommit-->DoCommit
+		Paxos：Leslie Lamport，1990年提出
+		
+	Google Chubby：分布式锁服务，GFS/BigTable都用到了chubby
+		分面式协作、元数据存储、Master选举 
+			
+	Zookeeper：
+		zookeeper是一个开源的分布式协调服务，由知名互联网公司Yahoo创建，它是Chubby的开源实现，换句话讲，zk是一个典型的分布式数据一致性解决方案，分布式应用程序可以基于它实现数据的发布/订阅、配置管理、负载均衡、名称服务、分布式协调/通知、集群管理、Master选举、分布式锁和分布式队列
+		
+		基本概念：
+			集群角色：Leader, Follower, Observer
+				Leader：选举产生，提供读/写
+				Follower：参与选举，可被选举，提供读服务
+				Observer：参与选举，不可被选举，提供读服务
+				
+			会话：ZK中，客户端(分布式系统中节点)<-->服务端(zk)，TCP长连接
+				sessionTimeout 
+				
+			数据节点(ZNode)：即zk数据模型中的数据单元，zk的数据都存储于内存中，数据模型为树状结构(ZNode Tree)，每个ZNode都会保存自己的数据于内存中
+				持久节点：仅显式删除才消失
+				临时节点：会话中止即自动消失
+				
+			版本（version）：ZK会为每个ZNode维护一个称之为Stat的数据结构，记录了当前ZNode的三个数据版本
+				dataVersion：当前版本
+				cversion：当前znode的子节点的版本
+				aclVersion：当前znode的ACL的版本
+				
+			ACL：ZK使用ACL机制进行权限控制
+				CREATE， READ，WRITE，DELETE，ADMIN
+				
+			事件监听器(Watcher)：
+				ZK上，由用户指定的触发机制，在某些事件产生时，ZK能够将通知给相关的客户端
+				
+		ZAB协议：Zookeeper Atomic Broadcast，ZK原子广播协议，支持崩溃恢复机制及数据的完整一致性
+			ZAB协议中存在三种状态：
+				(1) Looking，zk启动时默认状态，开始选举
+				(2) Following
+				(3) Leading
+				
+			四个阶段：
+				选举：election
+				发现：discovery
+				同步：sync
+				广播：Broadcast
+				
+		安装：
+			部署方式：单机模式、伪分布式模式、分布式模式
+			
+			http://zookeeper.apache.org
+			
+			zoo.cfg配置参数：
+			tickTime=2000
+			dataDir=/data/zookeeper
+			ClientPort=2181
+			initLimit=5
+			syncLimit=2
+			
+			指定主机的语法格式：
+				server.ID=IP:port1:port2
+					ID：各主机的数字标识，一般从1开始 
+					IP：各主机的IP
+					port1：
+					port2：
+					
+			节点信息：stat 
+				cZxid = 0x14
+				ctime = Wed Sep 14 16:12:44 CST 2016
+				mZxid = 0x14
+				mtime = Wed Sep 14 16:12:44 CST 2016
+				pZxid = 0x14
+				cversion = 0
+				dataVersion = 0
+				aclVersion = 0
+				ephemeralOwner = 0x0
+				dataLength = 8
+				numChildren = 0	
+				
+			Client：
+				Watcher, 一次性地触发通知机制；
+		
+		zkCli命令：
+			create, ls, ls2(ls+stat), stat, delete, rmr, get, set, ...
+				
+		监控zk的四字命令：
+			ruok(are you ok), stat, srvr, conf, cons, wchs, envi ...
+			
+		zoo.cfg配置文件的参数：
+			基本配置参数：
+				clientPort=2181
+				dataDir=/data/zookeeper
+				dataLogDir：事务日志文件路径；
+				tickTime：
+				
+			存储配置：
+				preAllocSize：为事务日志预先分配的磁盘空间量；默认65535KB；
+				snapCount：每多少次事务后执行一次快照操作；每事务的平均大小在100字节；
+				autopurget.snapRetainCount：
+				autopurge.purgeInterval：purge操作的时间间隔，0表示不启动；
+				fsync.warningthresholdms：zk进行事务日志fsync操作时消耗的时长报警阈值；
+				weight.X=N：判断quorum时投票权限，默认1；
+				
+			网络配置：
+				maxClientCnxns：每客户端IP的最大并发连接数；
+				clientPortAddress：zk监听IP地址；
+				minSessionTimeout：
+				maxSessionTimeout：
+				
+			集群配置：
+				initLimit：Follower连入Leader并完成数据同步的时长；
+				syncLimit：心跳检测的最大延迟；
+				leaderServes：默认zk的leader接收读写请求，额外还要负责协调各Follower发来的事务等；因此，为使得leader集中处理zk集群内部信息，建议不让leader直接提供服务；
+				cnxTimeout：Leader选举期间，各服务器创建TCP连接的超时时长；
+				ellectionAlg：选举算法，目前仅支持FastLeaderElection算法一种；
+				server.id=[hostname]:port:port[:observer]
+					集群内各服务器的属性参数
+						第一个port：follower与leader进行通信和数据同步时所使用端口；
+						第二个port：leader选举时使用的端口；
+						observer：定义指定的服务器为observer；
+						
+					注意：运行为集群模式时，每个节点在其数据目录中应该有一个myid文件，其内容仅为当前server的id；
+					
+		典型应用场景：
+			数据发布/订阅
+			负载均衡
+			命名服务
+			分布式协调/通知
+			集群管理
+			Master选举
+			
+			
+		
+			
+				
+				
+
+
+
+
+ 
