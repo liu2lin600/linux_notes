@@ -134,6 +134,12 @@ sudo：
             NOPASSWD：
                 如：jerry  ALL=(root) PASSWD:/usr/sbin/su, NOPASSWD:/usr/sbin/useradd 
 
+    其它指令：
+        Defaults:USER !requiretty           # 设置指定用户没有tty也能使用sudo
+        Defaults env_keep +="HOME"          # 传递指定的环境变量，多个间空格隔开
+        Defaults !tty_tickets               # 每次启动新终端无需重新输入密码
+        Defaults:USER timestamp_timeout=20  # 指定用户过期时间为20分钟，为0时每次都需要密码
+
     2、普通用户执行可以执行管理命令
         sudo：5分钟倒计时，用于记录用户以前输入的密码，在后续操作时可以不用输入密码
             -u USER：以指定的用户作为新的身份。不加则默认以root作为新的身份
