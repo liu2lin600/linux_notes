@@ -1,0 +1,110 @@
+2016-12-13
+# edit by liu2lin600
+
+zookeeper
+
+♦ 概述：
+	ZooKeeper 顾名思义 动物园管理员，他是拿来管大象(Hadoop) 、 蜜蜂(Hive) 、 小猪(Pig)  的管理员， Apache Hbase和 Apache Solr 以及LinkedIn sensei  等项目中都采用到了 Zookeeper，为分布式应用所设计的高可用、高性能且一致的开源协调服务，是Google的Chubby一个开源实现，是Hadoop和Hbase的重要组件，它提供了一项基本服务：分布式锁服务，还包括配置维护、组服务、分布式消息队列、分布式通知/协调等功能
+
+♦ 原理
+	1. 每个Server在内存中存储了一份数据
+	2. Zookeeper启动时，将从实例中选举一个leader（Paxos协议，决定实例为奇数） 
+	3. Leader负责处理数据更新等操作（Zab协议）
+	4. 一个更新操作成功，当且仅当大多数Server在内存中成功修改数据
+
+♦ 特点
+	• 顺序一致性
+		从同一个客户端发起的事务请求，最终将会严格按照其发起顺序被应用到zookeeper中
+
+	• 原子性
+		所有事物请求的处理结果在整个集群中所有机器上的应用情况是一致的，即，要么整个集群中所有机器都成功应用了某一事务，要么都没有应用，一定不会出现集群中部分机器应用了改事务，另外一部分没有应用的情况。
+
+	• 单一视图
+		无论客户端连接的是哪个zookeeper服务器，其看到的服务端数据模型都是一致的。
+
+	• 可靠性
+		一旦服务端成功的应用了一个事务，并完成对客户端的响应，那么该事务所引起的服务端状态变更将会一直保留下来，除非有另一个事务又对其进行了改变。
+
+	• 实时性
+		zookeeper并不是一种强一致性，只能保证顺序一致性和最终一致性，只能称为达到了伪实时性
+
+♦ 角色
+	1. Leader：领导者负责进行投票的发起和决议，更新系统状态，处理写请求
+	2. Follower：用于接收客户端的读写请求并向客户端返回结果，在选主过程中参与投票
+	3. Observer：观察者可以接收客户端的读写请求，并将写请求转发给Leader，但Observer节点不参与投票过程，只同步leader状态，Observer的目的是为了，扩展系统，提高读取速度
+
+♦ 数据模型
+	ZooKeeper拥有一个层次的命名空间，这个和标准的文件系统非常相似，采用树形层次结构，树中的每个节点被称为—Znode，Znode也可以拥有子节点，通过绝对路径来引用Znode，如/client_conf/hive
+
+	/ --->/client_conf --->/client_conf/hive,/client_conf/redis...
+	  --->/server_conf --->...
+	  --->/status 	   --->...
+
+	每个Znode兼容文件和目录两种特点，既像文件一样维护着数据、元信息、ACL、时间戳等数据结构，又像目录一样可以作为路径标识的一部分。每个Znode由3部分组成 :
+
+		1、stat：此为状态信息, 描述该Znode的版本, 权限等信息
+		2、data：与该Znode关联的数据
+		3、children：该Znode下的子节点
+
+	ZooKeeper虽然可以关联一些数据，但并没有被设计为常规的数据库或者大数据存储，相反的是，它用来管理调度数据，比如分布式应用中的配置文件信息、状态信息、汇集位置等等。这些数据的共同特性就是它们都是很小的数据，通常以KB为大小单位。ZooKeeper的服务器和客户端都被设计为严格检查并限制每个Znode的数据大小至多1M，但常规使用中应该远小于此值
+
+	数据节点分类：
+		1. 持久
+		2. 持久带序号
+		3. 临时
+		4. 临时带序号
+
+♦ 读写数据
+	• 写数据：一个客户端进行写数据请求时，会指定zk集群中节点，如果是follower接收到写请求，就会把请求转发给Leader，Leader通过内部的Zab协议进行原子广播，直到所有zk节点都成功写了数据后（内存同步以及磁盘更新），这次写请求算是完成，然后zk service就会给client发回响应
+	• 读数据：因为集群中所有的zk节点都呈现一个同样的命名空间视图（就是结构数据），上面的写请求已经保证了写一次数据必须保证集群所有的zk节点都是同步命名空间的，所以读的时候可以在任意一台zk节点上
+
+
+♦ 工作模式
+	ZooKeeper的工作模式有三种:单机模式、集群模式、伪集群模式
+
+	1. 单机模式：Zookeeper只运行在一台服务器上，适合测试环境
+	2. 伪集群模式：就是在一台物理机上运行多个Zookeeper 实例
+	3. 集群模式：Zookeeper运行于一个至少有三个节点以上集群中，适合生产环境
+
+♦ 安装配置
+	◇ 下载解压
+		wget https://mirrors.tuna.tsinghua.edu.cn/apache/zookeeper/zookeeper-3.4.9/zookeeper-3.4.9.tar.gz
+		tar xf zookeeper-3.4.9.tar.gz
+		cd zookeeper-3.4.9
+
+	◇ 配置文件（3台机器为例）
+		cp conf/zoo-sample.cfg conf/zoo.cfg
+
+		tickTime=2000 					# 心跳时间2s
+		initLimit=10 					# follower连接leader初始化最长时间
+		syncLimit=5 					# Leader与Follower之间发送消息，请求和应答时间长度
+		dataDir=/zookeeper/data 		# 数据目录
+		dataLogDir=/zookeeper/log 		# 日志目录
+		clientPort=2181 				# 客户端连接端口
+		server.1=host1:2888:3888 		# 第1台服务
+		server.2=host2:2888:3888 		# 
+		server.3=host3:2888:3888 		# 
+
+		# 可以在同一台启动多实例，clientPort需不同
+
+	◇ 启动及状态
+		./bin/zkServer.sh start|status
+
+	◇ 进行命令行shell
+		./bin/zkCli.sh [HOST:PORT]
+
+	◇ 常用命令
+
+		ls /
+		get /zookeeper
+		create [-s] [-e] /test
+		set /test 'hello'
+		delete /test
+		rmr /test
+
+
+
+
+♦ 
+
+♦ 

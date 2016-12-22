@@ -1,0 +1,26 @@
+{'data': '{"event_name":"_homeState","unit":"week","from_date":"2016-09-06","to_date":"2016-09-06","measure_type":"times","sampling_factor":64,"filter":{"conditions":[{"field":"event._homeState.departmentId","function":"equal","params":["27"]}]},"by_field":"event._homeState.department","user_filter":{}}', 'id': 128, 'name': 'YJC_首页回访次数', 'type': '/addiction/'}
+
+ SELECT  "a"."p_department" as "byValue" ,COUNT(DISTINCT "a"."user_id" ) AS distUser
+        FROM
+(SELECT  *
+        FROM event_p1 a
+        WHERE (  ("a"."event_id" = 3))) a
+        WHERE (("a"."date" BETWEEN '2016-09-05' AND '2016-09-11') AND ("a"."p_departmentid" = 27000))
+        GROUP BY 1
+        ORDER BY 1
+        LIMIT 300
+2016-12-05 12:12:08,934 [WebServer-54] DEBUG [com.sensorsdata.analytics.queryengine.query.SQLQueryService] - execute sql addictionDetail:
+ SELECT CASE WHEN "e"."units" > 1000 THEN 1001 ELSE "e"."units" END AS units, "e"."byValue" as "byValue" ,COUNT(*) AS frequency
+        FROM (
+        SELECT  "d"."user_id" as "user_id" , "d"."byValue" as "byValue" ,CAST(ROUND(SUM("d"."units")/COUNT(*)) AS int) AS units
+                FROM (
+                SELECT  "a"."week_id" as "a_0_week_id" , "a"."user_id" as "user_id" , "a"."p_department" as "byValue" ,COUNT(*) AS units
+                        FROM
+                (SELECT  *
+                        FROM event_p1 a
+                        WHERE (  ("a"."event_id" = 3))) a
+                        WHERE (("a"."date" BETWEEN '2016-09-05' AND '2016-09-11') AND ("a"."p_departmentid" = 27000))
+                        GROUP BY 1,2,3) d
+                GROUP BY 1,2) e
+        GROUP BY 1,2
+        LIMIT 3000
