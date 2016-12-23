@@ -36,10 +36,14 @@
 		• /usr/bin/ntpstat: 查看是否与服务器同步
 
 	◇ 安装配置
-		ntpd即可提供时间服务端也可以作为客户端去请求服务器同步时间，同步时间
+		✽ ntpd即可提供时间服务端也可以作为客户端自动去请求服务器同步时间
 
-		1. 设置时区:cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-		2. 安装ntpd服务:yum -y install ntp
+		1. 设置时区
+			» cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+		
+		2. 安装ntpd服务
+			» yum -y install ntp
+		
 		3. 配置/etc/ntp.conf
 
 			# 限制条件
@@ -77,12 +81,9 @@
 
 		4. 修改/etc/sysconfig/ntpd:
 
-			# Drop root to id 'ntp:ntp' by default.
 			OPTIONS="-u ntp:ntp -p /var/run/ntpd.pid"
-			# Set to 'yes' to sync hw clock after successful ntpdate
-			SYNC_HWCLOCK=yes #make no into yes; BIOS的时间也会跟着修改
-			# Additional options for ntpdate
-			NTPDATE_OPTIONS=""
+			SYNC_HWCLOCK=yes 		# BIOS的时间也会跟着修改
+			NTPDATE_OPTIONS="" 		# 额外选项
 
 		► 说明
 			restrict [address] mask [netmask_ip] [parameter]
@@ -96,16 +97,18 @@
 				nopeer     ：    不与其他同一层的ntp服务器进行时间同步
 
 	◇ 启动服务及命令用法
-		• service ntpd start|status|stop 	# 监听123/udp
+		• service ntpd start|status|stop... 	# 监听123/udp
 
-		• ntpstat 	# 此命令出现上述synchronised结果比较慢
+		• ntpstat 	# 此命令出现synchronised结果比较慢，需5-10分钟才能成功连接和同步
 
+			» ntpstat
 			synchronised to NTP server (10.10.255.2) at stratum 4 	# 已同步
    				time correct to within 101 ms 	# 校正101ms
    				polling server every 16 s 		# 每16s校正一次
 
-		• ntpq -p 	# 
+		• ntpq 		# 查看同步状态
 
+			» ntpq -p
 				 remote           refid      st t when poll reach   delay   offset  jitter
 			==============================================================================
 			+10.10.255.1     202.118.1.130    3 u   14   16  377    0.479   15.205   1.586
@@ -115,7 +118,7 @@
 			· remote ： 本机和上层ntp的ip或主机名
 				'*'：它告诉我们远端的服务器已经被确认为我们的主NTP Server
 				'+'：辅助服务器，当*号服务器不可用时它就可以接管
-			    '-'：不合格的NTP Server
+				'-'：不合格的NTP Server
 				'x'：远程服务器不可用
 			· refid  ： 参考上一层ntp主机地址
 			· st     ： stratum阶层
@@ -127,17 +130,76 @@
 			· jitter ： 系统时间与bios时间差
 
 		• date命令
-			[work@relay ~]$ date
+			» date
 			2016年 12月 22日 星期四 21:40:30 CST 		# 标准北京时间
-			[work@relay ~]$ date -u 
+			» date -u 
 			2016年 12月 22日 星期四 13:40:32 UTC 		# 国际协调时间，基本等同格林威治时间(GMT)
 
-		• tzselect命令：手动设置时区
+		• tzselect命令：进入交互式手动设置时区
 
 ## chrony
 
-♦ 
+	Chrony是网络时间协议的 (NTP) 的另一种实现，自RHEL7/CentOS7 起，Chrony做为了发行版里的标配服务，它可以更准确地同步系统时钟
+	Chrony同ntpd一样，可以同时做为ntp服务的客户端和服务端。默认安装完后有两个程序chronyd和chronyc 。chronyd是一个在系统后台运行的守护进程，chronyc是用来监控chronyd性能和配置其参数程序
 
+	♦ 安装
+		» yum install chrony
+		» systemctl start|stop|restart chronyd
+
+	♦ 配置文件：/etc/chrony.conf
+
+		server 0.centos.pool.ntp.org iburst 	# 添加时间服务器，可多个
+		stratumweight 0 						# 同步时，每个层应该添加多少距离到同步距离
+		driftfile /var/lib/chrony/drift 		# 
+		rtcsync 								# 内核指令，系统时间每11分钟会拷贝到实时时钟（RTC）
+		makestep 10 3
+		bindcmdaddress 127.0.0.1
+		bindcmdaddress ::1
+
+		allow 10.1/16 							# 允许客户端同步请求
+		deny 10.1.1.1
+
+		keyfile /etc/chrony.keys 				# 密码文件
+		commandkey 1 							# 指定了密码文件中哪一条被使用
+		generatecommandkey 						# 指定了产生一个SHA1或MD5加密的密码，存放在/etc/chrony.keys
+		noclientlog
+		logchange 0.5 							# 调整时间大于0.5时记录日志
+		logdir /var/log/chrony 					# 日志文件
+
+	♦ 客户端命令
+		• chronyc：
+			» chronyc source -v 				# 查看时间源
+			» chronyc sourcestats -v 			# 同步状态
+
+			✽ 也可直接输入chronyc进入交互式命令进行修改等，主要功能如下
+
+				help 		： 列出所有可用命令
+				accheck 	： 检查NTP访问是否对特定主机可用
+				activity 	： 该命令会显示有多少NTP源在线/离线
+				add server 	： 手动添加一台新的NTP服务器。
+				clients 	： 在客户端报告已访问到服务器
+				delete 		： 手动移除NTP服务器或对等服务器
+				settime 	： 手动设置守护进程时间
+				tracking 	： 显示系统时间信息
+
+		• system_config_date：图形化工具
+			» yum install system_config_date
+			» system_config_date
+
+		• timedatectl
+			» timedatectl 							# 查看日期时间、时区及NTP状态
+			» timedatectl list-timezones 				# 查看时区列表
+			» timedatectl set-timezone Asia/Shanghai 	# 修改时区
+			» timedatectl set-time "2016-01-21 11:50:00"
+			» timedatectl set-ntp true/flase 			# 开启NTP
+
+	♦ Chrony 的优势包括：
+
+		• 更快的同步只需要数分钟而非数小时时间，从而最大程度减少了时间和频率误差，这对于并非全天运行机器而言非常有用
+		• 能够更好地响应时钟频率的快速变化，这对于具备不稳定时钟的虚拟机或导致时钟频率发生变化的节能技术而言非常有用
+		• 在初始同步后，它不会停止时钟，以防对需要系统时间保持单调的应用程序造成影响
+		• 在应对临时非对称延迟时（例如，在大规模下载造成链接饱和时）提供了更好的稳定性
+		• 无需对服务器进行定期轮询，因此具备间歇性网络连接的系统仍然可以快速同步时钟
 
 
 ## ntpdate
