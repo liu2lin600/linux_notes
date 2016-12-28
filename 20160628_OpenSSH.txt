@@ -152,8 +152,8 @@ openSSH服务器端：sshd
     ~/.ssh/id_rsa           # 本机私钥
     ~/.ssh/id_rsa.pub       # 本机公钥
     ~/.ssh/authorized_keys  # 存放远程主机公钥，可免密登录本机
-    /etc/ssh/ssh_config     # 
-    /etc/ssh/sshd_config    # sshd配置  可参考 http://www.jinbuguo.com/openssh/sshd_config.html
+    /etc/ssh/ssh_config     # 全局ssh客户端配置
+    /etc/ssh/sshd_config    # sshd服务配置  可参考 http://www.jinbuguo.com/openssh/sshd_config.html
     /var/log/secure         # 登录日志
 
 ssh中的GSSAPI相关选项：
@@ -162,6 +162,15 @@ ssh中的GSSAPI相关选项：
     SSH默认开启了GSSAPIAuthentication认证，一般SSH依次进行的认证方法的是publickey,gssapi-keyex,gssapi-with-mic,password，这个你可以ssh -v开启debug模式在连接日志看到。
 
     一般用户只使用password认证方式，但前面3个认证过程系统还是会尝试，这就浪费时间了，也就造成SSH登录慢。关于gssapi相关的认证，消耗的时间比较多，具体可以查看ssh连接日志，GSSAPI1主要是基于Kerberos的，因此要解决这个问题也就变得要系统配置有Kerberos，如果没则最好关掉
+
+    gss引起的登录慢问题排查：
+    
+        ssh -v root@192.168.1.1     # 查看详情
+        ssh -o GSSAPIAuthentication=no root@192.168.1.1     # 禁用gss登录
+        echo "GSSAPIAuthentication no" >> ~/.ssh/config     # ssh客户端配置，不改全局配置
+
+ssh端口转发：
+    见有道笔记
 
 
 ssh协议的另一个实现：dropbear, 轻量化的实现方案，多用于嵌入式环境中,供简单ssh远程连接服务
