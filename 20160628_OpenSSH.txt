@@ -165,9 +165,12 @@ ssh中的GSSAPI相关选项：
 
     gss引起的登录慢问题排查：
     
-        ssh -v root@192.168.1.1     # 查看详情
-        ssh -o GSSAPIAuthentication=no root@192.168.1.1     # 禁用gss登录
-        echo "GSSAPIAuthentication no" >> ~/.ssh/config     # ssh客户端配置，不改全局配置
+        1. 查看详情
+            ssh -v root@192.168.1.1  
+
+        2. 禁用gss登录
+            ssh -o GSSAPIAuthentication=no root@192.168.1.1  
+            或：echo "GSSAPIAuthentication no" >> ~/.ssh/config     # ssh客户端配置，不改全局配置
 
 ssh端口转发：
     见有道笔记
