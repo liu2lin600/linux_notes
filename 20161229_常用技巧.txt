@@ -1,0 +1,10 @@
+2016-12-29
+# edit by liu2lin600
+
+♦ 获取机器外网ip
+
+	» curl ipinfo.io
+	» curl ifconfig.me
+	» curl myip.ipip.net
+	» curl www.whatismyip.com.tw
+	» curl http://members.3322.org/dyndns/getip
