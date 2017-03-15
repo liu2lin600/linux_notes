@@ -158,10 +158,28 @@ zookeeper
 		delete /test
 		rmr /test
 
+	◇ 4字命令
+		ZooKeeper 支持某些特定的四字命令字母与其的交互。它们大多是查询命令，用来获取 ZooKeeper 服务的当前状态及相关信息。用户在客户端可以通过 telnet 或 nc 向 ZooKeeper 提交相应的命令
+
+		conf 	输出相关服务配置的详细信息
+		cons	列出所有连接到服务器的客户端的完全的连接/会话的详细信息。包括包数量、会话 id 、操作延迟、最后的操作执行等信息
+		dump	列出未经处理的会话和临时节点
+		envi	输出关于服务环境的详细信息（区别于 conf 命令）
+		reqs	列出未经处理的请求
+		ruok	测试服务是否处于正确状态。如果确实如此，那么服务返回“ imok ”，否则不做任何相应
+		status	输出关于性能和连接的客户端的列表
+		wchs	列出服务器 watch 的详细信息
+		wchc	通过 session 列出服务器 watch 的详细信息，它的输出是一个与 watch 相关的会话的列表
+		wchp	通过路径列出服务器 watch 的详细信息。它输出一个与 session 相关的路径
+
+		用法：
+			echo conf | nc 127.0.0.1 2181
+
 
 
 
 ♦ 更多
+	https://my.oschina.net/xianggao/blog/531204
 	https://blog.linuxeye.com/393.html
 	http://www.ibm.com/developerworks/cn/opensource/os-cn-zookeeper/
 
