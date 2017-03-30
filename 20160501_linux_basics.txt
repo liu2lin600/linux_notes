@@ -1,104 +1,6 @@
 # 未整理
 
 
-介绍课程：
-	中级：
-		初级：系统基础
-		中级：系统管理、服务安全及服务管理、Shell脚本；
-	高级：
-		MySQL数据库；
-			cache & storage
-		集群：
-			Cluster
-
-			lb:
-				4layer
-				7layer
-			ha:
-		分布式：
-			zookeeper
-			分布式文件系统
-		虚拟化技术：
-			xen
-			kvm
-
-		Openstack：IAAS云；
-
-		运维工具：
-			ansible
-			puppet(ruby), saltstack(python)
-
-		监控工具：
-			zabbix
-
-		大数据处理：
-			hadoop
-			spark, storm
-
-			elk: elasticsearch, logstash, kibana
-
-		docker：
-
-		Python：
-
-		一万小时定律：
-
-	认证：
-		RedHat:
-			RHCSA
-			RHCE
-			RHCA
-
-	培训：
-		加速知识获取过程；
-		有人监督，有环境；
-
-纪律：
-	1、迟到
-		1分钟：2个；
-
-		请假一晌：60个；
-
-	2、教室使用
-		全天开放；
-			拒绝玩游戏：
-
-	3、上课期间
-		手机铃声关闭；
-			一次：30个；
-
-作业和考试：
-	作业：
-		课前提问
-		博客作业
-			5w1h:
-				what, why, when, where, who
-				how
-
-	考试：
-		机试、笔试
-		及格：80分
-			一分：5个
-
-
-上课环境：
-	172.16.0.0/16
-		Windows: 172.16.250.X
-		Linux: 172.16.249.X
-			X: 1-254
-
-		网关：172.16.0.1
-		DNS: 172.16.0.1
-
-		每位同学：172.16.Y.1-254
-				  172.16.100+Y.1-254
-
-	Server: 172.16.0.1, 192.168.0.254, 192.168.1.254
-		允许核心转发；
-	
-		DHCP、ftp、http、cobbler
-
-
 VMware Workstation的使用：
 
 	现代计算机设备的组成部分：
@@ -243,7 +145,7 @@ VMware Workstation的使用：
 
 	问题1：CentOS和Linux是什么关系？CentOS和RHEL是什么关系？
 	问题2：各种开源协议的具体细节？
-		GPL, LGPL, Apache, BSD
+		GPL, LGPL, Apache, BSD, MIT
 
 	程序包管理器：
 		rpm:
@@ -270,21 +172,19 @@ VMware Workstation的使用：
 		http://mirrors.163.com
 
 	登录：
-		root/mageedu
-
 		# startx &
 
-	终端：
-		用户与主机交互，必然用到的设备；
+	终端：用户与主机交互，必然用到的设备；
 
-		物理终端：直接接入本机的显示器和键盘设备；/dev/console
+		1. 物理终端：直接接入本机的显示器和键盘设备；/dev/console
 
-		虚拟终端：附加在物理终端之上的以软件方式虚拟实现的终端，CentOS 6默认启动6个虚拟终端
+		2. 虚拟终端：附加在物理终端之上的以软件方式虚拟实现的终端，CentOS 6默认启动6个虚拟终端
 			Ctrl+Alt+F#: [1,6]
 			图形终端：附加在物理终端之上的以软件方式虚拟实现的终端，但额外会提供桌面环境；
 
 			设备文件路径：/dev/tty#
-		模拟终端：
+		
+		3. 模拟终端：
 			图形界面下打开的命令行接口，基于ssh协议或telnet协议等远程打开的界面
 
 			设备文件：/dev/pts/#    [0,oo)
@@ -401,7 +301,8 @@ Linux命令帮助的获取
 
 	内部命令：
 		# help COMMAND
-	外部命令：
+	
+	外部命令
 		(1) # COMMAND --help
 			# COMMAND -h
 		(2) 使用手册(manual)
@@ -494,17 +395,11 @@ Linux命令帮助的获取
 				/KEYWORD: 
 					以KEYWORD指定的字符串为关键字，从当前位置向文件尾部搜索；不区分字符大小写；
 						n: 下一个
-						N：上一个
+						N: 上一个
 				?KEYWORD:
 					以KEYWORD指定的字符串为关键字，从当前位置向文件首部搜索；不区分字符大小写；
 						n: 跟搜索命令同方向，下一个
-						N：跟搜索命令反方向，上一个
-
-			练习：date命令
-				显示今天为周几？
-				设定当前系统时间？
-				显示今天的日期，形如：08/15/15？
-				显示当前的时间，形如： 16:01:21？
+						N: 跟搜索命令反方向，上一个
 
 		(3) info
 			info COMMAND
@@ -521,113 +416,6 @@ Linux命令帮助的获取
 
 		(8) slideshare
 			http://www.slideshare.net/
-
-基础命令：
-	date：
-		date [OPTION]... [+FORMAT]：显示
-			FORMAT: 格式符号
-				%D
-				%F
-				%T
-       	date [MMDDhhmm[[CC]YY][.ss]]：设置
-       		MM: 月分
-       		DD：几号
-       		hh: 小时
-       		mm: 分钟
-       		YY: 两位年份
-       		CCYY: 四位年份
-       		.ss: 秒钟
-
-	    Linux的两种时钟：
-	    	系统时钟：由Linux内核通过CPU的工作频率进行的计时；
-	    	硬件时钟：
-
-	    	hwclock: 显示硬件时钟
-	    		-s, --hctosys
-	    		-w, --systohc
-
-	    	cal：日历
-
-	目录相关的命令：
-		当前目录或工作目录
-		主目录，家目录：HOME
-			root: /root
-			普通用户：/home/USERNAME
-				/home/tom
-
-			~：用户的主目录
-
-		cd: 
-			cd 或 cd ~: 回当前用户的主目录
-			cd ~USERNAME: 切换至指定用户的主目录
-			cd -: 在上一个目录和当前目录之间来回切换
-
-			.
-			..
-
-			相关的环境变量：
-				PWD：保存了当前目录路径；
-				OLDPWD：上一次所在目录路径；
-
-		pwd: 显示当前目录
-
-		ls: list
-			显示指定路径下的文件列表；
-
-			ls [OPTION]... [DIR]...
-				-a, --all: 显示所有文件，包括隐藏文件；
-				-l: 长格式
-					-rw-r--r-- 1 root root 44800 Aug 14 14:32 install.log
-						-rw-r--r--:
-							最左侧的第一位：文件类型
-								-, d, l, b, c, p, s
-							后面的9位：访问权限，perm
-						数字：文件被硬链接的次数；
-						左root: 文件的owner
-						右root: 文件的group
-						44800：文件的size
-						Aug 14 14:32 : 文件的最近一次被修改的时间
-						install.log： 文件名
-				-h, --human-readable：单位换算
-				-d: 显示目录自身的相关属性；通常要与-l一起使用；
-				-r, --reverse: 逆序显示
-				-R, --recursive: 递归
-
-
-
-		stat /PATH/TO/SOMEFILE：获取指定文件的元数据
-
-		文件查看命令：cat, tac
-			cat [OPTION]... [FILE]...
-				-E: 显示行结束符$
-				-n: 对显示出的每一行进行编号
-
-		文件内容类型查看命令：file
-			file /PATH/TO/SOMEWHERE
-
-		回显命令：echo
-			-n: 禁止自动添加换行符号；
-			-e: 允许使用转义符；
-				\n: 换行
-				\t: 制表符
-
-			echo "$VAR_NAME": 变量会替换，双引号表弱引用
-			echo '$VAR_NAME': 变量不会替换，强引用
-
-		which：显示命令对应的程序文件路径
-			which [OPTION] COMMAND
-				--skip-alias：禁止显示别名
-
-		whatis：
-			使用mkwhatis命令可将当前系统上所有的帮助手册及与之对应的关键字创建为一个数据库；
-
-	系统管理类命令：
-		关机：
-			halt, poweroff, shutdown, init 0
-		重启：
-			reboot, shutdown, init 6
-		跟用户登录相关：
-			who, whoami, w
 
 
 Linux的文件系统：
@@ -695,34 +483,6 @@ Linux的文件系统：
 		p: 管道文件；
 		s: 套接字文件；socket; 
 
-
-系统管理类命令：
-		关机：
-			halt, poweroff, shutdown, init 0
-		重启：
-			reboot, shutdown, init 6
-		跟用户登录相关：
-			who, whoami, w
-
-	关机或重启：
-		halt, poweroff
-		reboot
-
-			-f: 强制，不调用shutdown
-			-p: 切断电源
-
-	shutdown：
-		shutdown [OPTION]...  TIME [MESSAGE]
-
-			-r: reboot
-			-h: halt
-
-			-c：cancel
-
-			TIME: 
-				now: 立刻
-				+m: 相对时间表示法，从命令提交开始多久之后；例如 +3；
-				hh:mm: 绝对时间表示，指明具体时间；
 
 	用户登录信息查看命令：
 		whoami: 显示当前登录有效用户；
@@ -793,173 +553,6 @@ bash的基础特性(1)：
 		程序执行有两类结果：
 			程序的返回值；
 			程序的执行状态结果；
-
-
-目录管理类命令：
-	cd, pwd, ls
-
-	mkdir, rmdir, tree
-
-	mkdir [options] /path/to/somewhere
-		-p: 存在于不报错，且可自动创建所需的各目录；
-		-v: 显示详细信息
-		-m MODE: 创建目录时直接指定权限；
-
-	tree: 
-		-d: 只显示目录
-		-L level：指定显示的层级数目
-		-P pattern: 只显示由指定pattern匹配到的路径；
-
-	rmdir：删除空目录
-		rmdir [OPTION]... DIRECTORY...
-			-v: 显示过程；
-
-	练习：
-		(1) 如何创建/tmp/x/y1, /tmp/x/y2, /tmp/x/y1/a, /tmp/x/y1/b, /tmp/x/y2/a, /tmp/x/y2/b
-			mkdir /tmp/x/{y1,y2}/{a,b}		
-
-		(2) 如何创建x_m, y_m, x_n, y_n
-			mkdir {x,y}_{m,n}
-
-		(3) 如何创建/tmp/bin, /tmp/sbin, /tmp/usr, /tmp/usr/bin, /tmp/usr/sbin
-			mkdir -p /tmp/{bin,sbin,usr/{bin,sbin}}
-
-文本文件查看类命令：
-	cat, tac
-	more, less, tail, head
-
-	more
-		more [OPTIONS...] FILE...
-			-d: 显示翻页及退出提示
-
-	less
-		less [OPTIONS...] FILE...
-
-	head
-		head [OPTION]... [FILE]...
-			-c #: 指定获取前#字节
-			-n #: 指定获取前#行
-				-#：
-
-	tail 
-		tail [OPTION]... [FILE]...
-			-c #: 指定获取后#字节
-			-n #: 指定获取后#行
-				-#：
-			-f: 跟踪显示文件新追加的内容；
-
-文件的时间戳管理工具：
-	touch
-
-	文件：metadata, data
-		查看文件状态：stat
-
-		三个时间戳：
-			access time：访问时间，简写为atime，读取文件内容
-			modify time: 修改时间, mtime，改变文件内容（数据）
-			change time: 改变时间, ctime，元数据发生改变
-
-	touch命令：
-		touch [OPTION]... FILE...
-			-a: only atime
-			-m: only mtime
-			-t STAMP:
-				 [[CC]YY]MMDDhhmm[.ss]
-			-c: 如果文件不存，则不予创建
-
-回顾：
-	文件系统、bash的基础特性、目录管理及文件查看
-
-		文件系统：
-			boot, bin, sbin, lib, lib64, dev, home, root, mnt, media, etc, proc, sys
-			usr
-			var
-
-		bash的基础特性：
-			命令补全
-			路径补全
-			命令历史
-			命令行展开：
-				~, {}
-			命令的状态结果
-				成功：0
-				失败：1-255
-
-		目录管理：mkdir, rmdir
-
-		文件查看：more, less, tail, head
-
-		时间戳管理：touch
-			-a, -m, -t
-			-c
-
-文件管理：
-	cp, mv, rm
-
-	复制命令：cp
-		cp [OPTION]... [-T] SOURCE DEST
-        cp [OPTION]... SOURCE... DIRECTORY
-        cp [OPTION]... -t DIRECTORY SOURCE...
-
-        cp SRC DEST
-        	SRC是文件：
-        		如果目标不存在：新建DEST，并将SRC中内容填充至DEST中；
-        		如果目录存在：
-        			如果DEST是文件：将SRC中的内容覆盖至DEST中；
-        				此时建议为cp命令使用-i选项；
-        			如果DEST是目录：在DEST下新建与原文件同名的文件，并将SRC中内容填充至新文件中；
-
-        cp SRC... DEST
-        	SRC...：多个文件
-        		DEST必须存在，且为目录，其它情形均会出错；
-
-        cp SRC DEST
-        	SRC是目录：
-        		此时使用选项：-r
-
-        		如果DEST不存在：则创建指定目录，复制SRC目录中所有文件至DEST中；
-        		如果DEST存在：
-        			如果DEST是文件：报错
-        			如果DEST是目录：
-
-        常用选项：
-        	-i：交互式
-        	-r, -R: 递归复制目录及内部的所有内容；
-        	-a: 归档，相当于-dR --preserv=all
-        		-d：--no-dereference --preserv=links
-        		--preserv[=ATTR_LIST]
-        			mode: 权限
-        			ownership: 属主属组
-        			timestamp: 
-        			links
-        			xattr
-        			context
-        			all
-        	-p: --preserv=mode,ownership,timestamp
-        	-v: --verbose
-        	-f: --force
-
-    mv: move，移动文件
-       mv [OPTION]... [-T] SOURCE DEST
-       mv [OPTION]... SOURCE... DIRECTORY
-       mv [OPTION]... -t DIRECTORY SOURCE...
-       
-       常用选项：
-       		-i: 交互式
-       		-f: 强制
-
-    rm: remove，删除
-    	rm [OPTION]... FILE...
-
-    	常用选项：
-    		-i: 交互式
-    		-f: 强制删除
-    		-r: 递归
-
-    		rm -rf 
-
-    文本编辑器：nano
-    	全屏编辑器
 
 bash的基础特性(2):
 	
@@ -1145,28 +738,6 @@ bash的基础特性(2):
 		Note: 连续且完全相同方为重复
 
 	练习：以冒号分隔，取出/etc/passwd文件的第6至第10行，并将这些信息按第3个字段的数值大小进行排序；最后仅显示的各自的第1个字段；
-
-回顾：
-	文件管理命令、bash的基础特性、文件本管理命令
-
-	文件管理命令：cp, mv, rm
-
-	bash基础特性：alias/unalias, glob (*, ?, [], [^]), 快捷键
-
-	IO重定向、管道：
-		标准输出重定向：>, >>
-		标准错误重定向：2>, 2>>
-
-			&>, &>>
-			COMMAND > /path/to/somefile.out 2> &1
-
-		输入重定向：<
-			显式使用：tr
-			隐式使用：...
-
-		管道：COMMAND1 | COMMAND2 | ...
-
-	文本处理命令：wc, cut, sort, uniq
 
 
 用户和组管理
@@ -1456,37 +1027,6 @@ bash的基础特性(2):
     	umask #: 设定
 
     命令总结：chmod, chown, chgrp, umask
-
-回顾：
-	文件管理、用户管理、权限管理、bash的基础特性
-		文件管理：cp, mv, rm
-		用户管理：
-			useradd, usermod, chsh, chfn, chage, userdel
-			groupad, groupmod, groupdel
-			passwd, gpasswd, pwck
-			id, finger, who, whoami, w
-			su
-			配置文件：/etc/passwd, /etc/shadow, /etc/group, /etc/gshadow 
-		权限管理：
-			perm: mode(rwxrwxrwx), ownership 
-				chmod
-				chown
-				chgrp
-					-R, --reference=RFILE
-
-				FILE: 666-umask
-				DIR: 777-umask
-
-				umask [UMASK]
-
-	bash基础特性：
-		命令行展开：~, {}
-		命令别名：alias/unalias
-		命令历史：history
-		命令和路径补全：$PATH
-		glob: *, ?, [], [^]
-		快捷键：Ctrl+{a,e,l,c,u,k}
-		命令hash：hash
 
 bash的基础特性(3)
 	1、提供了编程环境
@@ -1996,48 +1536,7 @@ bash的基础特性(4)
 				如果参数个数小于1，则提示用户“至少应该给一个参数”，并立即退出；
 				如果参数个数不小于1，则显示第一个参数所指向的文件中的空白行数；
 
-回顾：egrep, 扩展的正则表达式,  变量, 配置文件, 算术运算, 条件测试, 退出状态码
 
-	ERE:
-		字符匹配：., [], [^]
-		次数匹配：*, ?, +, {m,n}
-		位置锚定：^, $, \<, \>, \b
-		分组：(), \1, \2, ..
-		或者: a|b
-
-	变量：
-		本地变量
-		环境变量
-		局部变量
-		位置变量
-		特殊变量
-
-		不能使用保留字；
-
-		命令：unset, export, declare -x, set, env, printenv, readonly
-
-	配置文件：
-		profile, bashrc
-
-	算术运算：
-		let, $[], $(()), expr
-
-		+=, -=, *=, /=
-
-		++, --
-
-	条件测试：
-		test, [], [[]]
-
-		三种：
-			数值：-lt, -le, -gt, -ge, -ne, -eq
-			字符串：==, !=, >, <, =~, -z, -n
-			文件		
-
-	自定义退出码：
-		exit [n]
-
-		[ $# -lt 1 ] && echo "At least one argument." && exit 1
 
 vim编辑器
 
@@ -2393,36 +1892,6 @@ bash条件测试：
 
 			# [ -z "$hostName" -o "$hostName"=="localhost.localdomain" ] && hostname www.magedu.com
 			# [ -f /bin/cat -a -x /bin/cat ] && cat /etc/fstab
-
-回顾：
-	vim编辑器、条件测试之文件测试、组合测试条件
-
-	vim：
-		编辑模式、输入模式、末行模式、可视化模式
-
-		跳转：h,j,k,l,w,b,e,),(,},{, G, ^, 0, $
-		编辑：x, r, c, d, y, p, u, ctrl+r
-		查找: /, ?, n, N
-		查找替换: s
-			s///
-				g:
-				i:
-		末行定界：
-			#
-			m,n
-			m,+#
-			.
-			$
-			/pat1/
-			/pat1/,/pat2/
-			%
-
-	文件测试：
-		单目：-e, -f, -d, -b, -c, -L, -P, -S, -r, -w, -x, -s
-		双目：-nt, -ot
-
-	组合测试：-a, -o, !
-
 
 文件查找：
 	在文件系统上查找符合条件的文件；

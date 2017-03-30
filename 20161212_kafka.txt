@@ -62,19 +62,76 @@ kafka
 	• 至少一次：消息绝不会丢失，但有可能重新发送
 	• 正好一次：这是人们真正想要的，每个消息传递一次且仅一次
 
+♦ 与Zookeeper关系
+
+	Kafka依赖Zookeeper管理集群配置，选举leader，以及在Consumer Group发生变化时进行rebalance
+
+ - Producer端使用zookeeper用来"发现"broker列表,以及和Topic下每个partition leader建立socket连接并发送消息.
+ - Broker端使用zookeeper用来注册broker信息,已经监测partition leader存活性.
+ - Consumer端使用zookeeper用来注册consumer信息,其中包括consumer消费的partition列表等,同时也用来发现broker列表,并和partition leader建立socket连接,并获取消息
 
 
-zookeeper
+♦ 常见操作
 
-♦ 
+1. 官网下载并解压
 
-♦ 
+    ```
+    tar xf kafka_2.11-0.10.1.0.tgz
+    cd kafka_2.11-0.10.1.0
+    ```
 
-♦ 
+1. 开启服务
 
-♦ 
+    ```
+    bin/zookeeper-server-start.sh config/zookeeper.properties          # 启动zookeeper
+    bin/kafka-server-start.sh config/server.properties                 # 启动kafka服务
+    ```
 
-♦ 
+1. topic相关操作，创建时需指定zk服务(通常为zk集群，各服务用逗号隔开)，可指定分区数及副本数（不能大于broker数）
+
+    ```
+    bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic event_topic
+    bin/kafka-topics.sh --describe --zookeeper localhost:2181 --topic event_topic      # 查看指定topic详情，包括分区、leader及副本数等
+    bin/kafka-topics.sh --list --zookeeper localhost:2181      # 查看所有topic列表
+    bin/kafka-topics.sh --delete --zookeeper localhost:2181 --topic event_topic      # 删除指定topic
+    ```
+  ![替代文字](https://box.worktile.com/view/3e0cc97f85df410c9e5b8a2c6ac34d5d?pid=f3e342be737d4beca87279c3f71a7a94)
+
+1. 添加partition数
+
+    ```
+    bin/kafka-topics.sh --zookeeper localhost:2181 --alter --partitions  3 --topic event_topic
+    ```
+    ![替代文字](https://box.worktile.com/view/26f03dbf5f024c429803e2b815682ec8?pid=f3e342be737d4beca87279c3f71a7a94)
+
+1. 启动producer及consumer测试
+
+    ```
+    bin/kafka-console-producer.sh --broker-list localhost:9092 --topic event_topic    # 启动producer，并输入信息
+    bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic event_topic --from-beginning    # 从头读取信息
+    ```
+
+1. 查看指定topic的offset值，可指定partition，time选项`-1`为当前最新，`-2`为第一条offset值
+
+    ```
+    bin/kafka-run-class.sh kafka.tools.GetOffsetShell --broker-list localhost:9092 --topic event_topic --partitions 0 --time -1
+    ```
+    ![替代文字](https://box.worktile.com/view/1d68aa6a16c347a28bbdf8b4138f87f5?pid=f3e342be737d4beca87279c3f71a7a94)
+
+1. 读取指定topic的指定partition的消息，可指定offset及最大消息数
+
+    ```
+    bin/kafka-run-class.sh kafka.tools.SimpleConsumerShell --broker-list localhost:9092 --topic event_topic --partition 5 --offset 2 --max-messages 10
+    ```
+
+1. 查看指定consumer的消息详情
+
+    ```
+    bin/kafka-consumer-offset-checker.sh --zookeeper localhost:2181 --topic event_topic --group test-consumer-group --broker-info
+    ```
+  ![替代文字](https://box.worktile.com/view/d8faa24dc49b448c831ab5b2ffd19218?pid=f3e342be737d4beca87279c3f71a7a94)
+
+
 
 
 ♦ 扩展阅读

@@ -243,6 +243,9 @@ MariaDB or MySQL：
                 CREATE DATABASE [IF NOT EXISTS] db_name CHARACTER SET [=] charset_name  COLLATE [=] collation_name
                 ALTER DATABASE [db_name] CHARACTER SET [=] charset_name  COLLATE [=] collation_name
                 DROP DATABASE [IF EXISTS] db_name
+                SHOW DATABASES;     # 查看所有数据库
+                USE DATABASE        # 选择指定数据库
+                SELECT database();  # 查看所在数据库
                 
             2. table：表
                 · CREATE：创建
@@ -278,7 +281,6 @@ MariaDB or MySQL：
 
                     示例：
 
-                    
                 · DROP：删除
                     DROP [TEMPORARY] TABLE [IF EXISTS] tbl_name [, tbl_name]; 
                     
@@ -700,6 +702,7 @@ MariaDB or MySQL：
                    TO 'user'@'host' [, 'user'@'host'] ...
                    [REQUIRE {NONE | ssl_option [[AND] ssl_option] ...}]
                    [WITH with_option ...]
+                
                 · priv_type：
                     ALL, SELECT, UPDATE, DELETE, INSERT, SUPER, 
                 · [object_type]：
