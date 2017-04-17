@@ -266,6 +266,7 @@
             
     • 常用操作实例：
         0. key 键
+            RANDOMKEY           # 随机获取一个key
             EXISTS phone        # 是否存在指定键
             DEL name            # 删除指定键
             DEL name type       # 删除多个键

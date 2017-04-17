@@ -144,12 +144,12 @@ Hadoop：
 
     ▫ 模型分类：
         • 单机模型：测试使用
-
         • 伪分布式模型：运行于单机
-
         • 分布式模型：群集模型
 
     ▫ hdfs命令操作
+
+        <必要时需要切到hdfs用户>
 
         语法：hadoop fs -CMD <args>
 
@@ -178,6 +178,15 @@ Hadoop：
             hadoop fs -du < hdfs-path>
             hadoop fs -du -s <hdfs-path>
             hadoop fs -du -h <hdfs-path> 
+
+        • stat：查看状态
+            hadoop fs -stat /
+
+        • fsck：健康状况
+            hadoop fsck /
+
+        • dfsadmin：dfs管理工具
+            hadoop dfsadmin -report     # 报告各dn信息
 
         • text：将文本文件或某些格式的非文本文件通过文本格式输出
             hadoop fs -text <hdfs-file>

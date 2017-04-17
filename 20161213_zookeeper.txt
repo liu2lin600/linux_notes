@@ -115,6 +115,24 @@ zookeeper
 	2. 逐台进行服务器的重启
 		这种方式更适合绝大多数的实际场景。在这种方式中，每次仅仅重启集群中的一台机器，然后逐台对整个集群中的机器进行重启操作。这种方式可以在重启期间依然保证集群对外的正常服务
 
+♦ 数据文件
+	1. 数据目录（dataDir）
+	    	A、myid – 这个文件只包含一个数字，和serverid对应
+	    	B、snapshot - 按zxid先后顺序的生成的数据快照
+
+		集群中的每台ZK server都会有一个用于惟一标识自己的id，有两个地方会使用到这个id：myid文件和zoo.cfg文件中。myid文件存储在dataDir目录中，指定了当前server的server id。在zoo.cfg文件中，根据server id，配置了每个server的ip和相应端口。Zookeeper启动的时候，读取myid文件中的server id，然后去zoo.cfg 中查找对应的配置
+
+		zk在进行数据快照过程中，会生成snapshot文件，存储在dataDir目录中。文件后缀是zxid，也就是事务id。（这个zxid代表了zk触发快照那个瞬间，提交的最后一个事务id）。注意，一个快照文件中的数据内容和提交第zxid个事务时内存中数据近似相同。仅管如此，由于更新操作的幂等性，ZK还是能够从快照文件中恢复数据。数据恢复过程中，将事务日志和快照文件中的数据对应起来，就能够恢复最后一次更新后的数据了
+
+	2. 事务日志目录（dataLogDir）
+		dataLogDir目录是ZK的事务日志目录，包含了所有ZK的事务日志。正常运行过程中，针对所有更新操作，在返回客户端“更新成功”的响应前，ZK会确保已经将本次更新操作的事务日志写到磁盘上，只有这样，整个更新操作才会生效。每触发一次数据快照，就会生成一个新的事务日志。事务日志的文件名是log.，zxid是写入这个文件的第一个事务id
+
+	3. 文件管理
+		不同的zk server生成的snapshot文件和事务日志文件的格式都是一致的。因此，如果某一天生产环境中出现一些古怪的问题，你就可以把这些文件下载到开发环境的zk中加载起来，便于调试发现问题，而不会影响生产运行。另外，使用这些较旧的snapshot和事务日志，我们还能够方便的让ZK回滚到一个历史状态。
+		另外，ZK提供的工具类LogFormatter能够帮助可视化ZK的事务日志，帮助我们排查问题
+		
+		zk在运行过程中，不断地生成snapshot文件和事务日志，3.4版本后可以自动清理
+
 ♦ 安装配置
 	◇ 下载解压
 		wget https://mirrors.tuna.tsinghua.edu.cn/apache/zookeeper/zookeeper-3.4.9/zookeeper-3.4.9.tar.gz
@@ -128,12 +146,20 @@ zookeeper
 		tickTime=2000 					# 心跳时间2s
 		initLimit=10 					# follower连接leader初始化最长时间
 		syncLimit=5 					# Leader与Follower之间发送消息，请求和应答时间长度
+		
 		dataDir=/zookeeper/data 		# 数据目录
-		dataLogDir=/zookeeper/log 		# 日志目录
+		dataLogDir=/zookeeper/log 		# 事务日志目录
+		logDir=/zookeeper/ 				# 启动有运行中产生的日志信息
+
+		
 		clientPort=2181 				# 客户端连接端口，默认2181
 		server.1=host1:2888:3888 		# 第1台服务
 		server.2=host2:2888:3888 		# 2888为flower与leader通信端口
 		server.3=host3:2888:3888 		# 3888为选举端口
+
+		autopurge.snapRetainCount=3		# 保留3个数据快照
+		autopurge.purgeInterval=1 		# 自动清理间隔为1h
+		forceSync=yes 					# 更新数据立刻写入盘，如果经常变更则不建议开启
 
 		# 可以在同一台启动多实例，clientPort需不同
 
