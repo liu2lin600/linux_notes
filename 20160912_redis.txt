@@ -60,7 +60,7 @@
             help <tab>     ：自动补全可能的命令
             quit           ：退出
         
-            group：
+            @group：
                 @generic    : DEL, DUMP, SCAN, SORT, TTL, TYPE...
                 @string     : SET, GET, EXISTS, INCR, DECR...
                 @list       : LPUSH, RPUSH, LPOP, RPOP, LINDEX, LSET...
@@ -266,6 +266,7 @@
             
     • 常用操作实例：
         0. key 键
+            RANDOMKEY           # 随机获取一个key
             EXISTS phone        # 是否存在指定键
             DEL name            # 删除指定键
             DEL name type       # 删除多个键
@@ -287,9 +288,29 @@
             GETRANGE name 2 4   # 从指定位置开始获取指定长度
 
         2. list 列表
+            LPUSH
+            RPUSH
+            LPOP
+            RPOP
+            LINDEX
+            LSET
 
         3. hash 哈希
+            HSET
+            HSETNX
+            HGET
+            HKEYS
+            HVALS
+            HDEL
 
         4. set 集合
+            SADD
+            SINTER
+            SPOP
+            SISMEMBER
 
-        5. sorted set 有序全集
+        5. sorted set 有序集合
+            ZADD
+            ZRANGE
+            ZCARD
+            ZRANK
