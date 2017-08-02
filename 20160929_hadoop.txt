@@ -171,7 +171,7 @@ Hadoop：
 
         • cp, rm, mv
             hadoop fs -cp <hdfs-file> <hdfs-file>
-            hadoop fs -rm <hdfs-file>
+            hadoop fs -rm -r -skipTrash <hdfs-file>    # 直接删不入回站
             hadoop fs -mv 
 
         • du：查看大小
@@ -212,6 +212,62 @@ Hadoop：
 
         • balancer：手动均衡数据
             hdfs balancer
+
+
+    ▫ yarn命令操作
+        • application
+            -list               ：从RM查看application列表
+            -appStates <States> ：与-list一起，可取ALL, NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED，可多个用逗号隔开
+            -appTypes <Types>   ：与-list一起使用，基于传入的逗号分隔的application types列表过滤
+            -kill <AppId>       ：杀死application
+            -status <AppId>     ：打印application状态
+                
+                » yarn application -list
+                » yarn application -list -appStates FAILED,NEW
+
+        • applicationattempt
+            -list <AppId>           ：列出指定application的application attempts
+            -status <Attempt Id>    ：打印application attempt的状态信息
+
+                » yarn applicationattempt -list application_1491808105321_22924
+                » yarn applicationattempt -status appattempt_1491808105321_22924_000001
+
+        • container
+            -list <Attempt Id>      ：列出application attempt的container列表
+            -status <ContainerId>   ：打印container的状态
+
+        • logs
+            yarn logs -applicationId <application ID> [options]
+                
+                » yarn logs -applicationId application_1491808105321_22924 [-appOwner hadoop]
+
+        • node
+            yarn node [options]
+
+                » yarn node -list [-all]
+                » yarn node -list -states NEW,RUNNING
+                » yarn node -status <NodeId>
+
+        • classpath：打印需要得到hadoop的jar和所需要的lib包路径
+        • version：查看版本
+        • queue
+        • daemonlog
+        • nodemanager
+        • resourcemanager
+        • rmadmin
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

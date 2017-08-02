@@ -125,15 +125,30 @@
 			· when   ： 多少秒前曾经同步过时间
 			· poll   ： 下次更新在多少秒后
 			· reach  ： 已经向上层ntp服务器要求更新的次数
-			· delay  ： 网络延迟
-			· offset ： 时间补偿
-			· jitter ： 系统时间与bios时间差
+			· delay  ： 网络延迟，单位微秒
+			· offset ： 时间补偿，单位ms
+			· jitter ： 系统时间与bios时间差，单位微秒
+
+		• ntptime
+			» ntptime
+			ntp_gettime() returns code 0 (OK)
+			  	time dd1c58b9.d3a62620  Fri, Jul 21 2017 18:40:57.826, (.826754402),
+			  	maximum error 491490 us, estimated error 3636 us, TAI offset 0
+			ntp_adjtime() returns code 0 (OK)
+			  	modes 0x0 (),
+			  	offset -733.145 us, frequency -7.803 ppm, interval 1 s,
+			  	maximum error 491490 us, estimated error 3636 us,
+			  	status 0x6001 (PLL,NANO,MODE),
+			  	time constant 10, precision 0.001 us, tolerance 500 ppm,
 
 		• date命令
 			» date
-			2016年 12月 22日 星期四 21:40:30 CST 		# 标准北京时间
+				2016年 12月 22日 星期四 21:40:30 CST 		# 标准北京时间
 			» date -u 
-			2016年 12月 22日 星期四 13:40:32 UTC 		# 国际协调时间，基本等同格林威治时间(GMT)
+				2016年 12月 22日 星期四 13:40:32 UTC 		# 国际协调时间，基本等同格林威治时间(GMT)
+			» date -R 									# 可显示时区
+			» date +%F 									# 年月日
+			» date -d @1502212112 						# 时间戳转日期
 
 		• tzselect命令：进入交互式手动设置时区
 
