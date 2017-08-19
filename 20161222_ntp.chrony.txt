@@ -76,8 +76,12 @@
 			# with symmetric key cryptography.
 			keys /etc/ntp/keys
  
-			#日志文件
+			# 日志文件
 			logfile /var/log/ntp.log
+
+			# 如果有问题同步本机 
+			server  127.127.1.0     # local clock
+			fudge   127.127.1.0 stratum 10
 
 		4. 修改/etc/sysconfig/ntpd:
 
