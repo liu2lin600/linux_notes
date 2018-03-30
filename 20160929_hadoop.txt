@@ -97,9 +97,8 @@ Hadoop：
 
                         RM: Resource Manager
                         NM: Node Manager
-
-                        AM: Application Master
-                        container: mapreduce任务
+                            AM: Application Master
+                                container: mapreduce任务
 
     ▫ 相关组件：
         • HBase：Hadoop DataBase，集群方式存在
@@ -212,6 +211,9 @@ Hadoop：
 
         • balancer：手动均衡数据
             hdfs balancer
+
+        • 清回收站
+            hdfs dfs -expunge       # 回收站路径：/user/USER/.Trash
 
         2. job 相关 
 
