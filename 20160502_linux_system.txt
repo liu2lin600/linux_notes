@@ -1392,20 +1392,8 @@ Linux程序包管理(2)
     	1、yum的配置和使用；包括yum repository的创建；
     	2、编译安装apache 2.2; 启动此服务；
 
-    博客作业：程序包管理：rpm/yum/编译
 
- 回顾：yum、源代码编译安装
-
- 	yum [OPTION]... COMMAND [args]...
- 		install, list, remove, update, groupinstall, grouplist, clean, makecache
-
- 	源代码编译：
- 		前提：开发环境
- 			./configure
- 			make
- 			make install
-
- Linux网络属性管理
+ # Linux网络属性管理
 
  	局域网：以太网，令牌环网
 
@@ -1468,16 +1456,18 @@ Linux程序包管理(2)
  				D类：组播
  					1110 0000 - 1110 1111: 224-239
 
- 				E类：
+ 				E类：用于科学研究
  					240-255
 
  			子网掩码：
  				172.16.100.100/255.255.0.0, 172.17.1.1
 
  				跨网络通信：路由
- 					主机路由
- 					网络路由
- 					默认路由
+ 					主机路由：到达指定主机的路由
+ 					网络路由：到达指定网络
+ 					默认路由：非本地通信使用
+
+ 					优先级：主机路由 > 网络路由 > 默认路由
 
 	将Linux主机接入到网络中：
 		IP/mask
@@ -1488,14 +1478,14 @@ Linux程序包管理(2)
 			第三DNS服务器
 
 		配置方式：
-			静态指定:
-				ifcfg: ifconfig, route, netstat
-				ip: object {link, addr, route}, ss, tc
-				配置文件
+			1. 静态指定:
+				- ifcfg家族: ifconfig, route, netstat
+				- ip家族: object {link, addr, route}, ss, tc
+				- 配置文件
 					system-config-network-tui (setup)
-				CentOS 7:
-					nmcli, nmtui
-			动态分配：
+					CentOS 7:nmcli, nmtui
+			
+			2. 动态分配：
 				DHCP: Dynamic Host Configuration Protocol
 
 		配置网络接口：
@@ -1849,17 +1839,7 @@ Linux网络配置(2)
 					-O: 保存位置
 					--limit-rates=: 指定传输速率
 
-			
-回顾：ip命令，ss命令；配置文件；CentOS 7
-
-	ifcfg、ip、netstat、ss
-	配置文件：
-		/etc/sysconfig/network-scripts/
-			ifcfg-IFNAME
-			route-IFNAME
-	CentOS 7: nmcli, nmtui
-
-Linux进程及作业管理
+# Linux进程及作业管理
 
 	内核的功用：进程管理、文件系统、网络功能、内存管理、驱动程序、安全功能
 
@@ -1919,11 +1899,13 @@ Linux进程及作业管理
 			停止态：暂停于内存中，但不会被调度，除非手动启动之；stopped
 			僵死态：zombie
 
-		进程的分类：
-			CPU-Bound
-			IO-Bound
+			一次IO过程：磁盘 --> 内核内存 --> 进程内存中
 
-		《Linux内核设计与实现》，《深入理解Linux内核》
+		进程的分类：
+			CPU-Bound：cpu密集型
+			IO-Bound：io密集型
+
+		书籍推荐：《Linux内核设计与实现》-->《深入理解Linux内核》
 
 	Linux进程查看及管理的工具：pstree, ps, pidof, pgrep, top, htop, glance, pmap, vmstat, dstat, kill, pkill, job, bg, fg, nohup
 
@@ -1944,14 +1926,14 @@ Linux进程及作业管理
 					x: 与终端无关的进程；
 
 				 	~]# ps aux
-					USER        PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+						USER PID %CPU %MEM VSZ RSS TTY STAT START TIME COMMAND
 
 						VSZ: Virtual memory SiZe，虚拟内存集
 						RSS: ReSident Size, 常驻内存集
 						STAT：进程状态
 							R：running
-							S: interruptable sleeping
-							D: uninterruptable sleeping
+							S: interruptable sleeping 可中断睡眠
+							D: uninterruptable sleeping 不可中断睡眠
 							T: stopped
 							Z: zombie
 
@@ -1975,7 +1957,7 @@ Linux进程及作业管理
 
 						ni: nice值
 						pri: priority，优先级
-						psr: processor, CPU
+						psr: processor, 运行在哪颗CPU上
 						rtprio: 实时优先级
 
 		pgrep, pkill：
@@ -2026,14 +2008,6 @@ Linux进程及作业管理
 	       		t: 显示进程树
 
 	       	注意：Fedora-EPEL源
-
-回顾：
-	Linux基础:
-		CPU: timeslice
-		Memory: 线性地址空间
-		I/O：
-			分时复用
-	进程查看工具：pstree, ps, pgrep, pidof, top, htop
 
 Linux进程查看及管理(2)
 	

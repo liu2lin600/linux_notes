@@ -97,9 +97,8 @@ Hadoop：
 
                         RM: Resource Manager
                         NM: Node Manager
-
-                        AM: Application Master
-                        container: mapreduce任务
+                            AM: Application Master
+                                container: mapreduce任务
 
     ▫ 相关组件：
         • HBase：Hadoop DataBase，集群方式存在
@@ -151,7 +150,7 @@ Hadoop：
 
         <必要时需要切到hdfs用户>
 
-        语法：hadoop fs -CMD <args>
+        1. 语法：hadoop fs -CMD <args>
 
         • ls
             hadoop fs -ls [-R] /                # 列出hdfs根文件目录，-R递归
@@ -171,7 +170,7 @@ Hadoop：
 
         • cp, rm, mv
             hadoop fs -cp <hdfs-file> <hdfs-file>
-            hadoop fs -rm <hdfs-file>
+            hadoop fs -rm -r -skipTrash <hdfs-file>    # 直接删不入回站
             hadoop fs -mv 
 
         • du：查看大小
@@ -212,6 +211,84 @@ Hadoop：
 
         • balancer：手动均衡数据
             hdfs balancer
+
+        • 清回收站
+            hdfs dfs -expunge       # 回收站路径：/user/USER/.Trash
+
+        2. job 相关 
+
+        hadoop job -list                    # 查看 Job 信息
+        hadoop job –kill job_id             # 杀死指定任务
+        hadoop job -logs job_id             # 查看指定任务的日志
+        hadoop job -history output-dir      # 指定路径下查看历史日志汇总
+        hadoop job -history all output-dir  # 作业的更多细节
+        hadoop job –status job_id           # 打印map和reduce完成百分比和所有计数器
+        hadoop job -kill-task <task-id>     # 杀死任务。被杀死的任务不会不利于失败尝试
+        hadoop job -fail-task <task-id>     # 使任务失败。被失败的任务会对失败尝试不利
+
+Total jobs:1
+                  JobId      State           StartTime      UserName           Queue      Priority       UsedContainers  RsvdContainers  UsedMem         RsvdMem         NeededMem         AM info
+ job_1501040274955_1945    RUNNING       1502621183071    sa_cluster    root.sa_cluster     NORMAL                   11               0   11264M              0M            11264M      http://data01.shence.sa:8088/proxy/application_1501040274955_1945/
+
+
+    ▫ yarn命令操作
+        • application
+            -list               ：从RM查看application列表
+            -appStates <States> ：与-list一起，可取ALL, NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED，可多个用逗号隔开
+            -appTypes <Types>   ：与-list一起使用，基于传入的逗号分隔的application types列表过滤
+            -kill <AppId>       ：杀死application
+            -status <AppId>     ：打印指定application状态
+                
+                » yarn application -list
+                » yarn application -list -appStates FAILED,NEW
+                » yarn application -status job_1501040274955_1945
+
+        • applicationattempt
+            -list <AppId>           ：列出指定application的application attempts
+            -status <Attempt Id>    ：打印application attempt的状态信息
+
+                » yarn applicationattempt -list application_1491808105321_22924
+                » yarn applicationattempt -status appattempt_1491808105321_22924_000001
+
+        • container
+            -list <Attempt Id>      ：列出application attempt的container列表
+            -status <ContainerId>   ：打印container的状态
+
+                » yarn container -list appattempt_1501040274955_1945_000001
+                » yarn container -status container_1501040274955_1945_01_000002
+
+        • logs
+            yarn logs -applicationId <application ID> [options]
+                
+                » yarn logs -applicationId application_1491808105321_22924 [-appOwner hadoop]
+
+        • node
+            yarn node [options]
+
+                » yarn node -list [-all]
+                » yarn node -list -states NEW,RUNNING
+                » yarn node -status <NodeId>
+
+        • classpath：打印需要得到hadoop的jar和所需要的lib包路径
+        • version：查看版本
+        • queue
+        • daemonlog
+        • nodemanager
+        • resourcemanager
+        • rmadmin
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
